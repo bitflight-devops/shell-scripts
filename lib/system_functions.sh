@@ -44,4 +44,19 @@ process_is_running() {
 	return 1
 }
 
+
+not_in_path() {
+    tr ':' '\n' <<<"${PATH}" | grep -q -e "^$1$"
+}
+
+add_to_path() {
+  if [[ -d "${1}" ]]; then
+    if [[ -z "${PATH}" ]]; then
+      export PATH="${1}"
+    elif not_in_path "${1}"; then
+      export PATH="${1}:${PATH}"
+    fi
+  fi
+}
+
 export SYSTEM_FUNCTIONS_LOADED=1

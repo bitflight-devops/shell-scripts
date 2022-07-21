@@ -13,6 +13,20 @@ fi
 [[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 
+# string formatters
+if [[ -t 1 ]]
+then
+  tty_escape() { printf "\033[%sm" "$1"; }
+else
+  tty_escape() { :; }
+fi
+tty_mkbold() { tty_escape "1;$1"; }
+tty_underline="$(tty_escape "4;39")"
+tty_blue="$(tty_mkbold 34)"
+tty_red="$(tty_mkbold 31)"
+tty_bold="$(tty_mkbold 39)"
+tty_reset="$(tty_escape 0)"
+
 if test -t 1 && command_exists tput && [[ $(tput colors) -gt 0 ]]; then
 	export COLOR_BRIGHT_BLACK=$'\e[0;90m'
 	export COLOR_BRIGHT_RED=$'\e[0;91m'

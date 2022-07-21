@@ -1,6 +1,6 @@
 enable=all
 source-path=SCRIPTDIR
-
+external-sources=false
 
 disable=SC1071
 disable=SC1090
