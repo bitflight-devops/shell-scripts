@@ -185,6 +185,8 @@ brew install \
   aws-elasticbeanstalk \
   packer
 
+brew tap homebrew/cask-fonts
+brew install --cask font-dejavu-sans-mono-nerd-font
 
 brew cleanup
 

@@ -5,6 +5,7 @@ external-sources=false
 disable=SC1071
 disable=SC1090
 disable=SC1091
+disable=SC2001
 disable=SC2016
 disable=SC2030
 disable=SC2031

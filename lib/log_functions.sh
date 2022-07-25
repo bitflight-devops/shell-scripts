@@ -74,7 +74,7 @@ running_in_ci() {
   [[ -n ${CI} ]]
 }
 
-getLogType() {
+get_log_type() {
   set +x
   LOG_TYPES=(
     "error"
@@ -83,11 +83,51 @@ getLogType() {
     "notice"
     "debug"
   )
-  logtype="${1}"
-  if echo "${LOG_TYPES[@]}" | grep -w -q -i "${logtype}"; then
-    tr '[:upper:]' '[:lower:]' <<<"${logtype}"
+  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  if [[ "${LOG_TYPES[*]}" =~ ( |^)"${logtype}"( |\$) ]]; then
+    printf '%s' "${logtype}"
   else
     echo ""
+  fi
+}
+get_log_color() {
+  if [[ -n ${GITHUB_ACTIONS} ]]; then
+    printf '%s' "::"
+    return
+  elif [[ -n ${CI} ]]; then
+    printf '%s' "##"
+    return
+  fi
+  # shellcheck disable=SC2034
+  LOG_COLOR_error="${RED}"
+  LOG_COLOR_info="${GREEN}"
+  LOG_COLOR_warning="${YELLOW}"
+  LOG_COLOR_notice="${MAGENTA}"
+  LOG_COLOR_debug="${GREY}"
+
+  local -r logtype="$(get_log_type "${1}")"
+  if [[ -z "${logtype}" ]]; then
+    printf '%s' "${NO_COLOR}"
+  else
+    eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
+  fi
+}
+
+simple_log() {
+  local -r logtype="$(get_log_type "${1}")"
+  local -r logcolor="$(get_log_color "${logtype}")"
+  if [[ -z "${logtype}" ]]; then
+    printf '%s%s\n' "${NO_COLOR}" "${*}"
+  else
+    shift
+    if [[ "${logcolor}" != "::" ]]; then
+      local delimiter='// '
+      local bold="${BOLD}"
+    else
+      local delimiter=''
+      local bold=''
+    fi
+    printf '%s%s%s%s %s%s%s%s\n' "${bold}" "${logcolor}" "${logtype}" "${logcolor}" "${delimiter}" "${NO_COLOR}" "${*}" "${NO_COLOR}"
   fi
 }
 
@@ -97,7 +137,7 @@ getLogType() {
 ## example: timestamp "error" "Something went wrong"
 ## output: 2022-07-17T14:59:56-0400 [ERROR] Something went wrong
 timestamp_log() {
-  local -r logtype="$(getLogType "${1}")"
+  local -r logtype="$(get_log_type "${1}")"
   shift
   local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
   local -r msg="${*}"
@@ -113,7 +153,7 @@ join_by() {
 }
 
 github_log() {
-  local -r logtype="$(getLogType "${1}")"
+  local -r logtype="$(get_log_type "${1}")"
   shift
 
   if [[ $(type -t escape_github_command_data) == 'function' ]]; then
@@ -147,7 +187,7 @@ github_log() {
 }
 
 # trunk-ignore(shellcheck/SC2120)
-toStdErr() {
+to_stderr() {
   if [[ $# -eq 0 ]]; then
     echo >&2 "$(</dev/stdin)"
   else
@@ -213,21 +253,21 @@ error() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
-  log_output "${return_code}" "ERROR" "COLOR_RED" "✗ ${*}" | toStdErr
+  log_output "${return_code}" "ERROR" "COLOR_RED" "✗ ${*}" | to_stderr
 }
 
 fatal() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
-  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | toStdErr
+  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | to_stderr
 }
 
 warn() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
-  log_output "${return_code}" "WARN" "COLOR_YELLOW" "∴ ${*}" | toStdErr
+  log_output "${return_code}" "WARN" "COLOR_YELLOW" "∴ ${*}" | to_stderr
 }
 
 failure() {

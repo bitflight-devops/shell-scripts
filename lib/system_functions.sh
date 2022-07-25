@@ -46,9 +46,8 @@ process_is_running() {
 
 
 not_in_path() {
-    tr ':' '\n' <<<"${PATH}" | grep -q -e "^$1$"
+  tr ':' '\n' <<<"${PATH}" | grep -q -e "^$1$"
 }
-
 add_to_path() {
   if [[ -d "${1}" ]]; then
     if [[ -z "${PATH}" ]]; then
