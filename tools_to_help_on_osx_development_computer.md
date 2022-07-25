@@ -236,45 +236,55 @@ done
 
 ```zsh
 #!/usr/bin/env zsh
+#!/usr/bin/env zsh
+export TERM='xterm-256color'
+
 ANTIGEN_SOURCE_PATH=/usr/local/share/antigen/antigen.zsh
+
 if [[ ! -f "${ANTIGEN_SOURCE_PATH}" ]]; then
   mkdir -p "$(dirname "${ANTIGEN_SOURCE_PATH}")"
   curl -L git.io/antigen >"${ANTIGEN_SOURCE_PATH}"
 fi
 
+run_after_wait() {
+  local -r wait_in_seconds="$1"
+  shift
+  sleep "${wait_in_seconds}"s
+  "$@"
+}
+generate_antigen_cache() {
+  SECONDS_IN_DAY=86400
+  SECONDS_IN_WEEK=$((SECONDS_IN_DAY * 7))
+
+  mkdir -p ~/.cache/antigen
+  run_timer="${HOME}/.cache/antigen/antigen.cachegen.last_run"
+
+  if [[ ! -f "${run_timer}" ]]; then
+    touch "${run_timer}"
+    last_run_time="$(date +%s)"
+  else
+    last_run_time="$(stat -f "%m" "${run_timer}")"
+  fi
+
+  if [[ "$(date +%s)" -gt "$((last_run_time + SECONDS_IN_WEEK))" ]]; then
+    touch "${run_timer}"
+    setopt local_options no_notify no_monitor
+    run_after_wait "$((130 + RANDOM % 100))" antigen cache-gen &
+  fi
+}
+
+
 source "${ANTIGEN_SOURCE_PATH}"
-antigen use oh-my-zsh
-antigen bundle git
-antigen bundle asdf
-# antigen bundle curl
-antigen bundle fzf
-antigen bundle aws
-antigen bundle brew
-antigen bundle docker
-antigen bundle gh
-antigen bundle iterm2
-antigen bundle macos
-antigen bundle npm
-antigen bundle nvm
-antigen bundle thefuck
-antigen bundle tmux
-antigen bundle vscode
-antigen bundle yarn
-antigen bundle zoxide
-antigen bundle Aloxaf/fzf-tab
-antigen bundle zdharma-continuum/fast-syntax-highlighting
-antigen bundle \
-  zsh-users/zsh-autosuggestions \
-  zsh-users/zsh-completions \
-  zsh-users/zsh-history-substring-search
+antigen init ~/.antigenrc
+generate_antigen_cache
+[[ -n ${ZSH_CACHE_DIR} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions" # Fix gh plugin
 
-antigen theme romkatv/powerlevel10k
-
-antigen apply
+# export PROMPT='$(gbt $?)'
 
 command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
+
 add_to_path() {
   if [[ -d "${1}" ]]; then
     if [[ -z "${PATH}" ]]; then
@@ -284,24 +294,16 @@ add_to_path() {
     fi
   fi
 }
-add_to_path "/usr/local/opt/gnu-sed/libexec/gnubin"
-if type brew &>/dev/null; then
-  FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
 
-  autoload -Uz compinit
-  compinit
-fi
-fpath=(~/.zsh $fpath)
-autoload -Uz compinit
-compinit -u
+# fpath=(~/.zsh $fpath)
+# autoload -Uz compinit
+# compinit -u
 
-source <(curl -sL https://git.io/zi-loader) 2>/dev/null || true
-zzinit 2>/dev/null || true
-
-if command_exists zi; then
-  zi light z-shell/zui
-  zi light z-shell/zsh-lint
-fi
+# zzinit 2>/dev/null || true
+# if command_exists zi; then
+#   zi light z-shell/zui
+#   zi light z-shell/zsh-lint
+# fi
 
 export FZF_BASE="$(brew --prefix fzf)"
 if [[ ~/.vimrc ]]; then
@@ -329,7 +331,6 @@ else
   export EDITOR='mvim'
 fi
 
-[[ -f ~/perl5/perlbrew/etc/bashrc ]] && \. ~/perl5/perlbrew/etc/bashrc
 [[ -f /usr/local/opt/asdf/libexec/asdf.sh ]] && \. /usr/local/opt/asdf/libexec/asdf.sh
 eval $(thefuck --alias)
 
@@ -351,17 +352,18 @@ export ARCHFLAGS="-arch x86_64"
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-# tabtab source for serverless package
-# uninstall by removing these lines or running `tabtab uninstall serverless`
-[[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh
-# tabtab source for sls package
-# uninstall by removing these lines or running `tabtab uninstall sls`
-[[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh
-# tabtab source for slss package
-# uninstall by removing these lines or running `tabtab uninstall slss`
-[[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh
+# # tabtab source for serverless package
+# # uninstall by removing these lines or running `tabtab uninstall serverless`
+# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh
+# # tabtab source for sls package
+# # uninstall by removing these lines or running `tabtab uninstall sls`
+# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh
+# # tabtab source for slss package
+# # uninstall by removing these lines or running `tabtab uninstall slss`
+# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh
 
-add_to_path "/usr/local/opt/openssl@1.1/bin"
+# add_to_path "/usr/local/opt/openssl@1.1/bin"
+
 alias pyauth='chamber exec dev-ws/us-east-1 GOOGLE_API_KEY -- pipenv run'
 export AWS_SESSION_TOKEN_TTL=8h
 
@@ -376,25 +378,32 @@ add_to_path "$HOME/.yarn/bin"
 add_to_path "$HOME/.config/yarn/global/node_modules/.bin"
 add_to_path "/usr/local/opt/apr/bin"
 add_to_path "${HOME}/.local/bin"
-add_to_path "$HOME/.jenv/bin"
 add_to_path "$HOME/.serverless/bin"
-add_to_path "/usr/local/opt/python/libexec/bin"
+add_to_path "/usr/local/opt/gnu-tar/libexec/gnubin"
+add_to_path "/usr/local/opt/gnu-sed/libexec/gnubin"
+if type brew &>/dev/null; then
+  FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
 
-eval "$(jenv init -)"
-
+  autoload -Uz compinit
+  compinit
+fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 source ~/wearsafe/github_login_tokens.sh
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/jamienelson/google-cloud-sdk/path.zsh.inc' ]; then \. '/Users/jamienelson/google-cloud-sdk/path.zsh.inc'; fi
+# # The next line updates PATH for the Google Cloud SDK.
+# if [ -f '/Users/jamienelson/google-cloud-sdk/path.zsh.inc' ]; then \. '/Users/jamienelson/google-cloud-sdk/path.zsh.inc'; fi
 
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc'; fi
+# # The next line enables shell command completion for gcloud.
+# if [ -f '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc'; fi
 
-[[ -f ~/perl5/perlbrew/etc/bashrc ]] && . ~/perl5/perlbrew/etc/bashrc
+source "${XDG_CONFIG_HOME:-$HOME/.config}/asdf-direnv/zshrc"
+
+# bun completions
+[ -s "/usr/local/share/zsh/site-functions/_bun" ] && source "/usr/local/share/zsh/site-functions/_bun"
+
+# bun completions
+[ -s "/Users/jamienelson/.bun/_bun" ] && source "/Users/jamienelson/.bun/_bun"
 
 ```
 
