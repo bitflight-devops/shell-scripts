@@ -187,6 +187,7 @@ brew install \
 
 brew tap homebrew/cask-fonts
 brew install --cask font-dejavu-sans-mono-nerd-font
+brew install --cask responsively # Web App Development Browser Sizing Tool
 
 brew cleanup
 
