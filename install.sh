@@ -173,7 +173,7 @@ indent_style() {
     style=" "
     final_style="${STEP_STAR}"
     ;;
-      failure)
+  failure)
     style=" "
     final_style="${CROSS_MARK}"
     ;;
@@ -191,7 +191,7 @@ indent_style() {
     final_style="-->"
     ;;
   esac
-local -r indent_length="$((width - ${#logtype}))"
+  local -r indent_length="$((width - ${#logtype}))"
   printf '%s' "$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
   printf -- "${style}%.0s" $(seq "${indent_length}")
   printf '%s' "${final_style}"
@@ -306,12 +306,21 @@ if [[ -z "${SHELL_SCRIPTS_LINUX-}" ]]; then
 
   if [[ "${UNAME_MACHINE}" == "arm64" ]]; then
     # On ARM macOS, this script installs to /opt/${SHELL_SCRIPTS_OWNER} only
-    BFD_PREFIX_DEFAULT="/opt/${SHELL_SCRIPTS_OWNER}"
-    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
+    if [[ ${USER} == 'root' ]]; then
+      BFD_PREFIX_DEFAULT="/opt/${SHELL_SCRIPTS_OWNER}"
+    else
+      BFD_PREFIX_DEFAULT="${HOME}"
+    fi
+    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
   else
     # On Intel macOS, this script installs to /usr/local only
-    BFD_PREFIX_DEFAULT="/usr/local"
-    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
+
+    if [[ ${USER} == 'root' ]]; then
+      BFD_PREFIX_DEFAULT="/usr/local"
+    else
+      BFD_PREFIX_DEFAULT="${HOME}"
+    fi
+    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
   fi
   BFD_CACHE="${HOME}/Library/Caches/${SHELL_SCRIPTS_OWNER}"
 
@@ -327,8 +336,13 @@ else
   UNAME_MACHINE="$(uname -m)"
 
   # On Linux, it installs to /home/${SHELL_SCRIPTS_GITHUB_REPOSITORY} if you have sudo access
-  # and ~/.bitflight-devops (which is unsupported) if run interactively.
-  BFD_PREFIX_DEFAULT="/home/${SHELL_SCRIPTS_OWNER}"
+  # and ~/.bitflight-devopsif run interactively.
+
+  if [[ ${USER} == 'root' ]]; then
+    BFD_PREFIX_DEFAULT="/home/${SHELL_SCRIPTS_OWNER}"
+  else
+    BFD_PREFIX_DEFAULT="${HOME}"
+  fi
   BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
   BFD_CACHE="${HOME}/.cache/${SHELL_SCRIPTS_OWNER}"
 
@@ -543,7 +557,7 @@ configure_git() {
     else
       git config --global user.email "$(get_last_github_author_email "${user}")"
     fi
-    else
+  else
     abort "Git is not installed."
   fi
 
@@ -775,8 +789,8 @@ install_dependencies() {
   if [[ -n ${SHELL_SCRIPTS_LINUX:-} ]]; then
     if [[ -x "$(command -v apt-get)" ]]; then
       export DEBIAN_FRONTEND=noninteractive
-        export APT_LISTCHANGES_FRONTEND=none
-        # >/dev/null 2>&1
+      export APT_LISTCHANGES_FRONTEND=none
+      # >/dev/null 2>&1
       run_as_root apt-get -o Acquire::Max-FutureTime=86400 -qq -y update # Handle out of sync docker containers
       run_as_root apt-get -o Acquire::Max-FutureTime=86400 -o Dpkg::Options::="--force-confnew" install -qq -y "${dependencies[@]}" >/dev/null 2>&1
     elif [[ -x "$(command -v yum)" ]]; then
