@@ -16,8 +16,6 @@ if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
 fi
 export SCRIPTS_LIB_DIR
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-export SCRIPTS_LIB_DIR
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 
 declare -a AVAILABLE_LIBRARIES=(
   "color_and_emoji_variables"
@@ -32,6 +30,22 @@ declare -a AVAILABLE_LIBRARIES=(
   "trace_functions"
   "yaml_functions"
 )
+
+# PROVIDED_ARGS=("${@}")
+# PROVIDED_LIBRARY_LIST=()
+# if [[ ${#PROVIDED_ARGS} -gt 0 ]]; then
+#   for arg in "${PROVIDED_ARGS[@]}"; do
+#     if [[ ${arg} =~ ^(--debug|-d)$ ]]; then
+#       export DEBUG=1
+#     elif [[ ${arg} =~ ^(--silent|-s)$ ]]; then
+#       export SILENT_BOOTSTRAP=1
+#     elif [[ ${AVAILABLE_LIBRARIES[*]} =~ ("${arg}") ]]; then
+#       PROVIDED_LIBRARY_LIST+=("${arg}")
+#     fi
+#   done
+# fi
+
+
 
 load_library() {
   local library="${1%.sh}.sh"
@@ -53,7 +67,6 @@ load_libraries() {
   fi
 }
 
-
 if load_library log_functions >/dev/null 2>&1; then
   eval "$(load_library log_functions)"
 fi
@@ -74,12 +87,12 @@ fi
 if [[ $# -eq 0 ]]; then
   LOAD_LIBRARIES=("${AVAILABLE_LIBRARIES[@]}")
 else
-  LOAD_LIBRARIES=("$@")
+  LOAD_LIBRARIES=("${PROVIDED_LIBRARY_LIST[@]}")
 fi
 
-info "Loading libraries..."
+[[ -z ${SILENT_BOOTSTRAP:-} ]] && info "Loading libraries..."
 if load_libraries "${LOAD_LIBRARIES[@]}" >/dev/null && eval "$(load_libraries "${LOAD_LIBRARIES[@]}")"; then
-  info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+  [[ -z ${SILENT_BOOTSTRAP:-} ]] && info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
 else
   error "Failed to load libraries"
 fi

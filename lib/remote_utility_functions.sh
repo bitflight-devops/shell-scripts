@@ -155,3 +155,19 @@ getRemoteFileContent() {
   checkExistURL "${url}"
   curl -s -X 'GET' -L "${url}"
 }
+
+basic_wget() {
+  # shellcheck disable=SC2034
+  IFS=/ read -r proto z host query <<<"$1"
+  exec 3<"/dev/tcp/${host}/80"
+  {
+    echo "GET /${query} HTTP/1.1"
+    echo "connection: close"
+    echo "user-agent: wget"
+
+    echo "host: ${host}"
+    echo "accept: */*"
+    echo
+  } >&3
+  sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(basename "$1")"
+}

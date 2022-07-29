@@ -807,9 +807,9 @@ installer_dependencies() {
   INSTALL_DEPS=false
   if [[ ${#REQUIRED_DEPENDENCIES[@]} -eq 0 ]]; then
     INSTALL_DEPS=false
-  elif [[ -n "${NONINTERACTIVE}" ]]; then
+  elif [[ -n "${NONINTERACTIVE-}" ]]; then
     INSTALL_DEPS=true
-  elif [[ -n "${INTERACTIVE}" ]]; then
+  elif [[ -n "${INTERACTIVE-}" ]]; then
     # If we're running in an interactive shell, we need to ask the user for
     # permission to install the dependencies.
 

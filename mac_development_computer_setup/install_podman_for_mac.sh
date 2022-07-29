@@ -23,7 +23,7 @@ xattr -r -d com.apple.quarantine /Applications/Hammerspoon.app
 # killall cfprefsd
 # defaults read org.hammerspoon.Hammerspoon
 
-podman machine init
+podman machine init -v "${HOME}:${HOME}"
 podman machine stop
 podman machine set --rootful
 podman machine start

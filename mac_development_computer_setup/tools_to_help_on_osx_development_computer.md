@@ -199,7 +199,8 @@ python -m pip install --upgrade pip  2>&1 |  grep -v "DEPRECATION:"
 python -m pip install --upgrade pipx 2>&1 |  grep -v "DEPRECATION:"
 
 # Initialise Utilities
-podman machine init
+podman machine init -v "${HOME}:${HOME}"
+ssh-add ~/.ssh/podman-machine-default  2>/dev/null || true
 podman machine set --rootful # Optionally Enable root permissions to allow access to low port numbers 0-1024
 sudo "$(brew --prefix podman)/bin/podman-mac-helper" install # Install podman-mac-helper
 # Add podman desktop helper, which will allow you to auto start podman at computer startup
@@ -254,9 +255,6 @@ else
   echo "Failed to identify explainshell container"
   podman ps container -f name=explainshell
 fi
-
-
-
 
 podman machine stop || true
 podman machine start

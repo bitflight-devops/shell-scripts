@@ -1,0 +1,65 @@
+name: Load common bash functions
+description: >
+  Loads common bash functions used by other actions.
+inputs:
+  tag:
+    required: false
+    type: string
+  branch:
+    required: false
+    type: string
+    default: "main"
+outputs:
+  loaded:
+    value: ${{ steps.bash_functions.outputs.loaded }}
+  path:
+    value: ${{ steps.bash_functions.outputs.path }}
+env:
+  SHELL_SCRIPTS_GITHUB_REPOSITORY: "bitflight-devops/shell-scripts"
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get Version To Checkout
+      id: version
+      shell: bash
+      run: |
+        if [[ -z "${{inputs.tag}}" ]]; then
+          ref="${{ branch }}"
+          ref="refs/tags/${ref#refs/heads/}"
+        else
+          ref="${{inputs.tag}}"
+          ref="refs/tags/${ref#refs/tags/}"
+        fi
+        echo "::set-output ref=${ref}"
+        rm -rf "/home/runner/shell-scripts"
+    - uses: actions/checkout@v3
+      name: Checkout Code
+      continue-on-error: true
+      with:
+        token: ${{ github.token }}
+        path: /home/runner/shell-scripts
+        repository: bitflight-devops/shell-scripts
+        ref: ${{ steps.version.outputs.ref }}
+        fetch-depth: 1
+    - name: Publish Bash Functions To Job Steps
+      id: bash_functions
+      shell: bash
+      working-directory: /home/runner/shell-scripts
+      env:
+        BFD_REPOSITORY: /home/runner/shell-scripts
+        SILENT_BOOTSTRAP: true
+      run: |
+        BOOTSTRAP="${BFD_REPOSITORY}/lib/bootstrap.sh"
+        echo "BFD_REPOSITORY=${BFD_REPOSITORY}" >>"${GITHUB_ENV}"
+        echo "::set-output name=path::${BOOTSTRAP}"
+        echo "SILENT_BOOTSTRAP=true" >>"${GITHUB_ENV}"
+        SILENT_BOOTSTRAP=1 . lib/bootstrap.sh
+        if [ -z "${BASH_ENV}" ]; then
+          export BASH_ENV="${BOOTSTRAP}"
+          echo "BASH_ENV=${BASH_ENV}" >>"${GITHUB_ENV}"
+          echo "Loaded Bash Functions to BASH_ENV"
+          echo "::set-output name=loaded::true"
+        else
+          echo "::set-output name=loaded::false"
+        fi
