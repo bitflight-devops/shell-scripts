@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Current Script Directory
+if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+  SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
+fi
 if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
@@ -9,7 +12,9 @@ if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
 fi
-
+export SCRIPTS_LIB_DIR
+export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
+export LOG_FUNCTIONS_LOADED=1
 [[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${COLOR_AND_EMOJI_VARIABLES_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/color_and_emoji_variables.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -74,6 +79,7 @@ running_in_ci() {
   [[ -n ${CI} ]]
 }
 
+# Duplicate of function in lib/log_functions.sh
 get_log_type() {
   set +x
   LOG_TYPES=(
@@ -83,34 +89,84 @@ get_log_type() {
     "notice"
     "debug"
   )
+  if [[ -z "${GITHUB_ACTIONS-}" ]]; then
+    LOG_TYPES+=(
+      "success"
+      "failure"
+      "step"
+    )
+  fi
   local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
-  if [[ "${LOG_TYPES[*]}" =~ ( |^)"${logtype}"( |\$) ]]; then
+  if [[ "${LOG_TYPES[*]}" =~ ( |^)"${logtype}"( |$) ]]; then
     printf '%s' "${logtype}"
   else
     echo ""
   fi
 }
+
 get_log_color() {
-  if [[ -n ${GITHUB_ACTIONS} ]]; then
+  if [[ -n ${GITHUB_ACTIONS-} ]]; then
     printf '%s' "::"
     return
-  elif [[ -n ${CI} ]]; then
+  elif [[ -n ${CI-} ]]; then
     printf '%s' "##"
     return
   fi
-  # shellcheck disable=SC2034
+
   LOG_COLOR_error="${RED}"
   LOG_COLOR_info="${GREEN}"
   LOG_COLOR_warning="${YELLOW}"
   LOG_COLOR_notice="${MAGENTA}"
   LOG_COLOR_debug="${GREY}"
+  LOG_COLOR_step="${COLOR_BOLD_CYAN}"
+  LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
+  LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
+  local arg="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  local -r logtype="$(get_log_type "${arg}")"
 
-  local -r logtype="$(get_log_type "${1}")"
   if [[ -z "${logtype}" ]]; then
     printf '%s' "${NO_COLOR}"
   else
     eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
   fi
+}
+
+indent_style() {
+  local logtype="${1}"
+  local -r width="${2}"
+
+  local final_style=''
+  case "${logtype}" in
+  notice)
+    style=" "
+    final_style="${STARTING_STAR}"
+    ;;
+  step)
+    style=" "
+    final_style="${STEP_STAR}"
+    ;;
+  failure)
+    style=" "
+    final_style="${CROSS_MARK}"
+    ;;
+  success)
+    style=" "
+    final_style="${CHECK_MARK_BUTTON}"
+    ;;
+  info)
+    style=" "
+    final_style="${INFO_ICON} "
+    logtype=''
+    ;;
+  *)
+    style=""
+    final_style="-->"
+    ;;
+  esac
+  local -r indent_length="$((width - ${#logtype}))"
+  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
+  printf -- "${style}%.0s" $(seq "${indent_length}")
+  printf '%s' "${final_style}"
 }
 
 simple_log() {
@@ -121,13 +177,17 @@ simple_log() {
   else
     shift
     if [[ "${logcolor}" != "::" ]]; then
-      local delimiter='// '
-      local bold="${BOLD}"
+      local indent_width=11
+      local indent="$(indent_style "${logtype}" "${indent_width}")"
+      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
+      # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
+      printf -v space "%*s" "$((indent_width + 2))" ''
+      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
     else
-      local delimiter=''
-      local bold=''
+      printf -v log_prefix '::%s ::' "${logtype}"
+      local -r msg="$(escape_github_command_data "${*}")"
     fi
-    printf '%s%s%s%s %s%s%s%s\n' "${bold}" "${logcolor}" "${logtype}" "${logcolor}" "${delimiter}" "${NO_COLOR}" "${*}" "${NO_COLOR}"
+    printf '%s%s\n' "${log_prefix}" "${msg}"
   fi
 }
 
@@ -208,7 +268,7 @@ log_output() {
   local -r labelUppercase="$(uppercase "${1}")"
   shift
   if iscolorcode "$(colorcode "${1}")"; then
-    local -r color="${1}"
+    local -r color="$(colorcode "${1}")"
     shift
   else
     local -r color=""
@@ -216,12 +276,16 @@ log_output() {
   local msg="${*}"
 
   if caller 1 >/dev/null 2>&1; then
-    local -r function_name="$(caller 1 | awk '{print $2}')"
+    local function_name="$(caller 1 | awk '{print $2}')"
+    [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
   fi
   if running_in_github_actions; then
-    github_log "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}:}" "${msg}"
+    github_log "${labelUppercase}" "${function_name:+${function_name}:}${msg}"
   else
-    printf "[%s%5s%s] %s%s\n" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}:}" "${msg}"
+    indent_width=7
+    printf -v space "%*s" "$((indent_width))" ''
+    local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
+    printf "%s[%s%5s%s] %s%s\n" "${COLOR_RESET:-}" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}: }" "${msg}"
   fi
 
   {
@@ -281,7 +345,7 @@ failure() {
 
 success() {
   local -r message="${*}"
-  log_output "0" "SUCCESS" "${COLOR_BRIGHT_YELLOW:-}" "${CHECK_MARK_BUTTON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "SUCCESS" "COLOR_BRIGHT_YELLOW" "${CHECK_MARK_BUTTON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
 }
 
 pipe_errors_to_github_workflow() {
@@ -358,5 +422,3 @@ run_as_root() {
   fi
   ${sh_c} "${@}"
 }
-
-export LOG_FUNCTIONS_LOADED=1

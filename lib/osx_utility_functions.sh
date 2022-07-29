@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export OSX_UTILITY_FUNCTIONS_LOADED=1
 command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
@@ -12,7 +13,7 @@ brew_app_directory() {
         readlink -f "$(brew --prefix "$@")"
       else
         for app in "$@"; do
-        echo "$(brew --cellar "$app")/$(brew info --json "$app" | jq -r '.[0].installed[0].version')"
+        echo "$(brew --cellar "${app}")/$(brew info --json "${app}" | jq -r '.[0].installed[0].version')"
         done
       fi
     fi

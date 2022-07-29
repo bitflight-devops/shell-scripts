@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Current Script Directory
+if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+  SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
+fi
 if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
@@ -9,11 +12,16 @@ if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
 fi
-
+export SCRIPTS_LIB_DIR
+export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
+export GITHUB_CORE_FUNCTIONS_LOADED=1
 [[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${LOG_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
+running_in_github_actions() {
+  [[ -n ${GITHUB_ACTIONS} ]]
+}
 running_in_github_actions || GITHUB_STEP_SUMMARY="summary.md"
 
 step_summary() (
@@ -149,5 +157,3 @@ escape_github_command_property() {
   local -r data="${1}"
   printf '%s' "${data}" | perl -ne '$_ =~ s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g;s/:/%3A/g;s/,/%2C/g;print;'
 }
-
-export GITHUB_CORE_FUNCTIONS_LOADED=1

@@ -5,6 +5,9 @@ BASE_INSTALL_DIR="${HOME}/.config/${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
 SCRIPTS_LIB_DIR_FOUND=0
 is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
 # Current Script Directory
+if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+  SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
+fi
 if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
@@ -14,6 +17,8 @@ if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
 fi
+export SCRIPTS_LIB_DIR
+export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 # Check if the SCRIPTS_LIB_DIR is actually in the lib repository folder
 if is_scripts_lib_dir "${SCRIPTS_LIB_DIR}"; then
   SCRIPTS_LIB_DIR_FOUND=1
