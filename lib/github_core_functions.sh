@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -20,7 +20,7 @@ export GITHUB_CORE_FUNCTIONS_LOADED=1
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
 running_in_github_actions() {
-  [[ -n ${GITHUB_ACTIONS} ]]
+  [[ -n ${GITHUB_ACTIONS:-} ]]
 }
 running_in_github_actions || GITHUB_STEP_SUMMARY="summary.md"
 

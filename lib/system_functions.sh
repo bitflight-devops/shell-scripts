@@ -37,7 +37,7 @@ get_distribution() {
 
 process_is_running() {
   PID="$1"
-  if [[ -n ${PID} ]]; then
+  if [[ -n ${PID:-} ]]; then
     kill -0 "${PID}" >/dev/null 2>&1
     return $?
   fi

@@ -5,7 +5,7 @@ BASE_INSTALL_DIR="${HOME}/.config/${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
 SCRIPTS_LIB_DIR_FOUND=0
 is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -37,7 +37,7 @@ else
       GIT_BASE_DIR="${SCRIPTS_LIB_DIR}"
     fi
 
-    if [[ -n ${GIT_BASE_DIR} ]] && is_scripts_lib_dir "${GIT_BASE_DIR}/lib"; then
+    if [[ -n ${GIT_BASE_DIR:-} ]] && is_scripts_lib_dir "${GIT_BASE_DIR}/lib"; then
       SCRIPTS_LIB_DIR="${GIT_BASE_DIR}/lib"
       SCRIPTS_LIB_DIR_FOUND=1
     fi

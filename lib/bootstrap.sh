@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -58,7 +58,7 @@ load_library() {
 
 load_libraries() {
   declare -a LIBRARIES=("$@")
-  if [[ -n ${SCRIPTS_LIB_DIR} ]] && [[ -x ${SCRIPTS_LIB_DIR} ]]; then
+  if [[ -n ${SCRIPTS_LIB_DIR:-} ]] && [[ -x ${SCRIPTS_LIB_DIR} ]]; then
     for library in "${LIBRARIES[@]}"; do
       load_library "${library}" || error "Library ${library} not found"
     done

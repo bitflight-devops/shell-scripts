@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -84,7 +84,7 @@ add_ebcli_bin_paths() {
   else
     export PATH="${PATH}:${HOME}/.local/bin"
 
-    if [[ -n ${GITHUB_PATH} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v "${HOME}/.local/bin" "${GITHUB_PATH}"; then
+    if [[ -n ${GITHUB_PATH:-} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v "${HOME}/.local/bin" "${GITHUB_PATH}"; then
       echo "${HOME}/.local/bin" >>"${GITHUB_PATH}"
     fi
   fi
@@ -93,7 +93,7 @@ add_ebcli_bin_paths() {
     echo "Path added ${HOME}/.ebcli-virtual-env/executables"
   else
     export PATH="${EB_PACKAGE_PATH}/.ebcli-virtual-env/executables:${PATH}"
-    if [[ -n ${GITHUB_PATH} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v ".ebcli-virtual-env/executables" "${GITHUB_PATH}"; then
+    if [[ -n ${GITHUB_PATH:-} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v ".ebcli-virtual-env/executables" "${GITHUB_PATH}"; then
       echo "${EB_PACKAGE_PATH}/.ebcli-virtual-env/executables" >>"${GITHUB_PATH}"
     fi
   fi
@@ -288,7 +288,7 @@ environment_name_by_cname() {
     return 2
   fi
   DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
-  if [[ -n ${APPLICATION_NAME} ]]; then
+  if [[ -n ${APPLICATION_NAME:-} ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
   local -r cname_prefix="$(cname_prefix_by_type "${name_type}")"
@@ -300,9 +300,9 @@ environment_name_by_cname() {
 
 cname_by_environment_name() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
-    if [[ -n ${APPLICATION_NAME} ]]; then
+    if [[ -n ${APPLICATION_NAME:-} ]]; then
       DEARGS+=("--application-name" "${APPLICATION_NAME}")
     fi
     aws_run elasticbeanstalk describe-environments \
@@ -316,7 +316,7 @@ cname_by_environment_name() {
 
 cname_prefix_by_environment_name() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     cname_by_environment_name "${env}" | cut -d. -f1
   else
     error "${0}(): Environment name not provided"
@@ -328,13 +328,13 @@ cname_prefix_by_environment_name() {
 environment_state() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   DEARGS=("--no-paginate" "--output" "text" "--include-deleted")
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     DEARGS+=("--environment-names" "${env}")
   else
     error "${0}(): Environment name not provided"
     return 2
   fi
-  if [[ -n ${APPLICATION_NAME} ]]; then
+  if [[ -n ${APPLICATION_NAME:-} ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
   aws_run elasticbeanstalk describe-environments \
@@ -344,7 +344,7 @@ environment_state() {
 
 environment_exists() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     environment_state "${env}" | grep -i -E "(Ready|Launching|Updating|Terminating)"
   else
     error "${0}(): Environment name not provided"
@@ -354,7 +354,7 @@ environment_exists() {
 
 environment_state_ready() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     environment_state "${env}" | grep -i -e "Ready"
   else
     error "${0}(): Environment name not provided"
@@ -364,7 +364,7 @@ environment_state_ready() {
 
 environment_state_waitable() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     environment_state "${env}" | grep -i -E "(Ready|Launching|Updating)"
   else
     error "${0}(): Environment name not provided"
@@ -374,7 +374,7 @@ environment_state_waitable() {
 
 environment_state_terminating() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     environment_state "${env}" | grep -i "Terminating"
   else
     error "${0}(): Environment name not provided"
@@ -384,7 +384,7 @@ environment_state_terminating() {
 
 environment_state_terminated() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env} ]]; then
+  if [[ -n ${env:-} ]]; then
     environment_state "${env}" | grep -i "Terminated"
   else
     error "${0}(): Environment name not provided"
@@ -694,7 +694,7 @@ count_environments() {
 }
 
 environments() {
-  if [[ -n ${INSTANCEID} ]]; then
+  if [[ -n ${INSTANCEID:-} ]]; then
     debug "Environment logs from ${INSTANCEID} for ${ENVIRONMENT_NAME}"
     eb_run logs --stream --instance "${INSTANCEID}" "${ENVIRONMENT_NAME}"
   fi
@@ -707,13 +707,13 @@ stream_environment_events() {
   local -r event_path="$(mktemp)"
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   local -r pid="${2:-}"
-  if [[ -n ${pid} ]]; then
+  if [[ -n ${pid:-} ]]; then
     debug "Streaming environment logs from PID ${pid} for ${env}"
   else
     debug "Streaming environment logs for ${env}"
   fi
   while ! eb_run events "${env}" >/dev/null 2>&1; do
-    if [[ -n ${pid} ]] && ! process_is_running "${pid}"; then
+    if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
       debug "Streaming environment logs for ${env} stopped. [${pid}] has exited early"
       return 1
     fi
@@ -727,7 +727,7 @@ stream_environment_events() {
     else
       info "${line}"
     fi
-    if [[ -n ${pid} ]] && ! process_is_running "${pid}"; then
+    if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
       notice "Environment ${env} creation process [${pid}] has completed"
       break
     fi
@@ -799,7 +799,7 @@ eb_init() {
     return 1
   fi
   EB_ARGS=("--platform=${EB_PLATFORM}")
-  [[ -n ${REGION} ]] && EB_ARGS+=("--region=${REGION}")
+  [[ -n ${REGION:-} ]] && EB_ARGS+=("--region=${REGION}")
   [[ -n ${EC2_KEYNAME} ]] && EB_ARGS+=("--keyname=${EC2_KEYNAME}")
 
   eb_run init "${EB_ARGS[@]}" "${APPLICATION_NAME}"

@@ -245,7 +245,7 @@ rm -f "${PODMAN_GUI_INSTALLER_PATH}"
 podman container run --rm --name explainshell -p 5023:5000 -d spaceinvaderone/explainshell
 EXS_CONTAINER_ID="$(podman container ps -f name=explainshell --format='{{.ID}}' 2>/dev/null)"
 # Configure the container to start up at boot
-if [[ -n ${EXS_CONTAINER_ID} ]]; then
+if [[ -n ${EXS_CONTAINER_ID:-} ]]; then
 podman machine ssh "podman generate systemd --new --name \"${EXS_CONTAINER_ID}\" >> \"/etc/systemd/system/${EXS_CONTAINER_ID}.service\""
 "podman generate systemd --new --name \"${EXS_CONTAINER_ID}\" \>\> \"/etc/systemd/system/${EXS_CONTAINER_ID}.service\""
 podman machine ssh systemctl enable "${EXS_CONTAINER_ID}.service"
@@ -330,7 +330,7 @@ generate_antigen_cache() {
 source "${ANTIGEN_SOURCE_PATH}"
 antigen init ~/.antigenrc
 generate_antigen_cache
-[[ -n ${ZSH_CACHE_DIR} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions" # Fix gh plugin
+[[ -n ${ZSH_CACHE_DIR:-} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions" # Fix gh plugin
 
 # export PROMPT='$(gbt $?)'
 

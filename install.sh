@@ -93,7 +93,7 @@ get_log_type() {
     "notice"
     "debug"
   )
-  if [[ -z "${GITHUB_ACTIONS-}" ]]; then
+  if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
     LOG_TYPES+=(
       "success"
       "failure"
@@ -124,10 +124,10 @@ function start_step() {
 }
 
 get_log_color() {
-  if [[ -n ${GITHUB_ACTIONS-} ]]; then
+  if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     printf '%s' "::"
     return
-  elif [[ -n ${CI-} ]]; then
+  elif [[ -n ${CI:-} ]]; then
     printf '%s' "##"
     return
   fi
@@ -251,7 +251,7 @@ if [ -z "${BASH_VERSION:-}" ]; then
   abort "Bash is required to interpret this script."
 fi
 
-if [[ -n ${GITHUB_ACTIONS-} ]]; then
+if [[ -n ${GITHUB_ACTIONS:-} ]]; then
   BFD_PREFIX="${HOME}"
   CI=true
 fi
@@ -386,7 +386,7 @@ root_available() {
       if [[ $(SUDO_ASKPASS="${BIN_FALSE[*]}" sudo -A sh -c 'whoami;whoami' 2>&1 | wc -l) -eq 2 ]]; then
         echo "sudo"
         return 0
-      elif groups "${user}" | grep -q '(^|\b)(sudo|wheel)(\b|$)' && [[ -n ${INTERACTIVE-} ]]; then
+      elif groups "${user}" | grep -q '(^|\b)(sudo|wheel)(\b|$)' && [[ -n ${INTERACTIVE:-} ]]; then
         echo "sudo"
         return 0
       else
@@ -416,7 +416,7 @@ run_as_root() {
   fi
 }
 
-if [[ -n ${NONINTERACTIVE-} ]]; then
+if [[ -n ${NONINTERACTIVE:-} ]]; then
   BFD_PREFIX="${HOME}"
 fi
 
@@ -772,7 +772,7 @@ repeat() {
 
 install_dependencies() {
   local dependencies=("$@")
-  if [[ -n ${SHELL_SCRIPTS_LINUX} ]]; then
+  if [[ -n ${SHELL_SCRIPTS_LINUX:-} ]]; then
     if [[ -x "$(command -v apt-get)" ]]; then
       export DEBIAN_FRONTEND=noninteractive
         export APT_LISTCHANGES_FRONTEND=none

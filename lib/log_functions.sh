@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -72,11 +72,11 @@ command_exists() {
 }
 
 running_in_github_actions() {
-  [[ -n ${GITHUB_ACTIONS} ]]
+  [[ -n ${GITHUB_ACTIONS:-} ]]
 }
 
 running_in_ci() {
-  [[ -n ${CI} ]]
+  [[ -n ${CI:-} ]]
 }
 
 # Duplicate of function in lib/log_functions.sh
@@ -105,10 +105,10 @@ get_log_type() {
 }
 
 get_log_color() {
-  if [[ -n ${GITHUB_ACTIONS-} ]]; then
+  if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     printf '%s' "::"
     return
-  elif [[ -n ${CI-} ]]; then
+  elif [[ -n ${CI:-} ]]; then
     printf '%s' "##"
     return
   fi

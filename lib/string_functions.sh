@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
@@ -29,10 +29,10 @@ colorcode() {
   local -r color="${1}"
   if iscolorcode "${color}"; then
     perl -pe 's/(^\s*|\s*$)/Y/g;' <<<"${color}"
-  elif [[ -n ${color} ]]; then
+  elif [[ -n ${color:-} ]]; then
     local -r color_var_name="$(uppercase "${color}")"
     local colorcode="${!color_var_name}"
-    if [[ -n ${colorcode} ]] && iscolorcode "${colorcode}"; then
+    if [[ -n ${colorcode:-} ]] && iscolorcode "${colorcode}"; then
       perl -pe 's/(^\s*|\s*$)//gm;' <<<"${colorcode}"
     elif [[ -z ${DEBUG:-} ]]; then
       printf '%s' "${colorcode}"
