@@ -24,10 +24,9 @@ Yum & CentOS: `yum install -y -q curl`
 
 ### Install without prompts
 ```bash
-
 sudo -v 2>/dev/null || true # Prompt for sudo first
 NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")
-source "$BFD_REPOSITORY/lib/bootstrap.sh"
+source "$BFD_REPOSITORY/lib/bootstrap.sh" || true
 ```
 
 ## CLI Usage
