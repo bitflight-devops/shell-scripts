@@ -3,7 +3,7 @@
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -15,11 +15,11 @@ fi
 export SCRIPTS_LIB_DIR
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 export ELASTICBEANSTALK_FUNCTIONS_LOADED=1
-[[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
-[[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
-[[ -z ${LOG_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
-[[ -z ${GENERAL_UTILITY_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/general_utility_functions.sh"
-[[ -z ${GITHUB_CORE_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
+[[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
+[[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
+[[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
+[[ -z ${GENERAL_UTILITY_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/general_utility_functions.sh"
+[[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 
 # CLI Utility Functions
 
@@ -135,7 +135,7 @@ install_eb_cli() {
 
     mkdir -p ~/.cache
 
-    if [[ -z ${EB_INSTALLER_PATH} ]]; then
+    if [[ -z ${EB_INSTALLER_PATH:-} ]]; then
       set_env EB_INSTALLER_PATH "${HOME}/.cache/aws-elastic-beanstalk-cli-setup"
     fi
 
@@ -147,7 +147,7 @@ install_eb_cli() {
 
     add_ebcli_bin_paths
 
-    if [[ -z ${EB_PACKAGE_PATH} ]]; then
+    if [[ -z ${EB_PACKAGE_PATH:-} ]]; then
       set_env EB_PACKAGE_PATH "${HOME}/.local/aws-elastic-beanstalk-cli-package"
     fi
 
@@ -260,7 +260,7 @@ passive_cname_prefix() {
 
 cname_available() (
   set +o pipefail
-  if [[ -z ${1} ]]; then
+  if [[ -z ${1:-} ]]; then
     error "${0}(): missing cname prefix as arg"
     return 2
   fi
@@ -400,12 +400,12 @@ wait_for_ready() {
   local -r interval="${3:-${DEFAULT_WAIT_FOR_READY_RETRY_INTERVAL}}"
   local start_time="$(date +%s)"
   local end_time=$((start_time + timeout))
-  if [[ -z ${env} ]]; then
+  if [[ -z ${env:-} ]]; then
     error "${0}(): Environment name not provided"
     return 2
   fi
   while STATE=$(environment_state_waitable "${env}") && [[ $(date +%s) -lt ${end_time} ]]; do
-    if [[ -z ${STATE} ]]; then
+    if [[ -z ${STATE:-} ]]; then
       error "${0}(): FAIL: Environment ${env} status is Terminating or Terminated"
       return 1
     fi
@@ -433,12 +433,12 @@ wait_for_terminated() {
   local start_time="$(date +%s)"
   local grace_end_time=$((start_time + grace_timeout))
   local end_time=$((start_time + timeout))
-  if [[ -z ${env} ]]; then
+  if [[ -z ${env:-} ]]; then
     error '${0}(): Environment name not provided'
     return 2
   fi
   while STATE=$(environment_state_waitable "${env}") && [[ $(date +%s) -lt ${grace_end_time} ]]; do
-    if [[ -z ${STATE} ]]; then
+    if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
@@ -448,7 +448,7 @@ wait_for_terminated() {
     return 3
   fi
   while STATE=$(environment_state_terminating "${env}") && [[ $(date +%s) -lt ${end_time} ]]; do
-    if [[ -z ${STATE} ]]; then
+    if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
@@ -474,7 +474,7 @@ wait_for_environment_cname_release() {
   local grace_end_time=$((start_time + grace_timeout))
   local end_time=$((start_time + timeout))
 
-  if [[ -z ${env} ]]; then
+  if [[ -z ${env:-} ]]; then
     error '${0}(): Environment name not provided'
     return 2
   fi
@@ -493,7 +493,7 @@ wait_for_environment_cname_release() {
     if cname_available "${current_cname_prefix}"; then
       return 0
     fi
-    if [[ -z ${STATE} ]]; then
+    if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
@@ -502,7 +502,7 @@ wait_for_environment_cname_release() {
     if cname_available "${current_cname_prefix}"; then
       return 0
     fi
-    if [[ -z ${STATE} ]]; then
+    if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
@@ -516,9 +516,9 @@ wait_for_environment_cname_release() {
 }
 
 wait_for_passive_cname() {
-  if [[ -z ${1} ]]; then
+  if [[ -z ${1:-} ]]; then
     local -r env="$(environment_name_by_cname passive)"
-    if [[ -z ${env} ]]; then
+    if [[ -z ${env:-} ]]; then
       info "${0}(): No passive environment found"
       return 1
     fi
@@ -552,12 +552,12 @@ wait_for_ebs() {
   local -r interval="${4:-${DEFAULT_WAIT_FOR_EBS_RETRY_INTERVAL}}"
   local start_time="$(date +%s)"
   local end_time=$((start_time + timeout))
-  if [[ -z ${env} ]]; then
+  if [[ -z ${env:-} ]]; then
     error "${0}(): Environment name not provided"
     return 2
   fi
   while envcount=$(ebs_pending "${env}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
-    if [[ -z ${envcount} ]]; then
+    if [[ -z ${envcount:-} ]]; then
       return 1
     fi
     if [[ ${envcount} -gt 0 ]]; then
@@ -646,7 +646,7 @@ stop_current_eb_processes() (
 
 remove_passive() {
   local -r env="$(environment_name_by_cname passive)"
-  if [[ -z ${env} ]]; then
+  if [[ -z ${env:-} ]]; then
     info "${0}(): No passive environment found"
     return 0
   fi
@@ -741,7 +741,7 @@ create_environment() {
   local -r timeout="${TIMEOUT_IN_MINUTES:-25}"
 
   notice "Creating environment ${env} within application ${APPLICATION_NAME}"
-  if [[ -z ${DEPLOY_VERSION} ]]; then
+  if [[ -z ${DEPLOY_VERSION:-} ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
@@ -771,7 +771,7 @@ deploy_asset() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-20}"
   debug "Deploying asset to environment ${env} with version ${DEPLOY_VERSION}"
-  if [[ -z ${DEPLOY_VERSION} ]]; then
+  if [[ -z ${DEPLOY_VERSION:-} ]]; then
     error "The env variable DEPLOY_VERSION is required"
     return 1
   elif version_available "${DEPLOY_VERSION}"; then
@@ -794,7 +794,7 @@ deploy_asset() {
 
 eb_init() {
   debug "eb_init: Init EB CLI"
-  if [[ -z ${EB_PLATFORM} ]]; then
+  if [[ -z ${EB_PLATFORM:-} ]]; then
     error "eb_init: requires an EB_PLATFORM environment variable to exist"
     return 1
   fi
@@ -808,7 +808,7 @@ eb_init() {
 
 eb_load_config() {
   debug "eb_load_config: Load Config from file to EB: ${ENVIRONMENT_CFG}"
-  if [[ -z ${ENVIRONMENT_CFG} ]]; then
+  if [[ -z ${ENVIRONMENT_CFG:-} ]]; then
     error "eb_load_config: requires an ENVIRONMENT_CFG environment variable to exist"
     return 1
   fi

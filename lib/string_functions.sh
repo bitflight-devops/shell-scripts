@@ -3,7 +3,7 @@
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -34,7 +34,7 @@ colorcode() {
     local colorcode="${!color_var_name}"
     if [[ -n ${colorcode} ]] && iscolorcode "${colorcode}"; then
       perl -pe 's/(^\s*|\s*$)//gm;' <<<"${colorcode}"
-    elif [[ -z ${DEBUG} ]]; then
+    elif [[ -z ${DEBUG:-} ]]; then
       printf '%s' "${colorcode}"
     else
       printf ''

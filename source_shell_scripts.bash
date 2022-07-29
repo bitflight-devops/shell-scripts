@@ -8,7 +8,7 @@ is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -53,7 +53,7 @@ if [[ ${SCRIPTS_LIB_DIR_FOUND} -eq 0 ]]; then
   fi
 fi
 if [[ ${REQUIRES_INSTALLING} -eq 1 ]]; then
-  if [[ -z ${AUTO_INSTALL} ]]; then
+  if [[ -z ${AUTO_INSTALL:-} ]]; then
     echo "The shell-scripts library is not installed."
     echo "Please run the following command to install it:"
     echo "  curl -sL \"https://raw.githubusercontent.com/${SHELL_SCRIPTS_GITHUB_REPOSITORY}/main/install.sh\" | bash"

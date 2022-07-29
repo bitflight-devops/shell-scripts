@@ -3,7 +3,7 @@
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -15,9 +15,9 @@ fi
 export SCRIPTS_LIB_DIR
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 export GENERAL_UTILITY_FUNCTIONS_LOADED=1
-[[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
-[[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
-[[ -z ${LOG_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
+[[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
+[[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
+[[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
 export BOOLEAN_TRUE="(true|on|yes|1)"
 export BOOLEAN_FALSE="(false|off|no|0)"

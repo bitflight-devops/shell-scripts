@@ -18,10 +18,16 @@ Install Options as Environment Vars:
 * `INTERACTIVE=1` force interactive mode (default when running in a terminal)
 * `NONINTERACTIVE=1` force non-interactive mode (default when in CI environment)
 
+*Make sure that you have downloader like curl:*
+Debian & Ubuntu: `apt-get update -y -qq && apt-get install -y -qq curl`
+Yum & CentOS: `yum install -y -q curl`
+
+### Install without prompts
 ```bash
-# Make sure that you have downloader like curl:
-# apt-get update -y -qq && apt-get install -y -qq curl
-source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")
+
+sudo -v 2>/dev/null || true # Prompt for sudo first
+NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")
+source "$BFD_REPOSITORY/lib/bootstrap.sh"
 ```
 
 ## CLI Usage

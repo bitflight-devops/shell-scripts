@@ -5,7 +5,7 @@ fi
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -90,9 +90,9 @@ else
   LOAD_LIBRARIES=("${PROVIDED_LIBRARY_LIST[@]}")
 fi
 
-[[ -z ${SILENT_BOOTSTRAP:-} ]] && info "Loading libraries..."
+[[ -z ${SILENT_BOOTSTRAP:-:-} ]] && info "Loading libraries..."
 if load_libraries "${LOAD_LIBRARIES[@]}" >/dev/null && eval "$(load_libraries "${LOAD_LIBRARIES[@]}")"; then
-  [[ -z ${SILENT_BOOTSTRAP:-} ]] && info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+  [[ -z ${SILENT_BOOTSTRAP:-:-} ]] && info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
 else
   error "Failed to load libraries"
 fi

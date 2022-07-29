@@ -3,7 +3,7 @@
 if [[ -n ${BFD_REPOSITORY} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-if [[ -z ${SCRIPTS_LIB_DIR} ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
@@ -15,9 +15,9 @@ fi
 export SCRIPTS_LIB_DIR
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 export REMOTE_UTILITY_FUNCTIONS_LOADED=1
-[[ -z ${SYSTEM_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
-[[ -z ${STRING_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
-[[ -z ${LOG_FUNCTIONS_LOADED} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
+[[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
+[[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
+[[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
 #########################
 # FILE REMOTE UTILITIES #
@@ -101,14 +101,14 @@ downloadFile() {
     DOWNLOAD_ARGS+=(--no-http-keep-alive --compression=auto --continue)
     DOWNLOAD_ARGS+=(--dns-timeout=3 --waitretry=2 --tries=2)
     DOWNLOAD_ARGS+=(--read-timeout=-1 --connect-timeout=30 --xattr)
-    if [[ -z ${TO_STD_OUT} ]] && [[ ${overwrite} == 'false' ]]; then
+    if [[ -z ${TO_STD_OUT:-} ]] && [[ ${overwrite} == 'false' ]]; then
       DOWNLOAD_ARGS+=(--no-clobber)
     fi
     withBackoff wget -q -O "${destinationFile}" "${url}" "${DOWNLOAD_ARGS[@]}"
   elif command_exists curl || installCURLCommand >/dev/null 2>&1; then
     DOWNLOAD_ARGS=(--create-dirs)
     DOWNLOAD_ARGS+=(--fail --remote-time --compressed)
-    if [[ -z ${TO_STD_OUT} ]] && [[ -f ${destinationFile} ]]; then
+    if [[ -z ${TO_STD_OUT} ]] && [[ -f ${destinationFile:-} ]]; then
       lastDownloadedModifiedDate=$(stat -c '%y' "${destinationFile}")
       lastModifiedDate=$(TZ=GMT date -d "${lastDownloadedModifiedDate}" '+%a, %d %b %Y %T %Z')
       DOWNLOAD_ARGS+=(--header="If-Modified-Since: ${lastModifiedDate}")
