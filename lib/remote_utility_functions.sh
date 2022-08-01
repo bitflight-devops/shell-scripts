@@ -171,3 +171,58 @@ basic_wget() {
   } >&3
   sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(basename "$1")"
 }
+
+
+configure_bastion_ssh_tunnel() {
+  if [[ -z "${BASTION_HOST}" ]] || [[ -z "${BASTION_USER}" ]] || [[ -z "${BASTION_PRIVATE_KEY}" ]]; then
+    error "One or more essential bastion variables missing: BASTION_PRIVATE_KEY:'${BASTION_PRIVATE_KEY:0:10}' BASTION_HOST:'${BASTION_HOST}' BASTION_USER:'${BASTION_USER}'"
+    exit 1
+  fi
+  mkdir -p ~/.ssh
+  if [[ ! -f "${HOME}/.ssh/config" ]]; then
+    touch "${HOME}/.ssh/config"
+  fi
+  if ! grep -q "remotehost-proxy" "${HOME}/.ssh/config"; then
+    cat <<EOF >>"${HOME}/.ssh/config"
+Host remotehost-proxy
+    HostName ${BASTION_HOST}
+    User ${BASTION_USER}
+    IdentityFile ~/.ssh/bastion.pem
+    ControlPath ~/.ssh/remotehost-proxy.ctl
+    ForwardAgent yes
+    TCPKeepAlive yes
+    ConnectTimeout 5
+    ServerAliveInterval 60
+    ServerAliveCountMax 30
+
+EOF
+  fi
+  # ControlPath ~/.ssh/remotehost-proxy.ctl
+  touch ~/.ssh/known_hosts
+  rm -f ~/.ssh/bastion.pem
+  echo "${BASTION_PRIVATE_KEY}" | base64 -d >~/.ssh/bastion.pem
+  chmod 700 ~/.ssh || true
+  chmod 600 ~/.ssh/bastion.pem || true
+  if ! grep -q "${BASTION_HOST}" ~/.ssh/known_hosts; then
+    ssh-keyscan -T 15 -t rsa "${BASTION_HOST}" >>~/.ssh/known_hosts || true
+  fi
+
+}
+
+check_ssh_tunnel() {
+  ssh -O check remotehost-proxy >/dev/null 2>&1
+}
+
+open_bastion_ssh_tunnel() {
+  if ! check_ssh_tunnel; then
+    ssh -4 -f -T -M -L"${BINDHOST:-127.0.0.1}:${JDBC_LOCAL_PORT:-${JDBC_PORT:-3306}}:${JDBC_HOST}:${JDBC_PORT:-3306}" -N remotehost-proxy && echo "SSH tunnel connected"
+  else
+    echo "SSH tunnel already connected"
+  fi
+}
+
+close_bastion_ssh_tunnel() {
+  if [[ -f "${HOME}/.ssh/remotehost-proxy.ctl" ]]; then
+    ssh -T -O "exit" remotehost-proxy
+  fi
+}

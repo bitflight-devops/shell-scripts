@@ -22,6 +22,11 @@ export ELASTICBEANSTALK_FUNCTIONS_LOADED=1
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 
 # CLI Utility Functions
+getProperty() {
+  PROP_KEY="$1"
+  PROPERTY_FILE="$2"
+  grep "${PROP_KEY}" "${PROPERTY_FILE}" | awk -F "=" '{print $2}' | sed "s/[\ '\"]//g"
+}
 
 apt_fast_dependencies() {
   APPS_TO_INSTALL=()

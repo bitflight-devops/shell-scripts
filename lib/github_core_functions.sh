@@ -19,6 +19,19 @@ export GITHUB_CORE_FUNCTIONS_LOADED=1
 [[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
+check_if_tag_created() {
+  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" >/dev/null 2>&1 &&
+    git describe --exact-match >/dev/null 2>&1
+}
+get_prerelease_suffix() {
+  if [[ $# -eq 0 ]]; then
+    echo "RC"
+  else
+    SUFFIX="$(echo "${1}" | sed -e 's;^refs/.*/;;g' -e 's;^.*/;;g')"
+    export SUFFIX
+  fi
+}
+
 running_in_github_actions() {
   [[ -n ${GITHUB_ACTIONS:-} ]]
 }

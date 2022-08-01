@@ -57,3 +57,74 @@ add_to_path() {
     fi
   fi
 }
+
+
+getLastAptGetUpdate() {
+  local aptDate="$(stat -c %Y '/var/cache/apt')"
+  local nowDate="$(date +'%s')"
+
+  printf "%d" "$((nowDate - aptDate))"
+}
+
+runAptGetUpdate() (
+  set +x
+  local lastAptGetUpdate="$(getLastAptGetUpdate)"
+  if [[ $# -gt 0 ]] && ! isEmptyString "${updateInterval:-}"; then
+    local updateInterval="${1:-}"
+  else
+    updateInterval="$((24 * 60 * 60))"
+  fi
+
+  if [[ ${lastAptGetUpdate} -gt ${updateInterval} ]]; then
+    if command_exists apt-fast; then
+      info "apt-fast update -qq"
+      run_as_root apt-fast update -qq -m
+    else
+      info "apt-get update -qq"
+      run_as_root apt-get update -qq -m
+    fi
+  else
+    local lastUpdate="$(date -u -d @"${lastAptGetUpdate}" +'%-Hh %-Mm %-Ss')"
+
+    info "\nSkip apt-get update because its last run was '${lastUpdate}' ago"
+  fi
+)
+
+prefix_sudo() {
+  if command_exists sudo && ! sudo -v >/dev/null 2>&1; then
+    echo sudo
+  fi
+}
+
+app_installer() (
+  set +x
+  if command_exists apt-fast; then
+    runAptGetUpdate
+    run_as_root apt-fast -y "$@" --no-install-recommends
+  elif command_exists yum; then
+    run_as_root yum "$@"
+  elif command_exists apt-get; then
+    runAptGetUpdate
+    run_as_root apt-get -y "$@" --no-install-recommends
+  elif command_exists brew; then
+    brew "$@"
+  else
+    debug "Can't install: " "$@"
+    return 1
+  fi
+)
+
+install_app() (
+  set +x
+  # Usage: install_app <app name> [second app] [third app]
+  # Is App installed?
+  INSTALL_LIST=("${@}")
+
+  if [[ ${#INSTALL_LIST[@]} -gt 0 ]]; then
+    if is_darwin; then
+      app_installer install "${INSTALL_LIST[@]}"
+    elif [[ "$(uname -s | cut -c1-5)" == "Linux" ]]; then
+      app_installer install -y -qq "${INSTALL_LIST[@]}"
+    fi
+  fi
+)
