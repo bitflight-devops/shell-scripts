@@ -272,10 +272,10 @@ log_output() {
   shift
   if iscolorcode "$(colorcode "${1}")"; then
     local -r color="$(colorcode "${1}")"
-    shift
   else
     local -r color=""
   fi
+  shift
   local msg="${*}"
 
   if caller 1 >/dev/null 2>&1; then
