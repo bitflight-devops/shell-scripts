@@ -38,6 +38,43 @@ Load the functions:
 . lib/bootstrap.sh
 ```
 
+Add this to the top of scripts that need to use the functions:
+
+```bash
+#!/usr/bin/env bash
+if [[ -z ${BFD_REPOSITORY:-} ]]; then
+  if [[ -x "/home/bitflight-devops/.shell-scripts" ]]; then
+    export BFD_REPOSITORY="/home/bitflight-devops/.shell-scripts"
+  elif [[ -x "${HOME}/.shell-scripts" ]]; then
+    export BFD_REPOSITORY="${HOME}/.shell-scripts"
+  elif [[ -x "/usr/local/.shell-scripts" ]]; then
+    export BFD_REPOSITORY="usr/local/.shell-scripts"
+  elif [[ -x "/opt/bitflight-devops/.shell-scripts" ]]; then
+    export BFD_REPOSITORY="/opt/bitflight-devops/.shell-scripts"
+  fi
+fi
+
+if [[ -n ${BFD_REPOSITORY:-} ]]; then
+  source "${BFD_REPOSITORY}/lib/bootstrap.sh" || true
+elif [[ -n "${SCRIPTS_LIB_DIR}" ]]; then
+  source "${SCRIPTS_LIB_DIR}/bootstrap.sh" || true
+else
+  if command -v curl >/dev/null 2>&1; then
+    NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh") || true
+  elif command -v wget >/dev/null 2>&1; then
+    NONINTERACTIVE=1 source <(wget -q "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh") || true
+  fi
+  if [[ -x "${SCRIPTS_LIB_DIR}/bootstrap.sh" ]]; then
+    source "${SCRIPTS_LIB_DIR}/bootstrap.sh" || true
+  else
+    echo "Failed to run bootstrap.sh"
+    echo "Please install the shell-scripts repository from github.com/bitflight-devops/shell-scripts"
+  fi
+fi
+
+## Continue the script
+
+```
 ## Action Usage
 
 

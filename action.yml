@@ -38,16 +38,16 @@ runs:
       continue-on-error: true
       with:
         token: ${{ github.token }}
-        path: /home/runner/shell-scripts
+        path: /home/runner/.cache/.shell-scripts
         repository: bitflight-devops/shell-scripts
         ref: ${{ steps.version.outputs.ref }}
         fetch-depth: 1
     - name: Publish Bash Functions To Job Steps
       id: bash_functions
       shell: bash
-      working-directory: /home/runner/shell-scripts
+      working-directory: /home/runner/.cache/shell-scripts
       env:
-        BFD_REPOSITORY: /home/runner/shell-scripts
+        BFD_REPOSITORY: /home/runner/.cache/.shell-scripts
         SILENT_BOOTSTRAP: true
       run: |
         BOOTSTRAP="${BFD_REPOSITORY}/lib/bootstrap.sh"

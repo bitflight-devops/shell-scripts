@@ -48,6 +48,7 @@ COLOR_BG_WHITE=$'\e[1;47m'
 COLOR_RESET=$'\e[0m'
 
 INFO_ICON=$'ℹ️'
+DEBUG_ICON=$'🛠️'
 STARTING_STAR=$'⭐'
 STEP_STAR=$'✨'
 HOURGLASS_IN_PROGRESS=$'⏳' # ⏳ hourglass not done
@@ -60,6 +61,40 @@ SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
 MAIN_USER="$(id -un 2>/dev/null || true)"
+
+sourced=0
+if [[ -n "${ZSH_VERSION:-}" ]]; then
+  case ${ZSH_EVAL_CONTEXT:-} in *:file) sourced=1 ;; esac
+elif [[ -n "${BASH_VERSION:-}" ]]; then
+  (return 0 2>/dev/null) && sourced=1
+else # All other shells: examine $0 for known shell binary filenames.
+  # Detects `sh` and `dash`; add additional shell filenames as needed.
+  case ${0##*/} in sh | -sh | dash | -dash) sourced=1 ;; esac
+fi
+
+in_quiet_mode() {
+  if [[ -n ${DEBUG:-} ]]; then
+    # not quiet
+    return 1
+  elif [[ -n "${SHELL_SCRIPTS_QUIET:-}" ]]; then
+    # quiet
+    return 0
+  elif [[ ${sourced} -eq 1 ]] && [[ ! -t 0 ]]; then
+    # sourced but not interactive - quiet
+    return 0
+  else
+    # not sourced or interactive - not quiet
+    return 1
+  fi
+}
+
+run_quietly() {
+  if in_quiet_mode; then
+    "$@" >/dev/null 2>&1
+  else
+    "$@"
+  fi
+}
 
 command_exists() { command -v "$@" >/dev/null 2>&1; }
 is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
@@ -184,7 +219,11 @@ indent_style() {
   info)
     style=" "
     final_style="${INFO_ICON} "
-    logtype=''
+    # logtype=''
+    ;;
+  debug)
+    style=" "
+    final_style="${DEBUG_ICON:-} "
     ;;
   *)
     style=""
@@ -198,6 +237,7 @@ indent_style() {
 }
 
 simple_log() {
+  in_quiet_mode && return 0
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
   if [[ -z "${logtype}" ]]; then
@@ -223,8 +263,9 @@ abort() {
   simple_log "error" "$@" >&2
   exit 1
 }
+
 execute() {
-  if ! "$@"; then
+  if ! run_quietly "$@"; then
     abort "$(printf "Failed during: %s" "$(shell_join "$@")")"
   fi
 }
@@ -234,11 +275,14 @@ warn() { simple_log warning "$@"; }
 warning() { simple_log warning "$@"; }
 notice() { simple_log notice "$@"; }
 info() { simple_log info "$@"; }
-debug() { simple_log debug "$@"; }
 chomp() { printf "%s" "${1/"$'\n'"/}"; }
-
+debug() {
+  if [[ -n "${DEBUG:-}" ]]; then
+    simple_log debug "$@"
+  fi
+}
 ohai() {
-  printf "${BLUE}==>${BOLD} %s${NO_COLOR}\n" "$(shell_join "$@")"
+  run_quietly printf "${BLUE}==>${BOLD} %s${NO_COLOR}\n" "$(shell_join "$@")"
 }
 
 downloader_installed() {
@@ -251,9 +295,8 @@ if [ -z "${BASH_VERSION:-}" ]; then
   abort "Bash is required to interpret this script."
 fi
 
-if [[ -n ${GITHUB_ACTIONS:-} ]]; then
-  BFD_PREFIX="${HOME}"
-  CI=true
+if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
+  BFD_PREFIX="${HOME%./}/.cache"
 fi
 
 # Check if script is run with force-interactive mode in CI
@@ -267,62 +310,52 @@ if [[ -n "${INTERACTIVE-}" && -n "${NONINTERACTIVE-}" ]]; then
   abort 'Both `$INTERACTIVE` and `$NONINTERACTIVE` are set. Please unset at least one variable and try again.'
 fi
 
+debug "checking which mode to use"
 # Check if script is run non-interactively (e.g. CI)
 # If it is run non-interactively we should not prompt for passwords.
 # Always use single-quoted strings with `exp` expressions
 # shellcheck disable=SC2016
 if [[ -z "${NONINTERACTIVE-}" ]]; then
   if [[ -n "${CI-}" ]]; then
-    warn 'Running in non-interactive mode because `$CI` is set.'
+    debug 'Running in non-interactive mode because `$CI` is set.'
     NONINTERACTIVE=1
-  elif [[ ! -t 0 ]]; then
+    unset INTERACTIVE
+  elif [[ ! -t 0 ]] && [[ ${sourced} -eq 1 ]]; then
     if [[ -z "${INTERACTIVE-}" ]]; then
-      warn 'Running in non-interactive mode because `stdin` is not a TTY.'
+      debug 'Running in non-interactive mode because `stdin` is not a TTY.'
       NONINTERACTIVE=1
+      unset INTERACTIVE
     else
-      warn 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
+      debug 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
     fi
+  else
+    debug 'Running in interactive mode.'
+    INTERACTIVE=1
+    unset NONINTERACTIVE || true
   fi
 else
-  ohai 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
+  debug 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
 fi
 
 # USER isn't always set so provide a fall back for the installer and subprocesses.
-if [[ -z "${USER-}" ]]; then
+if [[ -z "${USER:-}" ]]; then
+  debug "No USER variable, creating one"
   USER="$(chomp "$(id -un)")"
   export USER
 fi
 
 # First check OS.
-OS="$(uname)"
+OS="$(/usr/bin/uname 2>/dev/null || uname)"
 if [[ "${OS}" == "Linux" ]]; then
   SHELL_SCRIPTS_LINUX=1
 elif [[ "${OS}" != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
+BFD_PREFIX_DEFAULT="${HOME}"
+BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
 
 if [[ -z "${SHELL_SCRIPTS_LINUX-}" ]]; then
   UNAME_MACHINE="$(/usr/bin/uname -m)"
-
-  if [[ "${UNAME_MACHINE}" == "arm64" ]]; then
-    # On ARM macOS, this script installs to /opt/${SHELL_SCRIPTS_OWNER} only
-    if [[ ${USER} == 'root' ]]; then
-      BFD_PREFIX_DEFAULT="/opt/${SHELL_SCRIPTS_OWNER}"
-    else
-      BFD_PREFIX_DEFAULT="${HOME}"
-    fi
-    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
-  else
-    # On Intel macOS, this script installs to /usr/local only
-
-    if [[ ${USER} == 'root' ]]; then
-      BFD_PREFIX_DEFAULT="/usr/local"
-    else
-      BFD_PREFIX_DEFAULT="${HOME}"
-    fi
-    BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
-  fi
-  BFD_CACHE="${HOME}/Library/Caches/${SHELL_SCRIPTS_OWNER}"
 
   STAT_PRINTF=("stat" "-f")
   PERMISSION_FORMAT="%A"
@@ -334,17 +367,6 @@ if [[ -z "${SHELL_SCRIPTS_LINUX-}" ]]; then
   INSTALL=("/usr/bin/install" -d -o "root" -g "wheel" -m "0755")
 else
   UNAME_MACHINE="$(uname -m)"
-
-  # On Linux, it installs to /home/${SHELL_SCRIPTS_GITHUB_REPOSITORY} if you have sudo access
-  # and ~/.bitflight-devopsif run interactively.
-
-  if [[ ${USER} == 'root' ]]; then
-    BFD_PREFIX_DEFAULT="/home/${SHELL_SCRIPTS_OWNER}"
-  else
-    BFD_PREFIX_DEFAULT="${HOME}"
-  fi
-  BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
-  BFD_CACHE="${HOME}/.cache/${SHELL_SCRIPTS_OWNER}"
 
   STAT_PRINTF=("stat" "--printf")
   PERMISSION_FORMAT="%a"
@@ -454,7 +476,8 @@ test_writeable() {
 create_script_directory() {
   local -r user="$(id -un 2>/dev/null || true)"
   local -r path="$1"
-  local -r permissions="ug+wrx"
+  local -r permissions="0755"
+  local fix_ownership='false'
   if [[ -d "${path}" ]]; then
     if ! test_writeable "${path}"; then
       info "The directory ${YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
@@ -463,12 +486,14 @@ create_script_directory() {
       return 0
     fi
   else
+
     info "Attempting to create ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
     if ! execute "${MKDIR[@]}" "${path}"; then
       if [[ ${user} != 'root' ]]; then
         if ! run_as_root "${MKDIR[@]}" "${path}"; then
           abort "Failed to create ${YELLOW}${path}${RED} as root."
         else
+          fix_ownership='true'
           info "Created ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}root${NO_COLOR}."
         fi
       else
@@ -479,10 +504,10 @@ create_script_directory() {
     fi
   fi
 
-  if [[ -d "${path}" ]]; then
+  if [[ -d "${path}" ]] && [[ ${fix_ownership} == 'true' ]]; then
     info "Setting ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
     run_as_root "${CHOWN[@]}" "${user}" "${path}" 2>/dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    info "Setting permissions on ${path} to ${permissions}"
+    info "Setting permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
     run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2>/dev/null || abort "Failed to set permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
   fi
 
@@ -497,33 +522,27 @@ create_script_directory() {
 
 create_directories() {
   create_script_directory "${BFD_REPOSITORY}"
-  create_script_directory "${BFD_CACHE}"
 }
 
-require_sudo() {
+# require_sudo() {
 
-  local -r user="$(id -un 2>/dev/null || true)"
-  info "Running install as ${user}"
-  local -r SUDO_CMD="$(root_available)"
-  ROOT_IS_AVAILABLE=$?
-  REQUIRE_SUDO=0
+#   local -r user="$(id -un 2>/dev/null || true)"
+#   info "Running install as ${user}"
+#   local -r SUDO_CMD="$(root_available)"
+#   ROOT_IS_AVAILABLE=$?
+#   REQUIRE_SUDO=0
 
-  if ! test_writeable "${BFD_CACHE}" "${BFD_REPOSITORY}"; then
-    ohai "Unable to write to ${BFD_CACHE} and ${BFD_REPOSITORY}."
-    REQUIRE_SUDO=0
-  fi
+#   if ! test_writeable "${BFD_REPOSITORY}"; then
+#     ohai "Unable to write to ${BFD_REPOSITORY}."
+#     REQUIRE_SUDO=0
+#   fi
 
-  if [[ ${REQUIRE_SUDO} -eq 0 ]] && [[ ${ROOT_IS_AVAILABLE} -eq 1 ]]; then
-    ohai "This command requires root access to install the scripts to the ${BFD_REPOSITORY}.\nYou can set a different install prefix using the BFD_PREFIX environment variable."
-  fi
+#   if [[ ${REQUIRE_SUDO} -eq 0 ]] && [[ ${ROOT_IS_AVAILABLE} -eq 1 ]]; then
+#     ohai "This command requires root access to install the scripts to the ${BFD_REPOSITORY}.\nYou can set a different install prefix using the BFD_PREFIX environment variable."
+#   fi
 
-  return "${REQUIRE_SUDO}"
-}
-if ! have_sudo_access || [[ ${MAIN_USER} != 'root' ]]; then
-  ohai "This script requires sudo access to install to the selected directory."
-  ohai "If you already have sudo access, you can run this script with 'sudo'."
-  abort "Please re-run this script with sudo."
-fi
+#   return "${REQUIRE_SUDO}"
+# }
 
 get_last_github_author_email() {
   if command_exists jq && [[ -f "${GITHUB_EVENT_PATH:-}" ]]; then
@@ -566,32 +585,39 @@ configure_git() {
 SHELL_SCRIPTS_REMOTE_GITHUB_REPOSITORY="https://github.com/${SHELL_SCRIPTS_GITHUB_REPOSITORY}.git"
 SHELL_SCRIPTS_RELEASES_URL="https://api.github.com/repos/${SHELL_SCRIPTS_GITHUB_REPOSITORY}/releases/latest"
 download_shell_scripts() {
-  cd "${BFD_REPOSITORY}" >/dev/null || return
+
   if command_exists git; then
+    (
+      cd "${BFD_REPOSITORY}" >/dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
+      info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
+      # we do it in four steps to avoid merge errors when reinstalling
+      execute "git" "init" "-q"
+      # "git remote add" will fail if the remote is defined in the global config
+      execute "git" "config" "remote.origin.url" "${SHELL_SCRIPTS_REMOTE_GITHUB_REPOSITORY}"
+      execute "git" "config" "remote.origin.fetch" "+refs/heads/*:refs/remotes/origin/*"
 
-    info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
-    # we do it in four steps to avoid merge errors when reinstalling
-    execute "git" "init" "-q"
-    # "git remote add" will fail if the remote is defined in the global config
-    execute "git" "config" "remote.origin.url" "${SHELL_SCRIPTS_REMOTE_GITHUB_REPOSITORY}"
-    execute "git" "config" "remote.origin.fetch" "+refs/heads/*:refs/remotes/origin/*"
+      # ensure we don't munge line endings on checkout
+      execute "git" "config" "core.autocrlf" "false"
 
-    # ensure we don't munge line endings on checkout
-    execute "git" "config" "core.autocrlf" "false"
-
-    execute "git" "fetch" "--force" "origin" >/dev/null 2>&1
-    execute "git" "fetch" "--force" "--tags" "origin" >/dev/null 2>&1
-    execute "git" "remote" "set-head" "origin" "--auto" >/dev/null
-    execute "git" "reset" "--hard" "origin/main" >/dev/null 2>&1
-    info "Pulling latest shell scripts - starting..."
-    execute "git" "pull" "--force" "origin" "main" >/dev/null 2>&1
-    info "Pulling latest shell scripts - completed."
+      execute "git" "fetch" "--force" "origin" >/dev/null 2>&1
+      execute "git" "fetch" "--force" "--tags" "origin" >/dev/null 2>&1
+      execute "git" "remote" "set-head" "origin" "--auto" >/dev/null
+      execute "git" "reset" "--hard" "origin/main" >/dev/null 2>&1
+      info "Pulling latest shell scripts - starting..."
+      execute "git" "pull" "--force" "origin" "main" >/dev/null 2>&1
+      info "Pulling latest shell scripts - completed."
+    )
   else
-    if download "${BFD_CACHE%/}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
-      unpack "${BFD_CACHE%/}/master.zip" "${BFD_REPOSITORY}"
-    else
-      abort "Unable to download shell-scripts from\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
-    fi
+    (
+      cd "${BFD_REPOSITORY}" >/dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
+      local bfd_cache="$(mktemp -d)"
+      if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
+        unpack "${bfd_cache}/master.zip" "${BFD_REPOSITORY}" && rm -rf "${bfd_cache}"
+      else
+        rm -rf "${bfd_cache}"
+        abort "Unable to download shell-scripts from\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
+      fi
+    )
   fi
 }
 
@@ -787,6 +813,11 @@ repeat() {
 install_dependencies() {
   local dependencies=("$@")
   if [[ -n ${SHELL_SCRIPTS_LINUX:-} ]]; then
+    if ! have_sudo_access || [[ ${MAIN_USER} != 'root' ]]; then
+      ohai "This script requires sudo access to install system dependencies."
+      ohai "If you already have sudo access, you can run this script with 'sudo'."
+      abort "Please re-run this script with sudo."
+    fi
     if [[ -x "$(command -v apt-get)" ]]; then
       export DEBIAN_FRONTEND=noninteractive
       export APT_LISTCHANGES_FRONTEND=none
@@ -813,6 +844,7 @@ install_dependencies() {
   if [[ -n "${NO_PACKAGE_MANAGER:-}" ]]; then
     abort "No package manager found. Please install ${YELLOW}${dependencies[*]}${NO_COLOR} manually."
   fi
+  success "Installed ${YELLOW}${dependencies[*]}${NO_COLOR}."
 }
 
 installer_dependencies() {
@@ -827,22 +859,27 @@ installer_dependencies() {
     # If we're running in an interactive shell, we need to ask the user for
     # permission to install the dependencies.
 
-    info "This script requires the following dependencies:"
-    for i in "${REQUIRED_DEPENDENCIES[@]}"; do info "  - ${i}"; done
+    local message="This script requires the following dependencies:\n"
+    for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${NO_COLOR}\n"; done
     if root_available; then
-      info "These dependencies can be installed for you as root."
-      start "Do you want to install them now? (Y/n)"
-      read -r -n 1 -t 120 install_deps
+      notice "${message}\nThese dependencies can be installed for you as root.\n"
+      start_step "Do you want to install them now? [Y/n] "
+      read -r -n 1 -t 120 install_deps_answer
       printf "\n"
-      if [[ "${add_to_shell:-}" =~ [Yy] ]]; then
+      if [[ "${install_deps_answer:-y}" =~ [Yy] ]]; then
         INSTALL_DEPS=true
       fi
+    else
+      notice "${message}"
     fi
   fi
 
-  if [[ "${INSTALL_DEPS}" == true ]]; then
-    info "Installing dependencies…" "${REQUIRED_DEPENDENCIES[@]}"
+  if [[ "${INSTALL_DEPS:-}" == 'true' ]]; then
+    info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${NO_COLOR}"
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
+  elif [[ "${#REQUIRED_DEPENDENCIES[@]}" -gt 0 ]]; then
+    ohai "Skipping dependency installation…"
+    abort "Please install ${YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
   fi
 
 }
@@ -857,22 +894,20 @@ print_or_execute() {
     execute "${@}"
   fi
 }
-shell_profile_file() {
+shell_rc_file() {
   case "${SHELL}" in
   */bash*)
-    if [[ -r "${HOME}/.bash_profile" ]]; then
-      shell_profile="${HOME}/.bash_profile"
-    else
-      shell_profile="${HOME}/.profile"
-    fi
+    shell_rc="${HOME}/.bashrc"
     ;;
   */zsh*)
-    shell_profile="${HOME}/.zprofile"
+    shell_rc="${HOME}/.zshrc"
     ;;
   *)
-    shell_profile="${HOME}/.profile"
+    shell_rc="${HOME}/.profile"
+    export ENV=~/.profile
     ;;
   esac
+  echo "${shell_rc}"
 }
 
 set_env_var() {
@@ -881,69 +916,62 @@ set_env_var() {
   local file
   local prefix=''
   local use_root=false
-  if [[ -n ${GITHUB_ACTIONS:-} ]]; then
+  if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
     file="${GITHUB_ENV}"
-  elif [[ -n ${SHELL_SCRIPTS_LINUX:-} ]] && root_available; then
-    file="/etc/environment"
-    use_root=true
   else
-    file="$(shell_profile_file)"
+    file="$(shell_rc_file)"
     prefix='export '
   fi
+  if [[ -z ${file:-} ]]; then
+    error "Could not find a shell profile file to set the environment variable in."
+    return 1
+  fi
   if [[ ! -f "${file}" ]]; then
-    if [[ "${use_root}" == true ]]; then
-      run_as_root touch "${file}"
-    else
-      touch "${file}"
-    fi
+    "${TOUCH[@]:-touch}" "${file}" || return 1
   fi
   #  /[.*+?^${}()|[\]\\]/g, '\\$&'
-  local elevate_if_not_root=''
-  [[ "${use_root}" == true ]] && elevate_if_not_root="run_as_root"
+
   if [[ -n "${value}" ]]; then
     if grep -q "^${prefix}${name}=" "${file}"; then
-      ${elevate_if_not_root} perl -pi -e "s#^${prefix}${name}=.*#${prefix}${name}=${value}#g" "${file}"
+      perl -pi -e "s#^${prefix}${name}=.*#${prefix}${name}=${value}#g" "${file}" && return 0
     else
-      echo "${prefix}${name}=${value}" >>"${file}"
+      echo "${prefix}${name}=${value}" >>"${file}" && return 0
     fi
   else
-    ${elevate_if_not_root} perl -pi -e "/^${name}=.*/d" "${file}"
+    perl -pi -e "/^${name}=.*/d" "${file}" && return 0
   fi
-
+  return 1
 }
 
 next_steps() {
 
   ohai "Next steps:"
 
-  local shell_profile="$(shell_profile_file)"
-  local REPO_VAR="export BFD_REPOSITORY=${BFD_REPOSITORY}"
+  local shell_profile="$(shell_rc_file)"
+  local repo_var="export BFD_REPOSITORY=${BFD_REPOSITORY}"
   if [[ -n "${INTERACTIVE:-}" ]]; then
-    notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}source ${BFD_REPOSITORY}/lib/bootstrap.sh${COLOR_RESET}"
-    if [[ -f "${shell_profile}" ]] && grep -q "${REPO_VAR}" "${shell_profile}"; then
-      debug "Environment variable\n${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}${REPO_VAR}${COLOR_RESET}\nalready configured in ${shell_profile}"
+    notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${BFD_REPOSITORY}/lib/bootstrap.sh${COLOR_RESET}"
+    if [[ -f "${shell_profile}" ]] && grep -q "${repo_var}" "${shell_profile}"; then
+      debug "Environment variable\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nalready configured in ${shell_profile}"
     else
-      read -r -n 1 -t 120 -p "Do you want to add this to your ${shell_profile}? [Y/n] " add_to_shell
+      start_step "Do you want to add this to your ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] ${COLOR_RESET}"
+      read -r -n 1 -t 120 add_to_shell
       printf "\n"
-      if [[ "${add_to_shell:-}" =~ [Yy] ]]; then
-        info "Adding environment variable:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}${REPO_VAR}${COLOR_RESET}\nto ${shell_profile}"
-        set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}"
+      if [[ "${add_to_shell:-y}" =~ [Yy] ]]; then
+        info "Adding environment variable:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nto ${shell_profile}"
+        set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}" && return 0
       fi
     fi
-    info "Run this command in the shell to set the shell-scripts directory:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}${REPO_VAR}${COLOR_RESET}\n"
-    info "Or reload the shell:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}source ${shell_profile}${COLOR_RESET}"
+    info "Run this command in the shell to set the shell-scripts directory:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\n"
+    info "Or reload the shell:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${shell_profile}${COLOR_RESET}"
   fi
 
-  if [[ -n "${NONINTERACTIVE}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-    info "Adding environment variable\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_WHITE}${REPO_VAR}${COLOR_RESET}"
+  if [[ -n "${NONINTERACTIVE:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    info "Adding environment variable\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}"
     set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}"
   fi
 
 }
-
-# Things can fail later if `pwd` doesn't exist.
-# Also sudo prints a warning message for no good reason
-cd "/usr" || exit 1
 
 installer_dependencies
 if ! command_exists git && ! downloader_installed; then
@@ -956,11 +984,13 @@ install() {
   { execute configure_git && success "Validated git user name and email"; } || failure "Failed to configure git"
   start_step "Creating install directory..."
   { execute create_directories && success "Created install directory"; } || failure "Failed to create directories"
-  start_step "Downloading shell-scripts..."
-  { execute download_shell_scripts && success "Downloaded shell-scripts"; } || failure "Failed to download shell-scripts"
+  start_step "Installing shell-scripts..."
+  { execute download_shell_scripts && success "Installed shell-scripts"; } || failure "Failed to install shell-scripts"
   next_steps
 
   success "${STARTING_STAR} Install completed"
+  unset INTERACTIVE
+  unset NONINTERACTIVE
 }
 
 # check_bin_dir "${BIN_DIR}"
