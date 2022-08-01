@@ -72,6 +72,10 @@ if test -t 1 && command_exists tput && [[ $(tput colors) -gt 0 ]]; then
   export CLEAR_SCREEN="$(tput rc)"
 fi
 
+export DEBUG_ICON=$'🛠️'
+export INFO_ICON=$'ℹ️'
+export STARTING_STAR=$'⭐'
+export STEP_STAR=$'✨'
 export HOURGLASS_IN_PROGRESS=$'⏳' # ⏳ hourglass in progress
 export HOURGLASS_DONE=$'⌛'        # ⌛ hourglass done
 export CHECK_MARK_BUTTON=$'✅'     # ✅ check mark button

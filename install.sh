@@ -991,6 +991,7 @@ install() {
   success "${STARTING_STAR} Install completed"
   unset INTERACTIVE
   unset NONINTERACTIVE
+  set +eu
 }
 
 # check_bin_dir "${BIN_DIR}"

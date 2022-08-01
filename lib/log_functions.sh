@@ -156,7 +156,10 @@ indent_style() {
   info)
     style=" "
     final_style="${INFO_ICON} "
-    logtype=''
+    ;;
+  debug)
+    style="-"
+    final_style="${DEBUG_ICON:-} "
     ;;
   *)
     style=""
