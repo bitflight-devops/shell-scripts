@@ -25,41 +25,30 @@ runs:
       shell: bash
       run: |
         if [[ -z "${{inputs.tag}}" ]]; then
-          ref="${{ branch }}"
-          ref="refs/tags/${ref#refs/heads/}"
+          SHELL_SCRIPTS_REF="${{ branch }}"
+          SHELL_SCRIPTS_REF="refs/heads/${ref#refs/heads/}"
         else
-          ref="${{inputs.tag}}"
-          ref="refs/tags/${ref#refs/tags/}"
+          SHELL_SCRIPTS_REF="${{inputs.tag}}"
+          SHELL_SCRIPTS_REF="refs/tags/${ref#refs/tags/}"
         fi
-        echo "::set-output ref=${ref}"
-        rm -rf "/home/runner/shell-scripts"
-    - uses: actions/checkout@v3
-      name: Checkout Code
-      continue-on-error: true
-      with:
-        token: ${{ github.token }}
-        path: /home/runner/.cache/.shell-scripts
-        repository: bitflight-devops/shell-scripts
-        ref: ${{ steps.version.outputs.ref }}
-        fetch-depth: 1
+        echo "::set-output ref=${SHELL_SCRIPTS_REF}"
+        BFD_REPOSITORY="${{ github.action_path }}"
+        echo "BFD_REPOSITORY=${BFD_REPOSITORY}" >>"${GITHUB_ENV}"
+
     - name: Publish Bash Functions To Job Steps
       id: bash_functions
       shell: bash
-      working-directory: /home/runner/.cache/shell-scripts
-      env:
-        BFD_REPOSITORY: /home/runner/.cache/.shell-scripts
-        SILENT_BOOTSTRAP: true
+      working-directory: ${{ github.action_path }}
       run: |
-        BOOTSTRAP="${BFD_REPOSITORY}/lib/bootstrap.sh"
-        echo "BFD_REPOSITORY=${BFD_REPOSITORY}" >>"${GITHUB_ENV}"
-        echo "::set-output name=path::${BOOTSTRAP}"
-        echo "SILENT_BOOTSTRAP=true" >>"${GITHUB_ENV}"
-        SILENT_BOOTSTRAP=1 . lib/bootstrap.sh
-        if [ -z "${BASH_ENV}" ]; then
-          export BASH_ENV="${BOOTSTRAP}"
-          echo "BASH_ENV=${BASH_ENV}" >>"${GITHUB_ENV}"
+        NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
+        set_env BOOTSTRAP "${BFD_REPOSITORY}/lib/bootstrap.sh"
+        set_env SHELL_SCRIPTS_QUIET "1"
+        set_env NONINTERACTIVE "1"
+        set_output path "${BOOTSTRAP}"
+        if [ -z "${BASH_ENV:-}" ]; then
+          set_env "BASH_ENV" "${BOOTSTRAP}"
           echo "Loaded Bash Functions to BASH_ENV"
-          echo "::set-output name=loaded::true"
+          set_output loaded "true"
         else
-          echo "::set-output name=loaded::false"
+          set_output loaded "false"
         fi

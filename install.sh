@@ -296,7 +296,7 @@ if [ -z "${BASH_VERSION:-}" ]; then
 fi
 
 if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
-  BFD_PREFIX="${HOME%./}/.cache"
+  BFD_PREFIX="${HOME%./}"
 fi
 
 # Check if script is run with force-interactive mode in CI
@@ -581,13 +581,35 @@ configure_git() {
   fi
 
 }
+git_ref_type() {
+  if [[ -z "$1" ]]; then
+    echo "no_ref_given"
+    git rev-parse --verify tags/v0.0.107^{tag}
+  elif git rev-parse -q --verify "$1^{tag}" 2>/dev/null; then
+    echo tag
+  elif git show-ref -q --verify "refs/heads/$1" 2>/dev/null; then
+    echo "branch"
+  elif git show-ref -q --verify "refs/tags/$1" 2>/dev/null; then
+    echo "tag"
+  elif git show-ref -q --verify "refs/remote/$1" 2>/dev/null; then
+    echo "remote"
+  elif git rev-parse --verify "$1^{commit}" >/dev/null 2>&1; then
+    echo "hash"
+  else
+    echo "unknown"
+  fi
+  return 0
+}
 
 SHELL_SCRIPTS_REMOTE_GITHUB_REPOSITORY="https://github.com/${SHELL_SCRIPTS_GITHUB_REPOSITORY}.git"
 SHELL_SCRIPTS_RELEASES_URL="https://api.github.com/repos/${SHELL_SCRIPTS_GITHUB_REPOSITORY}/releases/latest"
 download_shell_scripts() {
-
+  if [[ -z ${SHELL_SCRIPTS_REF-} ]]; then
+    SHELL_SCRIPTS_REF="main"
+  fi
   if command_exists git; then
     (
+
       cd "${BFD_REPOSITORY}" >/dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
       # we do it in four steps to avoid merge errors when reinstalling
@@ -602,9 +624,9 @@ download_shell_scripts() {
       execute "git" "fetch" "--force" "origin" >/dev/null 2>&1
       execute "git" "fetch" "--force" "--tags" "origin" >/dev/null 2>&1
       execute "git" "remote" "set-head" "origin" "--auto" >/dev/null
-      execute "git" "reset" "--hard" "origin/main" >/dev/null 2>&1
+      execute "git" "reset" "--hard" "origin/${SHELL_SCRIPTS_REF}" >/dev/null 2>&1
       info "Pulling latest shell scripts - starting..."
-      execute "git" "pull" "--force" "origin" "main" >/dev/null 2>&1
+      execute "git" "pull" "--quiet" "--force" "origin" "${SHELL_SCRIPTS_REF}" >/dev/null 2>&1
       info "Pulling latest shell scripts - completed."
     )
   else
