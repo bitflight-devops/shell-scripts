@@ -1,14 +1,6 @@
 name: Load common bash functions
 description: >
   Loads common bash functions used by other actions.
-inputs:
-  tag:
-    required: false
-    type: string
-  branch:
-    required: false
-    type: string
-    default: "main"
 outputs:
   loaded:
     value: ${{ steps.bash_functions.outputs.loaded }}
@@ -24,14 +16,6 @@ runs:
       id: version
       shell: bash
       run: |
-        if [[ -z "${{inputs.tag}}" ]]; then
-          SHELL_SCRIPTS_REF="${{ branch }}"
-          SHELL_SCRIPTS_REF="refs/heads/${ref#refs/heads/}"
-        else
-          SHELL_SCRIPTS_REF="${{inputs.tag}}"
-          SHELL_SCRIPTS_REF="refs/tags/${ref#refs/tags/}"
-        fi
-        echo "::set-output ref=${SHELL_SCRIPTS_REF}"
         BFD_REPOSITORY="${{ github.action_path }}"
         echo "BFD_REPOSITORY=${BFD_REPOSITORY}" >>"${GITHUB_ENV}"
 
