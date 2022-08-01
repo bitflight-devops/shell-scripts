@@ -84,13 +84,13 @@ get_log_type() {
   set +x
   LOG_TYPES=(
     "error"
-    "info"
     "warning"
     "notice"
     "debug"
   )
   if [[ -z "${GITHUB_ACTIONS-}" ]]; then
     LOG_TYPES+=(
+      "info"
       "success"
       "failure"
       "step"
@@ -194,18 +194,23 @@ simple_log() {
   fi
 }
 
+plain_log() {
+  local -r logtype="$(get_log_type "${1}")"
+  shift
+  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
+  local -r msg="${*}"
+
+  printf "[%7s] %s\n" "${logtypeUppercase}" "${msg}"
+}
 # Arguments:
 #   $1: Log type
 #   $*: Log message
 ## example: timestamp "error" "Something went wrong"
 ## output: 2022-07-17T14:59:56-0400 [ERROR] Something went wrong
 timestamp_log() {
-  local -r logtype="$(get_log_type "${1}")"
-  shift
-  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
-  local -r msg="${*}"
+  local -r log_string="$(plain_log "${@}")"
   local -r timestamp="$(date +%Y-%m-%dT%H:%M:%S%z)"
-  printf "%s [%s] %s\n" "${timestamp}" "${logtypeUppercase}" "${msg}"
+  printf "%s %s" "${timestamp}" "${log_string}"
 }
 
 join_by() {
@@ -225,8 +230,8 @@ github_log() {
     local -r msg="${*}"
   fi
 
-  if [[ ${#msg} -gt 0 ]]; then
-    if [[ ${#logtype} -gt 0 ]]; then
+  if [[ -n ${msg} ]]; then
+    if [[ -n ${logtype} ]]; then
       LOG_ARGS=()
       LOG_STRING=("::${logtype} ")
       shift
@@ -244,12 +249,12 @@ github_log() {
       fi
       perl -pe 'tr/ //s;s/::\s*/::/g;' <<<"${LOG_STRING[*]}::${msg}"
     else
-      timestamp_log "${logtype}" "${msg}"
+      plain_log "${logtype}" "${msg}"
     fi
   fi
 }
 
-# trunk-ignore(shellcheck/SC2120)
+# shellcheck disable=SC2120
 to_stderr() {
   if [[ $# -eq 0 ]]; then
     echo >&2 "$(</dev/stdin)"
