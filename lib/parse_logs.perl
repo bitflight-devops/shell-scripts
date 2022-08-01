@@ -109,8 +109,17 @@ while (<>) {
     push @lines, $_;
 }
 
+my $starting_line;
+if ( $#lines > 300 ) {
+    print "Too many lines in the log file.\n only reading the last 300 lines";
+    $starting_line = $#lines - 300;
+}
+else {
+    $starting_line = 0;
+}
+
 # Loop through the lines and parse the log messages
-for ( my $i = 0 ; $i <= $#lines ; $i++ ) {
+for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
   PARSELINE:
     my $command;
     my $title;

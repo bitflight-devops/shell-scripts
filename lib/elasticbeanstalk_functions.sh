@@ -597,7 +597,7 @@ pipe_errors_from_ebs_to_github_actions() {
           if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2>/dev/null; then
             mkdir -p "${log_output_path}"
             unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz"
-            prints_from_zip "${log_output_path}"
+            print_logs_from_zip "${log_output_path}"
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Success"
             return 0
           else
@@ -617,7 +617,7 @@ pipe_errors_from_ebs_to_github_actions() {
       fi
     else
       info "Printing logs from Elastic Beanstalk's env ${env}: Starting"
-      if prints_from_zip "${log_output_path}"; then
+      if print_logs_from_zip "${log_output_path}"; then
         info "Printing logs from Elastic Beanstalk's env ${env}: Success"
       else
         info "Printing logs from Elastic Beanstalk's env ${env}: Failure"
