@@ -650,7 +650,11 @@ stop_current_eb_processes() (
 )
 
 remove_passive() {
+  if [[ -n "${2:-}" ]]; then
+  local -r env="${2:-}"
+  else
   local -r env="$(environment_name_by_cname passive)"
+  fi
   if [[ -z ${env:-} ]]; then
     info "${0}(): No passive environment found"
     return 0
@@ -660,7 +664,7 @@ remove_passive() {
   fi
   eb_run terminate --nohang --force "${env}"
   notice "Passive Environment [${env}] termination signal sent - waiting for CNAME $(passive_cname_prefix) to be released"
-  if [[ $1 == "hang" ]]; then
+  if [[ ${1} == "hang" ]]; then
     wait_for_passive_cname "${env}" && notice "Passive Environment [${env}] has released the CNAME $(passive_cname_prefix)"
   fi
 }
