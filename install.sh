@@ -584,7 +584,6 @@ configure_git() {
 git_ref_type() {
   if [[ -z "$1" ]]; then
     echo "no_ref_given"
-    git rev-parse --verify tags/v0.0.107^{tag}
   elif git rev-parse -q --verify "$1^{tag}" 2>/dev/null; then
     echo tag
   elif git show-ref -q --verify "refs/heads/$1" 2>/dev/null; then

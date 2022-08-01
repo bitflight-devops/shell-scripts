@@ -13,6 +13,8 @@ if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   fi
 fi
 export SCRIPTS_LIB_DIR
+[[ -z ${COLOR_AND_EMOJI_VARIABLES_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/color_and_emoji_variables.sh"
+
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 
 export STRING_FUNCTIONS_LOADED=1
@@ -31,11 +33,11 @@ colorcode() {
     perl -pe 's/(^\s*|\s*$)/Y/g;' <<<"${color}"
   elif [[ -n ${color:-} ]]; then
     local -r color_var_name="$(uppercase "${color}")"
-    local colorcode="${!color_var_name}"
-    if [[ -n ${colorcode:-} ]] && iscolorcode "${colorcode}"; then
+    eval 'local resolved_color="${'"${color_var_name}"':-}"'
+    if [[ -n ${resolved_color:-} ]] && iscolorcode "${colorcode}"; then
       perl -pe 's/(^\s*|\s*$)//gm;' <<<"${colorcode}"
     elif [[ -z ${DEBUG:-} ]]; then
-      printf '%s' "${colorcode}"
+      printf '%s' "${resolved_color}"
     else
       printf ''
     fi

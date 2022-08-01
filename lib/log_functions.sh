@@ -290,12 +290,13 @@ log_output() {
     local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
     printf "%s[%s%5s%s] %s%s\n" "${COLOR_RESET:-}" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}: }" "${msg}"
   fi
-
-  {
-    nocolor_msg="$(stripcolor "${msg}")"
-    timestamp_log "${labelUppercase}" "${function_name:+${function_name}:}" "${nocolor_msg}" >>"$(logfileName "${return_code}")" 2>&1 &
-    disown
-  } 2>/dev/null
+  if ! running_in_github_actions; then
+    {
+      nocolor_msg="$(stripcolor "${msg}")"
+      timestamp_log "${labelUppercase}" "${function_name:+${function_name}:}" "${nocolor_msg}" >>"$(logfileName "${return_code}")" 2>&1 &
+      disown
+    } 2>/dev/null
+  fi
 }
 
 debug() {
