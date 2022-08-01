@@ -24,6 +24,18 @@ check_if_tag_created() {
     git describe --exact-match >/dev/null 2>&1
 }
 
+get_tag_name() {
+  git describe --exact-match 2>/dev/null
+}
+set_tag_as_output_if_available() {
+  if check_if_tag_created; then
+    set_env GITHUB_TAG "$(get_tag_name)"
+    set_output tag "${GITHUB_TAG}"
+  else
+    set_output tag "unknown"
+  fi
+}
+
 get_prerelease_suffix() {
   if [[ $# -eq 0 ]]; then
     echo "RC"
@@ -33,7 +45,7 @@ get_prerelease_suffix() {
   fi
 }
 
-function check_if_on_release_branch() {
+check_if_on_release_branch() {
   if [[ -n "${1:-${GITHUB_REF}}" ]] && [[ -n "${2:-${RELEASE_BRANCH}}" ]]; then
     local raw_ref="${1:-${GITHUB_REF}}"
     local -r ref="${raw_ref//refs\/heads\//}"

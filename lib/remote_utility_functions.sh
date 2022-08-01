@@ -172,7 +172,6 @@ basic_wget() {
   sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(basename "$1")"
 }
 
-
 configure_bastion_ssh_tunnel() {
   if [[ -z "${BASTION_HOST}" ]] || [[ -z "${BASTION_USER}" ]] || [[ -z "${BASTION_PRIVATE_KEY}" ]]; then
     error "One or more essential bastion variables missing: BASTION_PRIVATE_KEY:'${BASTION_PRIVATE_KEY:0:10}' BASTION_HOST:'${BASTION_HOST}' BASTION_USER:'${BASTION_USER}'"
@@ -225,4 +224,54 @@ close_bastion_ssh_tunnel() {
   if [[ -f "${HOME}/.ssh/remotehost-proxy.ctl" ]]; then
     ssh -T -O "exit" remotehost-proxy
   fi
+}
+
+run_flyway_migration() {
+  docker context use "default"
+  if [[ -z "$(docker network list -q -f 'name=api-backend')" ]]; then
+    docker network create --driver bridge api-backend
+    NETWORK_CREATED=true
+  fi
+  if docker compose -p flyway --project-directory "${GITHUB_WORKSPACE:-./}" -f "${FLYWAY_DOCKER_COMPOSE_FILE}" run --rm flyway; then
+    ERRORED=false
+  fi
+  if [[ "${NETWORK_CREATED}" == true ]]; then
+    docker network rm api-backend || true
+  fi
+  if [[ "${ERRORED}" != false ]]; then
+    error_log "Flyway migration failed"
+    return 1
+  fi
+}
+
+create_mysql_tunnel() {
+  rm -f ~/.ssh/remotehost-proxy.ctl
+
+  # Set up the configuration for ssh tunneling to the bastion server
+  configure_bastion_ssh_tunnel
+
+  # Start the ssh tunnel for MySQL
+  set_env BINDHOST "0.0.0.0"
+  set_env JDBC_LOCAL_PORT "33307"
+  open_bastion_ssh_tunnel
+}
+
+setup_local_mysql_route_variables() {
+  # Get the local hosts IP
+  if [[ -f '/sbin/ip' ]]; then
+    # DOCKERHOST="$(/sbin/ip route | awk '/default/ { print  $3}')"
+    DOCKERHOST="$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)"
+    echo "Using the docker hosts ethernet IP ${DOCKERHOST} for accessing mysql"
+
+  else
+    DOCKERHOST=127.0.0.1
+    echo "Using the docker hosts local IP ${DOCKERHOST} for accessing mysql"
+  fi
+  set_env DOCKERHOST "127.0.0.1"
+
+  # Set the mysql host to the docker host to use the tunnel
+  set_env JDBC_HOST_ORIGINAL "${JDBC_HOST}"
+  set_env JDBC_PORT_ORIGINAL "${JDBC_PORT}"
+  set_env JDBC_HOST "${DOCKERHOST}"
+  set_env JDBC_PORT "${JDBC_LOCAL_PORT}"
 }
