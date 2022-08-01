@@ -173,10 +173,11 @@ indent_style() {
 }
 
 simple_log() {
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
   if [[ -z "${logtype}" ]]; then
-    printf '%s%s\n' "${NO_COLOR}" "${*}"
+    plain_log "${fulllogtype}" "${*}"
   else
     shift
     if [[ "${logcolor}" != "::" ]]; then
@@ -195,9 +196,9 @@ simple_log() {
 }
 
 plain_log() {
-  local -r logtype="$(get_log_type "${1}")"
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   shift
-  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
+  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${fulllogtype}")"
   local -r msg="${*}"
 
   printf "[%7s] %s\n" "${logtypeUppercase}" "${msg}"
@@ -221,6 +222,7 @@ join_by() {
 }
 
 github_log() {
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   local -r logtype="$(get_log_type "${1}")"
   shift
 
@@ -249,7 +251,7 @@ github_log() {
       fi
       perl -pe 'tr/ //s;s/::\s*/::/g;' <<<"${LOG_STRING[*]}::${msg}"
     else
-      plain_log "${logtype}" "${msg}"
+      plain_log "${fulllogtype}" "${msg}"
     fi
   fi
 }
@@ -288,7 +290,7 @@ log_output() {
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
   fi
   if running_in_github_actions; then
-    github_log "${labelUppercase}" "${function_name:+${function_name}:}${msg}"
+    github_log "${labelUppercase}" "${function_name:+${function_name}():}${msg}"
   else
     indent_width=7
     printf -v space "%*s" "$((indent_width))" ''
@@ -298,7 +300,7 @@ log_output() {
   if ! running_in_github_actions; then
     {
       nocolor_msg="$(stripcolor "${msg}")"
-      timestamp_log "${labelUppercase}" "${function_name:+${function_name}:}" "${nocolor_msg}" >>"$(logfileName "${return_code}")" 2>&1 &
+      timestamp_log "${labelUppercase}" "${function_name:+${function_name}():}" "${nocolor_msg}" >>"$(logfileName "${return_code}")" 2>&1 &
       disown
     } 2>/dev/null
   fi
