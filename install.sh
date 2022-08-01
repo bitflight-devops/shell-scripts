@@ -26,7 +26,7 @@ COLOR_BOLD_WHITE=$'\e[1;37m'
 COLOR_BOLD=$'\e[1m'
 COLOR_BOLD_YELLOW=$'\e[1;33m'
 COLOR_RESET=$'\e[0m'
-CLEAR_SCREEN="$(tput rc)"
+CLEAR_SCREEN="$(tput rc 2>/dev/null || printf '')"
 
 COLOR_BRIGHT_BLACK=$'\e[0;90m'
 COLOR_BRIGHT_RED=$'\e[0;91m'

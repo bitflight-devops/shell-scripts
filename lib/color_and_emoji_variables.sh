@@ -41,7 +41,7 @@ tty_red="$(tty_mkbold 31)"
 tty_bold="$(tty_mkbold 39)"
 tty_reset="$(tty_escape 0)"
 
-if test -t 1 && command_exists tput && [[ $(tput colors) -gt 0 ]]; then
+if test -t 1 && command_exists tput && [[ $(tput colors 2>/dev/null || printf '0') -gt 0 ]]; then
   export COLOR_BRIGHT_BLACK=$'\e[0;90m'
   export COLOR_BRIGHT_RED=$'\e[0;91m'
   export COLOR_BRIGHT_GREEN=$'\e[0;92m'
@@ -69,7 +69,7 @@ if test -t 1 && command_exists tput && [[ $(tput colors) -gt 0 ]]; then
   export COLOR_BOLD=$'\e[1m'
   export COLOR_BOLD_YELLOW=$'\e[1;33m'
   export COLOR_RESET=$'\e[0m'
-  export CLEAR_SCREEN="$(tput rc)"
+  export CLEAR_SCREEN="$(tput rc 2>/dev/null || printf '')"
 fi
 
 export DEBUG_ICON=$'🛠️'
