@@ -21,7 +21,6 @@ export LOG_FUNCTIONS_LOADED=1
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
-
 if [[ -z ${LOG_DIR:-} ]]; then
   case "$(uname -s)" in
   *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
@@ -402,10 +401,13 @@ print_single_log_file() {
 
 log_file_contents() (
   set +x +e
-  export GITHUB_LOG_FILE_RAW="${1}"
-  find "$(dirname "${GITHUB_LOG_FILE_RAW}")" -type f -iname "$(basename "${GITHUB_LOG_FILE_RAW}")" -print0 | while IFS= read -r -d $'\0' file; do
-    print_single_log_file "${file}"
-  done
+  export GITHUB_LOG_FILE_RAW="$(tr -s '/' <<<"${1}")"
+  local logdir="$(dirname "${GITHUB_LOG_FILE_RAW}")"
+  if [[ -d "${logdir}" ]]; then
+    find "${logdir}" -type f -iname "$(basename "${GITHUB_LOG_FILE_RAW}")" -print0 | while IFS= read -r -d $'\0' file; do
+      print_single_log_file "${file}"
+    done
+  fi
   return 0
 )
 
