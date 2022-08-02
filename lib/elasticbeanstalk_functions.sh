@@ -91,26 +91,26 @@ install_ebcli_ubuntu_dependencies() {
 add_ebcli_bin_paths() {
   # Use add_to_path from system_functions
   add_to_path "${HOME}/.local/bin"
-  [[ -n ${EB_PACKAGE_PATH:-} ]] && add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package"
+  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package"
   add_to_path "${HOME}/.ebcli-virtual-env/executables"
 }
 
 install_eb_cli() {
-  info "install_eb_cli: Install EB CLI with python3 $(python3 --version), and python version $(python --version)"
+  info "Install EB CLI with python3 $(python3 --version)"
 
   if ! command_exists git; then
     install_app git
   fi
-
+  add_ebcli_bin_paths
   if ! command_exists eb || eb --version | grep -q -v 'EB CLI 3'; then
 
     if ! command_exists pipx; then
-      python3 -m pip install --user pipx
+      debug "Install pipx:\n$(python3 -m pip install --user pipx)"
     elif ! python3 -m pipx --version >/dev/null 2>&1; then
-      python3 -m pip install --user -U pipx
+      debug "Upgrade pipx:\n$(python3 -m pip install --user -U pipx)"
     fi
-
-    if python3 -m pipx ensurepath | grep -q -v "is already in PATH"; then
+    add_ebcli_bin_paths
+    if python3 -m pipx ensurepath 2>/dev/null | grep -q -v "is already in PATH"; then
       if [[ -f ~/.bashrc ]]; then
         source ~/.bashrc
       elif [[ -f ~/.profile ]]; then
@@ -121,7 +121,7 @@ install_eb_cli() {
     add_ebcli_bin_paths
 
     if ! command_exists virtualenv || virtualenv --version | grep -q -v "virtualenv 2"; then
-      python3 -m pipx install virtualenv 2>/dev/null || python3 -m pipx upgrade virtualenv
+      debug "Install virtualenv:\n$(python3 -m pipx install virtualenv 2>/dev/null || python3 -m pipx upgrade virtualenv)"
       add_ebcli_bin_paths
     fi
 
@@ -135,10 +135,13 @@ install_eb_cli() {
       set_env EB_INSTALLER_PATH "${HOME}/.cache/aws-elastic-beanstalk-cli-setup"
     fi
 
-    if [[ ! -d ${EB_INSTALLER_PATH} ]]; then
+    if [[ ! -d "${EB_INSTALLER_PATH}" ]]; then
+      mkdir -p "${EB_INSTALLER_PATH}"
       git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
     else
-      (cd "${EB_INSTALLER_PATH}" && { git pull -f || git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"; })
+      if ! git -C "${EB_INSTALLER_PATH}" pull -f; then
+        git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
+      fi
     fi
 
     if [[ -z ${EB_PACKAGE_PATH:-} ]]; then
@@ -148,6 +151,7 @@ install_eb_cli() {
     if [[ ! -d ${EB_PACKAGE_PATH} ]]; then
       mkdir -p "${EB_PACKAGE_PATH}"
     fi
+
     add_ebcli_bin_paths
     if ! command_exists eb; then
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
@@ -155,7 +159,7 @@ install_eb_cli() {
         --hide-export-recommendation \
         --location "${EB_PACKAGE_PATH}"
     fi
-
+    add_ebcli_bin_paths
   fi
 }
 

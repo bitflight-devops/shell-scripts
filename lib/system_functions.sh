@@ -53,11 +53,13 @@ add_to_path() {
     if [[ -z "${PATH}" ]]; then
       export PATH="${1}"
       running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
-      debug "Path added: ${1}"
+      debug "Path created: ${1}"
     elif not_in_path "${1}"; then
       export PATH="${1}:${PATH}"
       running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
       debug "Path added: ${1}"
+      else
+      debug "Path already includes:\n'${1}' --in--> '${PATH}'"
     fi
   # fi
 }
