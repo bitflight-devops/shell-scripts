@@ -89,24 +89,10 @@ install_ebcli_ubuntu_dependencies() {
 }
 
 add_ebcli_bin_paths() {
-  if [[ ${PATH} =~ .local/bin ]]; then
-    echo "Path added ${HOME}/.local/bin"
-  else
-    export PATH="${PATH}:${HOME}/.local/bin"
-
-    if [[ -n ${GITHUB_PATH:-} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v "${HOME}/.local/bin" "${GITHUB_PATH}"; then
-      echo "${HOME}/.local/bin" >>"${GITHUB_PATH}"
-    fi
-  fi
-  set_env EB_PACKAGE_PATH "${HOME}/.local/aws-elastic-beanstalk-cli-package"
-  if [[ ${PATH} =~ .ebcli-virtual-env/executables ]]; then
-    echo "Path added ${HOME}/.ebcli-virtual-env/executables"
-  else
-    export PATH="${EB_PACKAGE_PATH}/.ebcli-virtual-env/executables:${PATH}"
-    if [[ -n ${GITHUB_PATH:-} ]] && [[ -f ${GITHUB_PATH} ]] && grep -q -v ".ebcli-virtual-env/executables" "${GITHUB_PATH}"; then
-      echo "${EB_PACKAGE_PATH}/.ebcli-virtual-env/executables" >>"${GITHUB_PATH}"
-    fi
-  fi
+  # Use add_to_path from system_functions
+  add_to_path "${HOME}/.local/bin"
+  [[ -n ${EB_PACKAGE_PATH:-} ]] && add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package"
+  add_to_path "${HOME}/.ebcli-virtual-env/executables"
 }
 
 install_eb_cli() {
@@ -155,8 +141,6 @@ install_eb_cli() {
       (cd "${EB_INSTALLER_PATH}" && { git pull -f || git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"; })
     fi
 
-    add_ebcli_bin_paths
-
     if [[ -z ${EB_PACKAGE_PATH:-} ]]; then
       set_env EB_PACKAGE_PATH "${HOME}/.local/aws-elastic-beanstalk-cli-package"
     fi
@@ -164,7 +148,7 @@ install_eb_cli() {
     if [[ ! -d ${EB_PACKAGE_PATH} ]]; then
       mkdir -p "${EB_PACKAGE_PATH}"
     fi
-
+    add_ebcli_bin_paths
     if ! command_exists eb; then
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
         --quiet \
@@ -231,7 +215,7 @@ EOF
 
 aws_run() {
   if ! command_exists aws; then
-    install_aws_cli >/dev/null 2>&1 || (echo "Failed to install aws cli" && exit 1)
+    install_aws_cli >/dev/null 2>&1 || { echo "Failed to install aws cli" && exit 1; }
   fi
   aws "${@}"
 }

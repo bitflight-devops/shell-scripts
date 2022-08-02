@@ -151,16 +151,6 @@ set_output() {
   fi
 }
 
-add_to_path() {
-  if [[ $# -ne 1 ]]; then
-    error "${0}: You need to provide one arguments. Provided args ${*}"
-    return 1
-  fi
-  export PATH="${1}:${PATH}"
-  running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
-  debug "Path added: ${1}"
-}
-
 get_java_version() {
   if [[ -f .java-version ]]; then
     JAVA_VERSION="$(cat .java-version)"

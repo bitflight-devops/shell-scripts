@@ -365,11 +365,14 @@ success() {
 }
 
 pipe_errors_to_github_workflow() {
-  local -r log_file_path="${1}"
+  local -r log_file_path="$(tr -s '/' <<<"${1}")"
   if [[ ${GITHUB_FILE_PROCESSED} == 'true' ]]; then
     cat "${log_file_path}"
+  elif [[ -f "${SCRIPTS_LIB_DIR}/parse_logs.perl" ]]; then
+    perl "${SCRIPTS_LIB_DIR}/parse_logs.perl" "${log_file_path}" || error "error parsing log file: ${log_file_path}"
   else
-    perl "${FUNCTIONS_DIR}/parse_logs.perl" "${log_file_path}" || error "error parsing log file: ${log_file_path}"
+    error "Perl log parsing script not found: ${SCRIPTS_LIB_DIR}/parse_logs.perl"
+    cat "${log_file_path}"
   fi
 }
 
@@ -407,7 +410,7 @@ log_file_contents() (
 )
 
 print_logs_from_zip() {
-  local -r extracted_logs_root_path="${1}"
+  local -r extracted_logs_root_path="${1%/}"
   if [[ -d ${extracted_logs_root_path} ]]; then
     log_file_contents "${extracted_logs_root_path}/var/log/eb-engine.log"
     log_file_contents "${extracted_logs_root_path}/var/log/wearsafe*.log"
