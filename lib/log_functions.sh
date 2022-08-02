@@ -21,21 +21,12 @@ export LOG_FUNCTIONS_LOADED=1
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
-if type -f is_darwin >/dev/null 2>&1; then
-  is_darwin() {
-    case "$(uname -s)" in
-    *darwin*) true ;;
-    *Darwin*) true ;;
-    *) false ;;
-    esac
-  }
-fi
+
 if [[ -z ${LOG_DIR:-} ]]; then
-  if is_darwin; then
-    LOG_DIR=/usr/local/var/log/shell_logs
-  else
-    LOG_DIR="${LOG_DIR:-/var/log/shell_logs}"
-  fi
+  case "$(uname -s)" in
+  *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
+  *) LOG_DIR="${LOG_DIR:-/var/log/shell_logs}" ;;
+  esac
 fi
 
 function logfileDir() {

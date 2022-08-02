@@ -540,7 +540,7 @@ wait_for_passive_cname() {
 
 # withBackoff
 ## Returns 0 for the data not existing and 1 when the data was successfully retrieved
-ebs_pending() (
+retrieve_ebs_pending_logs() (
   set +e
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   local -r infofile="${2:-/tmp/${env}.loginfo.json}"
@@ -555,27 +555,22 @@ ebs_pending() (
 
 export DEFAULT_WAIT_FOR_EBS_TIMEOUT=15
 export DEFAULT_WAIT_FOR_EBS_RETRY_INTERVAL=3
-wait_for_ebs() {
+wait_for_ebs_logs() {
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   local -r loginfo_file="${2:-/tmp/${env}.loginfo.json}"
   local -r timeout="${3:-${DEFAULT_WAIT_FOR_EBS_TIMEOUT}}"
   local -r interval="${4:-${DEFAULT_WAIT_FOR_EBS_RETRY_INTERVAL}}"
   local start_time="$(date +%s)"
   local end_time=$((start_time + timeout))
+  local env_available
   if [[ -z ${env:-} ]]; then
     error "${0}(): Environment name not provided"
     return 2
   fi
-  while envcount=$(ebs_pending "${env}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
-    if [[ -z ${envcount:-} ]]; then
-      return 1
-    fi
-    if [[ ${envcount} -gt 0 ]]; then
+  while env_available=$(retrieve_ebs_pending_logs "${env}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
+    if [[ ${env_available} -gt 0 ]]; then
       debug "${0}(): Waited for ${env} logs for $(($(date +%s) - start_time)) seconds"
       return 0
-    fi
-    if ! aws_run elasticbeanstalk request-environment-info --info-type bundle --environment-name "${env}" 2>/dev/null; then
-      return 1
     fi
     sleep "${interval}"
   done
@@ -602,7 +597,7 @@ pipe_errors_from_ebs_to_github_actions() {
         info "Requesting logs from Elastic Beanstalk's env ${env}: Success"
         info "Retrieving logs from Elastic Beanstalk's env ${env}: Starting"
         loginfo_file="/tmp/${env}.loginfo.json"
-        if wait_for_ebs "${env}" "${loginfo_file}"; then
+        if wait_for_ebs_logs "${env}" "${loginfo_file}"; then
           local -r url="$(jq -r '.Message' "${loginfo_file}")"
           if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2>/dev/null; then
             mkdir -p "${log_output_path}"
@@ -611,13 +606,13 @@ pipe_errors_from_ebs_to_github_actions() {
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Success"
             return 0
           else
-            debug "${0}(): Cannot download ${url} - possibly doesn't exist"
+            debug "${0}(): Cannot download ${url} - possibly doesn't exist.\n$(cat "${loginfo_file}")"
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Failure"
             return 0
           fi
         else
-          if [[ $(jq -r '.EnvironmentInfo | length') -eq 0 ]]; then
-            debug "${0}(): Environment ${env} not available to download logs from"
+          if ! jq -r '.Message' "${loginfo_file}" >/dev/null 2>&1; then
+            debug "${0}(): Environment ${env} not available to download logs: [${loginfo_file}]\n$(jq '.' "${loginfo_file}")"
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Failure"
             return 0
           fi
@@ -635,6 +630,7 @@ pipe_errors_from_ebs_to_github_actions() {
       return 0
     fi
   else
+    debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env}")"
     info "Elastic Beanstalk's env ${env} status is [$(environment_state "${env}")] which means logs cannot be requested"
   fi
 
