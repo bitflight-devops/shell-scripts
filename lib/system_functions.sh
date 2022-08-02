@@ -58,8 +58,6 @@ add_to_path() {
       export PATH="${1}:${PATH}"
       running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
       debug "Path added: ${1}"
-      else
-      debug "Path already includes:\n'${1}' --in--> '${PATH}'"
     fi
   # fi
 }
