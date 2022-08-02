@@ -205,6 +205,7 @@ simple_log() {
 }
 
 plain_log() {
+  set +x
   local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   shift
   local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${fulllogtype}")"
@@ -218,6 +219,7 @@ plain_log() {
 ## example: timestamp "error" "Something went wrong"
 ## output: 2022-07-17T14:59:56-0400 [ERROR] Something went wrong
 timestamp_log() {
+  set +x
   local -r log_string="$(plain_log "${@}")"
   local -r timestamp="$(date +%Y-%m-%dT%H:%M:%S%z)"
   printf "%s %s" "${timestamp}" "${log_string}"
@@ -231,11 +233,12 @@ join_by() {
 }
 
 github_log() {
+  set +x
   local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   local -r logtype="$(get_log_type "${1}")"
   shift
 
-  if [[ $(type -t escape_github_command_data) == 'function' ]]; then
+  if [[ $(type -t escape_github_command_data) == 'function' ]] && [[ -n "${logtype}" ]]; then
     local -r msg="$(escape_github_command_data "$(trim "${*}")")"
   else
     local -r msg="${*}"
@@ -247,7 +250,7 @@ github_log() {
       LOG_STRING=("::${logtype} ")
       shift
       FILE="$(trim "${GITHUB_LOG_FILE:-${BASH_SOURCE[0]}}")"
-      if [[ $(type -t escape_github_command_property) == 'function' ]]; then
+      if [[ $(type -t escape_github_command_property) == 'function' ]] && [[ -n "${logtype}" ]]; then
         [[ ${#FILE} -gt 0 ]] && LOG_ARGS+=("file=$(escape_github_command_property "${FILE}")")
         [[ -n ${GITHUB_LOG_TITLE:-} ]] && LOG_ARGS+=("title=$(escape_github_command_property "${GITHUB_LOG_TITLE}")")
       else
@@ -281,6 +284,7 @@ to_stderr() {
 #   $*: Log Message
 # example: log_output 1 "error" "red" "Something went wrong"
 log_output() {
+  set +x
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   local -r return_code=${1:?}
   shift
