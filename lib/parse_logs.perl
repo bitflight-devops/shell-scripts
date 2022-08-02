@@ -90,14 +90,14 @@ qr/(?<date>^[A-Z][\w]+\h\d{1,2}(?:\h\d+)?)\h(?<time>[\d]{2}:[\d]{2}:[\d]{2})\h?(
     # qr/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([.]\d{1,3})?(Z|[-+]\d{2}:\d{2})/
 
     # [2020-10-18T01:32:45.319Z]
-qr/^\[(?<date>\d{4}-\d{2}-\d{2})T(?<time>\d{2}:\d{2}:\d{2}([.]\d{1,3})?(Z|[-+]\d{2}:\d{2}))\]\h?(?<message>.*)/,
+qr/^\[(?<date>\d{4}-\d{2}-\d{2})T(?:(?<time>\d{2}:\d{2}:\d{2})([.]\d{1,3})?(Z|[-+]\d{2}:\d{2}))\]\h?(?<message>.*)/,
 
     # 2020-10-18 01:33:43,021 P6044 [INFO]
     # or
     # 2020/10/18 01:32:49.489691 [INFO]
     # or
     # 2022-06-22 11:52:29.078 ERROR 49294 ---
-qr/(?<date>^(?:\d{1,2}|\d{4})[-\/]\d{1,2}[-\/](?:\d{1,2}|\d{4}))\ (?<time>\d{2}:\d{2}:\d{2}(?:[.,]\d{3,6})?)\h+(?:P\d+\h)?(?:\[(?<level>\w+)\]|(?<level>\w+) \d{2,}\ ---\ )\h?(?<message>.*)/
+qr/(?<date>^(?:\d{1,2}|\d{4})[-\/]\d{1,2}[-\/](?:\d{1,2}|\d{4}))\ (?:(?<time>\d{2}:\d{2}:\d{2})(?:[.,]\d{3,6})?)\h+(?:P\d+\h)?(?:\[(?<level>\w+)\]|(?<level>\w+) \d{2,}\ ---\ )\h?(?<message>.*)/
 
 );
 
@@ -161,7 +161,7 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 $message =~ s/(?<= ) | +$//g;
 
                 if ( $i != $#lines && $lines[ $i + 1 ] !~ $pattern ) {
-                    $message = "👇\n$message";
+                    $message = "Multiline entry below 👇\n$message\n";
                 }
                 $message = tidy_line($message);
 
@@ -204,7 +204,7 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 $command = 'error';
             }
             elsif ( $fullmessage =~ /(warning|warn)/i ) {
-                $command = 'warning';
+                $command = 'warn';
             }
             elsif ( $fullmessage =~ /(debug)/i ) {
                 $command = 'debug';
@@ -234,23 +234,41 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
         }
         $log_details{'level'} = uc( $log_details{'level'} );
 
-        my $log_message_string    = '';
-        my @command_details_order = ( 'date', 'time', 'level', 'message' );
+        my $log_message_string    = $log_details{'message'};
+        my @command_details_order = ( 'date', 'time', 'level' );
+        my $log_indent_string     = '';
         foreach my $key (@command_details_order) {
             if (   exists( $log_details{$key} )
                 && defined( $log_details{$key} )
                 && $log_details{$key} ne '' )
             {
-                if ( $key ne 'message' ) {
-                    $log_message_string .= "[" . $log_details{$key} . "] ";
-                }
-                else {
-                    $log_message_string .= $log_details{$key};
-                }
+              if ($key eq 'level') {
+                $log_indent_string .= sprintf( '[%5s] ', $log_details{$key} );
+              } else {
+                $log_indent_string .= sprintf( '%s ', $log_details{$key} );
+              }
+
             }
         }
-        $log_message_string = ( join '', escape_data($log_message_string) );
 
-        print $command_string . $log_message_string . "\n";
+        if ( $command ne 'info' ) {
+            $log_indent_string  = join( '', escape_data($log_indent_string) );
+            $log_message_string = join( '',
+                escape_data( $log_indent_string . $log_message_string ) );
+        }
+        else {
+          my $indent_space = sprintf( "\n%*s", length($log_indent_string), " " );
+$log_message_string =~ s/\n/$indent_space/gm;
+            my @messageArray = split( "\n", $log_message_string );
+            if ( length($log_message_string) > 1 ) {
+                $log_message_string = join(
+                    sprintf( "%*s", length($log_indent_string), "\n" ),
+                    @messageArray
+                );
+            }
+        }
+
+        printf( "%s%s%s\n",
+            $command_string, $log_indent_string, $log_message_string );
     }
 }
