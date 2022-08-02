@@ -49,7 +49,7 @@ not_in_path() {
   tr ':' '\n' <<<"${PATH}" | grep -q -e "^$1$"
 }
 add_to_path() {
-  if [[ -d "${1}" ]]; then
+  # if [[ -d "${1}" ]]; then
     if [[ -z "${PATH}" ]]; then
       export PATH="${1}"
       running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
@@ -59,7 +59,7 @@ add_to_path() {
       running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
       debug "Path added: ${1}"
     fi
-  fi
+  # fi
 }
 
 
