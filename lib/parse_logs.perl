@@ -122,13 +122,20 @@ else {
 for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
   PARSELINE:
     my $command;
-    my $title;
     my $end_line;
-    my $start_line     = $i + 1;
-    my $pattern_found  = 0;
-    my $message        = $lines[$i];
-    my %log_details    = ( 'message' => $message );
-    my %log_properties = ( 'file'    => $ARGV, 'line' => $start_line );
+    my $start_line    = $i + 1;
+    my $pattern_found = 0;
+    my $message       = $lines[$i];
+    my %log_details   = ( 'message' => $message );
+    my $filename      = $ARGV;
+    my $title         = $ARGV;
+    $filename =~ s#^.*/var/log#/var/log#;
+    $title    =~ s#^.*/var/log/(.*)$#$1#;
+    my %log_properties = (
+        'file'  => $filename,
+        'title' => $title,
+        'line'  => $start_line
+    );
 
     if ( $lines[$i] =~ $skip_pattern ) {
         print "$lines[$i]\n";
@@ -142,7 +149,9 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 if ( defined($level) ) {
                     $command = lc($level);
                 }
-                $title   = $+{title};
+                if ( defined( $+{title} ) ) {
+                    $title = $+{title};
+                }
                 $message = $+{message};
 
                 # Remove all newlines from the message
@@ -178,7 +187,9 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 );
 
                 # Get the log properties
-                $log_properties{'title'}    = $title;
+                if ( defined($title) ) {
+                    $log_properties{'title'} = $title;
+                }
                 $log_properties{'end_line'} = $end_line;
 
                 last;
@@ -201,23 +212,28 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
             else {
                 $command = 'info';
             }
+            $log_details{'level'} = $command;
         }
-
-        my $command_string           = $cmd_delimiter_string . $command . ' ';
+        my $command_string           = '';
         my @command_properties_array = ();
-        %log_properties = escape_properties(%log_properties);
+        if ( $command ne 'info' ) {
+            $command_string = $cmd_delimiter_string . $command . ' ';
+            %log_properties = escape_properties(%log_properties);
 
-        foreach my $key ( keys %log_properties ) {
-            if ( exists( $log_properties{$key} )
-                && defined( $log_properties{$key} ) )
-            {
-                push @command_properties_array,
-                  $key . "=" . $log_properties{$key};
+            foreach my $key ( keys %log_properties ) {
+                if ( exists( $log_properties{$key} )
+                    && defined( $log_properties{$key} ) )
+                {
+                    push @command_properties_array,
+                      $key . "=" . $log_properties{$key};
+                }
             }
-        }
 
-        $command_string .= ( join ",", ( sort @command_properties_array ) );
-        $command_string .= $cmd_delimiter_string;
+            $command_string .= ( join ",", ( sort @command_properties_array ) );
+            $command_string .= $cmd_delimiter_string;
+        }
+        $log_details{'level'} = uc( $log_details{'level'} );
+
         my $log_message_string    = '';
         my @command_details_order = ( 'date', 'time', 'level', 'message' );
         foreach my $key (@command_details_order) {
