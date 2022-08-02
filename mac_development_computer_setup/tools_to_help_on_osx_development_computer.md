@@ -287,7 +287,7 @@ done
 
 ### `~/.zshrc`
 
-```zshs
+```zsh
 #!/usr/bin/env zsh
 export TERM='xterm-256color'
 
@@ -301,9 +301,10 @@ fi
 run_after_wait() {
   local -r wait_in_seconds="$1"
   shift
-  sleep "${wait_in_seconds}"
+  sleep "${wait_in_seconds}"s
   "$@"
 }
+
 generate_antigen_cache() {
   SECONDS_IN_DAY=86400
   SECONDS_IN_WEEK=$((SECONDS_IN_DAY * 7))
@@ -325,11 +326,10 @@ generate_antigen_cache() {
   fi
 }
 
-
 source "${ANTIGEN_SOURCE_PATH}"
 antigen init ~/.antigenrc
-generate_antigen_cache
-[[ -n ${ZSH_CACHE_DIR:-} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions" # Fix gh plugin
+# generate_antigen_cache
+[[ -n ${ZSH_CACHE_DIR} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions"
 
 # export PROMPT='$(gbt $?)'
 
@@ -346,16 +346,6 @@ add_to_path() {
     fi
   fi
 }
-
-# fpath=(~/.zsh $fpath)
-# autoload -Uz compinit
-# compinit -u
-
-# zzinit 2>/dev/null || true
-# if command_exists zi; then
-#   zi light z-shell/zui
-#   zi light z-shell/zsh-lint
-# fi
 
 export FZF_BASE="$(brew --prefix fzf)"
 if [[ ~/.vimrc ]]; then
@@ -404,18 +394,6 @@ export ARCHFLAGS="-arch x86_64"
 
 test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
 
-# # tabtab source for serverless package
-# # uninstall by removing these lines or running `tabtab uninstall serverless`
-# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.zsh
-# # tabtab source for sls package
-# # uninstall by removing these lines or running `tabtab uninstall sls`
-# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.zsh
-# # tabtab source for slss package
-# # uninstall by removing these lines or running `tabtab uninstall slss`
-# [[ -f /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh ]] && . /usr/local/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.zsh
-
-# add_to_path "/usr/local/opt/openssl@1.1/bin"
-
 alias pyauth='chamber exec dev-ws/us-east-1 GOOGLE_API_KEY -- pipenv run'
 export AWS_SESSION_TOKEN_TTL=8h
 
@@ -441,21 +419,21 @@ if type brew &>/dev/null; then
 fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
 source ~/wearsafe/github_login_tokens.sh
 
-# # The next line updates PATH for the Google Cloud SDK.
-# if [ -f '/Users/jamienelson/google-cloud-sdk/path.zsh.inc' ]; then \. '/Users/jamienelson/google-cloud-sdk/path.zsh.inc'; fi
-
-# # The next line enables shell command completion for gcloud.
-# if [ -f '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/jamienelson/google-cloud-sdk/completion.zsh.inc'; fi
-
 source "${XDG_CONFIG_HOME:-$HOME/.config}/asdf-direnv/zshrc"
+. ~/.asdf/plugins/java/set-java-home.zsh
 
 # bun completions
 [ -s "/usr/local/share/zsh/site-functions/_bun" ] && source "/usr/local/share/zsh/site-functions/_bun"
 
 # bun completions
 [ -s "/Users/jamienelson/.bun/_bun" ] && source "/Users/jamienelson/.bun/_bun"
+
+export DOCKER_HOST='unix:///Users/jamienelson/.local/share/containers/podman/machine/podman-machine-default/podman.sock'
+alias docker=podman
+export BFD_REPOSITORY="${HOME}/.shell-scripts"
 
 ```
 
@@ -466,6 +444,7 @@ source "${XDG_CONFIG_HOME:-$HOME/.config}/asdf-direnv/zshrc"
 brew install --cask visual-studio-code
 command -v code >/dev/null 2>&1 || { echo >&2 "VS Code is not installed.  Aborting."; exit 1; }
 docker container run --name explainshell --restart always -p 5437:5000 -d spaceinvaderone/explainshell
+```
 # Install VS Code extensions
 
 ## Suggested Extra Tools:
@@ -494,5 +473,4 @@ $ my_function() { sleep 1; }
 $ export -f my_function
 $ hyperfine my_function
 ```
-
 ````
