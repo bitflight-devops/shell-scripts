@@ -93,6 +93,7 @@ add_ebcli_bin_paths() {
   add_to_path "${HOME}/.local/bin"
   add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package"
   add_to_path "${HOME}/.ebcli-virtual-env/executables"
+  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/executables"
 }
 
 install_eb_cli() {
@@ -159,6 +160,7 @@ install_eb_cli() {
         --hide-export-recommendation \
         --location "${EB_PACKAGE_PATH}"
     fi
+
     add_ebcli_bin_paths
   fi
 }
