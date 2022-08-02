@@ -65,7 +65,12 @@ install_apt-fast() {
     fi
   fi
 }
-
+latest_solution_stack_coretto11() {
+  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select( contains("running Corretto 11"))) | .[0]' 2>/dev/null || echo "corretto-11")"
+}
+latest_solution_stack_tomcat85() {
+  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select(contains("Tomcat 8.5 Corretto 11"))) | .[0]' 2>/dev/null || echo "tomcat-8.5-corretto-11")"
+}
 install_ebcli_ubuntu_dependencies() {
   install_apt-fast || true
   if ! command_exists python3; then
@@ -651,9 +656,9 @@ stop_current_eb_processes() (
 
 remove_passive() {
   if [[ -n "${2:-}" ]]; then
-  local -r env="${2:-}"
+    local -r env="${2:-}"
   else
-  local -r env="$(environment_name_by_cname passive)"
+    local -r env="$(environment_name_by_cname passive)"
   fi
   if [[ -z ${env:-} ]]; then
     info "${0}(): No passive environment found"

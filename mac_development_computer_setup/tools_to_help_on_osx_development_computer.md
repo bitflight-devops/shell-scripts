@@ -302,7 +302,7 @@ fi
 run_after_wait() {
   local -r wait_in_seconds="$1"
   shift
-  sleep "${wait_in_seconds}"s
+  sleep "${wait_in_seconds}"
   "$@"
 }
 generate_antigen_cache() {
