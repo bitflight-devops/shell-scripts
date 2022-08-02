@@ -202,17 +202,20 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
             my $fullmessage = $log_details{'message'};
             if ( $fullmessage =~ /(error|severe)/i ) {
                 $command = 'error';
+                $log_details{'level'} = $command;
             }
             elsif ( $fullmessage =~ /(warning|warn)/i ) {
-                $command = 'warn';
+                $command = 'warning';
+                $log_details{'level'} = 'warn';
             }
             elsif ( $fullmessage =~ /(debug)/i ) {
                 $command = 'debug';
+                $log_details{'level'} = $command;
             }
             else {
                 $command = 'info';
+                $log_details{'level'} = $command;
             }
-            $log_details{'level'} = $command;
         }
         my $command_string           = '';
         my @command_properties_array = ();
@@ -242,11 +245,13 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 && defined( $log_details{$key} )
                 && $log_details{$key} ne '' )
             {
-              if ($key eq 'level') {
-                $log_indent_string .= sprintf( '[%5s] ', $log_details{$key} );
-              } else {
-                $log_indent_string .= sprintf( '%s ', $log_details{$key} );
-              }
+                if ( $key eq 'level' ) {
+                    $log_indent_string .=
+                      sprintf( '[%5s] ', $log_details{$key} );
+                }
+                else {
+                    $log_indent_string .= sprintf( '%s ', $log_details{$key} );
+                }
 
             }
         }
@@ -257,8 +262,9 @@ for ( my $i = $starting_line ; $i <= $#lines ; $i++ ) {
                 escape_data( $log_indent_string . $log_message_string ) );
         }
         else {
-          my $indent_space = sprintf( "\n%*s", length($log_indent_string), " " );
-$log_message_string =~ s/\n/$indent_space/gm;
+            my $indent_space =
+              sprintf( "\n%*s", length($log_indent_string), " " );
+            $log_message_string =~ s/\n/$indent_space/gm;
             my @messageArray = split( "\n", $log_message_string );
             if ( length($log_message_string) > 1 ) {
                 $log_message_string = join(
