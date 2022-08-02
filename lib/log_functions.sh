@@ -87,7 +87,7 @@ get_log_type() {
     "notice"
     "debug"
   )
-  if [[ -z "${GITHUB_ACTIONS-}" ]]; then
+  if [[ -z ${GITHUB_ACTIONS-} ]]; then
     LOG_TYPES+=(
       "info"
       "success"
@@ -96,7 +96,7 @@ get_log_type() {
     )
   fi
   local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
-  if [[ "${LOG_TYPES[*]}" =~ ( |^)"${logtype}"( |$) ]]; then
+  if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
     printf '%s' "${logtype}"
   else
     echo ""
@@ -123,7 +123,7 @@ get_log_color() {
   local arg="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
   local -r logtype="$(get_log_type "${arg}")"
 
-  if [[ -z "${logtype}" ]]; then
+  if [[ -z ${logtype} ]]; then
     printf '%s' "${NO_COLOR}"
   else
     eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
@@ -175,11 +175,11 @@ simple_log() {
   local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
-  if [[ -z "${logtype}" ]]; then
+  if [[ -z ${logtype} ]]; then
     plain_log "${fulllogtype}" "${*}"
   else
     shift
-    if [[ "${logcolor}" != "::" ]]; then
+    if [[ ${logcolor} != "::" ]]; then
       local indent_width=11
       local indent="$(indent_style "${logtype}" "${indent_width}")"
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
@@ -228,7 +228,7 @@ github_log() {
   local -r logtype="$(get_log_type "${1}")"
   shift
 
-  if [[ $(type -t escape_github_command_data) == 'function' ]] && [[ -n "${logtype}" ]]; then
+  if [[ $(type -t escape_github_command_data) == 'function' ]] && [[ -n ${logtype} ]]; then
     local -r msg="$(escape_github_command_data "$(trim "${*}")")"
   else
     local -r msg="${*}"
@@ -240,7 +240,7 @@ github_log() {
       LOG_STRING=("::${logtype} ")
       shift
       FILE="$(trim "${GITHUB_LOG_FILE:-${BASH_SOURCE[0]}}")"
-      if [[ $(type -t escape_github_command_property) == 'function' ]] && [[ -n "${logtype}" ]]; then
+      if [[ $(type -t escape_github_command_property) == 'function' ]] && [[ -n ${logtype} ]]; then
         [[ ${#FILE} -gt 0 ]] && LOG_ARGS+=("file=$(escape_github_command_property "${FILE}")")
         [[ -n ${GITHUB_LOG_TITLE:-} ]] && LOG_ARGS+=("title=$(escape_github_command_property "${GITHUB_LOG_TITLE}")")
       else
@@ -293,7 +293,7 @@ log_output() {
     local function_name="$(caller 1 | awk '{print $2}')"
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
   fi
-  if running_in_github_actions && [[ -n "${logtype}" ]]; then
+  if running_in_github_actions && [[ -n ${logtype} ]]; then
     github_log "${labelUppercase}" "${function_name:+${function_name}():}${msg}"
   else
     indent_width=7
@@ -403,7 +403,7 @@ log_file_contents() (
   set +x +e
   export GITHUB_LOG_FILE_RAW="$(tr -s '/' <<<"${1}")"
   local logdir="$(dirname "${GITHUB_LOG_FILE_RAW}")"
-  if [[ -d "${logdir}" ]]; then
+  if [[ -d ${logdir} ]]; then
     find "${logdir}" -type f -iname "$(basename "${GITHUB_LOG_FILE_RAW}")" -print0 | while IFS= read -r -d $'\0' file; do
       print_single_log_file "${file}"
     done

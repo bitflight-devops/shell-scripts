@@ -63,9 +63,9 @@ SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITO
 MAIN_USER="$(id -un 2>/dev/null || true)"
 
 sourced=0
-if [[ -n "${ZSH_VERSION:-}" ]]; then
+if [[ -n ${ZSH_VERSION:-} ]]; then
   case ${ZSH_EVAL_CONTEXT:-} in *:file) sourced=1 ;; esac
-elif [[ -n "${BASH_VERSION:-}" ]]; then
+elif [[ -n ${BASH_VERSION:-} ]]; then
   (return 0 2>/dev/null) && sourced=1
 else # All other shells: examine $0 for known shell binary filenames.
   # Detects `sh` and `dash`; add additional shell filenames as needed.
@@ -76,7 +76,7 @@ in_quiet_mode() {
   if [[ -n ${DEBUG:-} ]]; then
     # not quiet
     return 1
-  elif [[ -n "${SHELL_SCRIPTS_QUIET:-}" ]]; then
+  elif [[ -n ${SHELL_SCRIPTS_QUIET:-} ]]; then
     # quiet
     return 0
   elif [[ ${sourced} -eq 1 ]] && [[ ! -t 0 ]]; then
@@ -128,7 +128,7 @@ get_log_type() {
     "notice"
     "debug"
   )
-  if [[ -z "${GITHUB_ACTIONS:-}" ]]; then
+  if [[ -z ${GITHUB_ACTIONS:-} ]]; then
     LOG_TYPES+=(
       "success"
       "failure"
@@ -136,7 +136,7 @@ get_log_type() {
     )
   fi
   local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
-  if [[ "${LOG_TYPES[*]}" =~ ( |^)"${logtype}"( |$) ]]; then
+  if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
     printf '%s' "${logtype}"
   else
     echo ""
@@ -177,12 +177,12 @@ get_log_color() {
   LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
   local arg="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
 
-  if [[ ! "${arg}" =~ (success|failure|step) ]]; then
+  if [[ ! ${arg} =~ (success|failure|step) ]]; then
     local -r logtype="$(get_log_type "${arg}")"
   else
     local -r logtype="${arg}"
   fi
-  if [[ -z "${logtype}" ]]; then
+  if [[ -z ${logtype} ]]; then
     printf '%s' "${NO_COLOR}"
   else
     eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
@@ -240,11 +240,11 @@ simple_log() {
   in_quiet_mode && return 0
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
-  if [[ -z "${logtype}" ]]; then
+  if [[ -z ${logtype} ]]; then
     printf '%s%s\n' "${NO_COLOR}" "${*}"
   else
     shift
-    if [[ "${logcolor}" != "::" ]]; then
+    if [[ ${logcolor} != "::" ]]; then
       local indent_width=11
       local indent="$(indent_style "${logtype}" "${indent_width}")"
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
@@ -277,7 +277,7 @@ notice() { simple_log notice "$@"; }
 info() { simple_log info "$@"; }
 chomp() { printf "%s" "${1/"$'\n'"/}"; }
 debug() {
-  if [[ -n "${DEBUG:-}" ]]; then
+  if [[ -n ${DEBUG:-} ]]; then
     simple_log debug "$@"
   fi
 }
@@ -300,13 +300,13 @@ if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
 fi
 
 # Check if script is run with force-interactive mode in CI
-if [[ -n "${CI-}" && -n "${INTERACTIVE-}" ]]; then
+if [[ -n ${CI-} && -n ${INTERACTIVE-} ]]; then
   abort "Cannot run force-interactive mode in CI."
 fi
 # Check if both `INTERACTIVE` and `NONINTERACTIVE` are set
 # Always use single-quoted strings with `exp` expressions
 # shellcheck disable=SC2016
-if [[ -n "${INTERACTIVE-}" && -n "${NONINTERACTIVE-}" ]]; then
+if [[ -n ${INTERACTIVE-} && -n ${NONINTERACTIVE-} ]]; then
   abort 'Both `$INTERACTIVE` and `$NONINTERACTIVE` are set. Please unset at least one variable and try again.'
 fi
 
@@ -315,13 +315,13 @@ debug "checking which mode to use"
 # If it is run non-interactively we should not prompt for passwords.
 # Always use single-quoted strings with `exp` expressions
 # shellcheck disable=SC2016
-if [[ -z "${NONINTERACTIVE-}" ]]; then
-  if [[ -n "${CI-}" ]]; then
+if [[ -z ${NONINTERACTIVE-} ]]; then
+  if [[ -n ${CI-} ]]; then
     debug 'Running in non-interactive mode because `$CI` is set.'
     NONINTERACTIVE=1
     unset INTERACTIVE
   elif [[ ! -t 0 ]] && [[ ${sourced} -eq 1 ]]; then
-    if [[ -z "${INTERACTIVE-}" ]]; then
+    if [[ -z ${INTERACTIVE-} ]]; then
       debug 'Running in non-interactive mode because `stdin` is not a TTY.'
       NONINTERACTIVE=1
       unset INTERACTIVE
@@ -338,7 +338,7 @@ else
 fi
 
 # USER isn't always set so provide a fall back for the installer and subprocesses.
-if [[ -z "${USER:-}" ]]; then
+if [[ -z ${USER:-} ]]; then
   debug "No USER variable, creating one"
   USER="$(chomp "$(id -un)")"
   export USER
@@ -346,15 +346,15 @@ fi
 
 # First check OS.
 OS="$(/usr/bin/uname 2>/dev/null || uname)"
-if [[ "${OS}" == "Linux" ]]; then
+if [[ ${OS} == "Linux" ]]; then
   SHELL_SCRIPTS_LINUX=1
-elif [[ "${OS}" != "Darwin" ]]; then
+elif [[ ${OS} != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
 BFD_PREFIX_DEFAULT="${HOME}"
 BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
 
-if [[ -z "${SHELL_SCRIPTS_LINUX-}" ]]; then
+if [[ -z ${SHELL_SCRIPTS_LINUX-} ]]; then
   UNAME_MACHINE="$(/usr/bin/uname -m)"
 
   STAT_PRINTF=("stat" "-f")
@@ -384,7 +384,7 @@ unset HAVE_SUDO_ACCESS # unset this from the environment
 
 have_sudo_access() {
   local -r user="$(id -un 2>/dev/null || true)"
-  if [[ "${user}" == "root" ]]; then
+  if [[ ${user} == "root" ]]; then
 
     return 0
   fi
@@ -393,14 +393,14 @@ have_sudo_access() {
   fi
 
   local -a SUDO=("/usr/bin/sudo")
-  if [[ -n "${SUDO_ASKPASS-}" ]]; then
+  if [[ -n ${SUDO_ASKPASS-} ]]; then
     SUDO+=("-A")
-  elif [[ -n "${NONINTERACTIVE-}" ]]; then
+  elif [[ -n ${NONINTERACTIVE-} ]]; then
     SUDO+=("-n")
   fi
 
-  if [[ -z "${HAVE_SUDO_ACCESS-}" ]]; then
-    if [[ -n "${NONINTERACTIVE-}" ]]; then
+  if [[ -z ${HAVE_SUDO_ACCESS-} ]]; then
+    if [[ -n ${NONINTERACTIVE-} ]]; then
       "${SUDO[@]}" -l mkdir &>/dev/null
     else
       "${SUDO[@]}" -v && "${SUDO[@]}" -l mkdir &>/dev/null
@@ -408,7 +408,7 @@ have_sudo_access() {
     HAVE_SUDO_ACCESS="$?"
   fi
 
-  if [[ -z "${HOMEBREW_ON_LINUX-}" ]] && [[ "${HAVE_SUDO_ACCESS}" -ne 0 ]]; then
+  if [[ -z ${HOMEBREW_ON_LINUX-} ]] && [[ ${HAVE_SUDO_ACCESS} -ne 0 ]]; then
     abort "Need sudo access on macOS (e.g. the user ${USER} needs to be an Administrator)!"
   fi
 
@@ -443,9 +443,9 @@ root_available() {
 run_as_root() {
   local sd="$(root_available)"
   local -r rv="$?"
-  if [[ ${rv} -eq 0 ]] && [[ "${sd}" == '' ]]; then
+  if [[ ${rv} -eq 0 ]] && [[ ${sd} == '' ]]; then
     execute "${@}"
-  elif [[ ${rv} -eq 0 ]] && [[ "${sd}" == 'sudo' ]]; then
+  elif [[ ${rv} -eq 0 ]] && [[ ${sd} == 'sudo' ]]; then
     execute sudo "${@}"
   else
     abort 'This command needs the ability to run other commands as root.\nWe are unable to find "sudo" available to make this happen.'
@@ -461,7 +461,7 @@ fi
 test_writeable() {
   local path
   for path in "$@"; do
-    if [[ -d "${path}" ]]; then
+    if [[ -d ${path} ]]; then
       "${TOUCH[@]:-touch}" "${path%/}"/test-writeable-file 2>/dev/null
       if [[ -f "${path%/}"/test-writeable-file ]]; then
         rm "${path%/}"/test-writeable-file
@@ -478,7 +478,7 @@ create_script_directory() {
   local -r path="$1"
   local -r permissions="0755"
   local fix_ownership='false'
-  if [[ -d "${path}" ]]; then
+  if [[ -d ${path} ]]; then
     if ! test_writeable "${path}"; then
       info "The directory ${YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
     else
@@ -504,7 +504,7 @@ create_script_directory() {
     fi
   fi
 
-  if [[ -d "${path}" ]] && [[ ${fix_ownership} == 'true' ]]; then
+  if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
     info "Setting ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
     run_as_root "${CHOWN[@]}" "${user}" "${path}" 2>/dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
     info "Setting permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
@@ -545,12 +545,12 @@ create_directories() {
 # }
 
 get_last_github_author_email() {
-  if command_exists jq && [[ -f "${GITHUB_EVENT_PATH:-}" ]]; then
+  if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
     execute jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
   fi
 }
 get_last_github_author_name() {
-  if command_exists jq && [[ -f "${GITHUB_EVENT_PATH:-}" ]]; then
+  if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
     execute jq -r '.pull_request // .check_suite // .workflow_run // .issue // .sender // .commit // .repository // . | .head_commit // .commit // . | .author.name // .pusher.name // .login // .user.login // .owner.login // ""' "${GITHUB_EVENT_PATH:-}"
   fi
 }
@@ -582,7 +582,7 @@ configure_git() {
 
 }
 git_ref_type() {
-  if [[ -z "$1" ]]; then
+  if [[ -z $1 ]]; then
     echo "no_ref_given"
   elif git rev-parse -q --verify "$1^{tag}" 2>/dev/null; then
     echo tag
@@ -703,11 +703,11 @@ get_permission() {
 }
 
 user_only_chmod() {
-  [[ -d "$1" ]] && [[ "$(get_permission "$1")" != 75[0145] ]]
+  [[ -d $1 ]] && [[ "$(get_permission "$1")" != 75[0145] ]]
 }
 
 exists_but_not_writable() {
-  [[ -e "$1" ]] && ! [[ -r "$1" && -w "$1" && -x "$1" ]]
+  [[ -e $1 ]] && ! [[ -r $1 && -w $1 && -x $1 ]]
 }
 
 get_owner() {
@@ -765,18 +765,18 @@ not_in_path() {
 }
 add_to_path() {
   # if [[ -d "${1}" ]]; then
-    if [[ -z "${PATH}" ]]; then
-      export PATH="${1}"
-    elif not_in_path "${1}"; then
-      export PATH="${1}:${PATH}"
-    fi
+  if [[ -z ${PATH} ]]; then
+    export PATH="${1}"
+  elif not_in_path "${1}"; then
+    export PATH="${1}:${PATH}"
+  fi
   # fi
 }
 
 check_bin_dir() {
   bin_dir="${1%/}"
 
-  if [[ ! -d "${bin_dir}" ]]; then
+  if [[ ! -d ${bin_dir} ]]; then
     error "Installation location ${bin_dir} does not appear to be a directory"
     info "Make sure the location exists and is a directory, then try again."
     exit 1
@@ -786,14 +786,14 @@ check_bin_dir() {
   good=$(
     IFS=:
     for path in ${PATH}; do
-      if [[ "${path%/}" = "${bin_dir}" ]]; then
+      if [[ ${path%/} == "${bin_dir}" ]]; then
         printf 1
         break
       fi
     done
   )
 
-  if [[ "${good}" != "1" ]]; then
+  if [[ ${good} != "1" ]]; then
     warn "Bin directory ${bin_dir} is not in your \$PATH"
   fi
 }
@@ -864,7 +864,7 @@ install_dependencies() {
       NO_PACKAGE_MANAGER=true
     fi
   fi
-  if [[ -n "${NO_PACKAGE_MANAGER:-}" ]]; then
+  if [[ -n ${NO_PACKAGE_MANAGER:-} ]]; then
     abort "No package manager found. Please install ${YELLOW}${dependencies[*]}${NO_COLOR} manually."
   fi
   success "Installed ${YELLOW}${dependencies[*]}${NO_COLOR}."
@@ -876,9 +876,9 @@ installer_dependencies() {
   INSTALL_DEPS=false
   if [[ ${#REQUIRED_DEPENDENCIES[@]} -eq 0 ]]; then
     INSTALL_DEPS=false
-  elif [[ -n "${NONINTERACTIVE-}" ]]; then
+  elif [[ -n ${NONINTERACTIVE-} ]]; then
     INSTALL_DEPS=true
-  elif [[ -n "${INTERACTIVE-}" ]]; then
+  elif [[ -n ${INTERACTIVE-} ]]; then
     # If we're running in an interactive shell, we need to ask the user for
     # permission to install the dependencies.
 
@@ -889,7 +889,7 @@ installer_dependencies() {
       start_step "Do you want to install them now? [Y/n] "
       read -r -n 1 -t 120 install_deps_answer
       printf "\n"
-      if [[ "${install_deps_answer:-y}" =~ [Yy] ]]; then
+      if [[ ${install_deps_answer:-y} =~ [Yy] ]]; then
         INSTALL_DEPS=true
       fi
     else
@@ -897,10 +897,10 @@ installer_dependencies() {
     fi
   fi
 
-  if [[ "${INSTALL_DEPS:-}" == 'true' ]]; then
+  if [[ ${INSTALL_DEPS:-} == 'true' ]]; then
     info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${NO_COLOR}"
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
-  elif [[ "${#REQUIRED_DEPENDENCIES[@]}" -gt 0 ]]; then
+  elif [[ ${#REQUIRED_DEPENDENCIES[@]} -gt 0 ]]; then
     ohai "Skipping dependency installation…"
     abort "Please install ${YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
   fi
@@ -908,7 +908,7 @@ installer_dependencies() {
 }
 
 print_or_execute() {
-  if [[ "${1}" == "print" ]]; then
+  if [[ ${1} == "print" ]]; then
     shift
     printf "    "
     printf "%s" "${@}"
@@ -949,12 +949,12 @@ set_env_var() {
     error "Could not find a shell profile file to set the environment variable in."
     return 1
   fi
-  if [[ ! -f "${file}" ]]; then
+  if [[ ! -f ${file} ]]; then
     "${TOUCH[@]:-touch}" "${file}" || return 1
   fi
   #  /[.*+?^${}()|[\]\\]/g, '\\$&'
 
-  if [[ -n "${value}" ]]; then
+  if [[ -n ${value} ]]; then
     if grep -q "^${prefix}${name}=" "${file}"; then
       perl -pi -e "s#^${prefix}${name}=.*#${prefix}${name}=${value}#g" "${file}" && return 0
     else
@@ -972,15 +972,15 @@ next_steps() {
 
   local shell_profile="$(shell_rc_file)"
   local repo_var="export BFD_REPOSITORY=${BFD_REPOSITORY}"
-  if [[ -n "${INTERACTIVE:-}" ]]; then
+  if [[ -n ${INTERACTIVE:-} ]]; then
     notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${BFD_REPOSITORY}/lib/bootstrap.sh${COLOR_RESET}"
-    if [[ -f "${shell_profile}" ]] && grep -q "${repo_var}" "${shell_profile}"; then
+    if [[ -f ${shell_profile} ]] && grep -q "${repo_var}" "${shell_profile}"; then
       debug "Environment variable\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nalready configured in ${shell_profile}"
     else
       start_step "Do you want to add this to your ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] ${COLOR_RESET}"
       read -r -n 1 -t 120 add_to_shell
       printf "\n"
-      if [[ "${add_to_shell:-y}" =~ [Yy] ]]; then
+      if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
         info "Adding environment variable:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nto ${shell_profile}"
         set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}" && return 0
       fi
@@ -989,7 +989,7 @@ next_steps() {
     info "Or reload the shell:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${shell_profile}${COLOR_RESET}"
   fi
 
-  if [[ -n "${NONINTERACTIVE:-}" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  if [[ -n ${NONINTERACTIVE:-} ]] || [[ -n ${GITHUB_ACTIONS:-} ]]; then
     info "Adding environment variable\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}"
     set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}"
   fi
@@ -1019,7 +1019,7 @@ install() {
 
 # check_bin_dir "${BIN_DIR}"
 install || failure "Installation failed"
-if [[ -z "${NONINTERACTIVE-}" ]]; then
+if [[ -z ${NONINTERACTIVE-} ]]; then
   ring_bell
   # wait_for_user
 fi

@@ -13,7 +13,7 @@ brew_app_directory() {
         readlink -f "$(brew --prefix "$@")"
       else
         for app in "$@"; do
-        echo "$(brew --cellar "${app}")/$(brew info --json "${app}" | jq -r '.[0].installed[0].version')"
+          echo "$(brew --cellar "${app}")/$(brew info --json "${app}" | jq -r '.[0].installed[0].version')"
         done
       fi
     fi

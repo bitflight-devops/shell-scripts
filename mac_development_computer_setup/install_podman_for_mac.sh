@@ -1,6 +1,6 @@
 #!/bin/sh
 mkdir -p ~/.hammerspoon
-cat <<EOF > ~/.hammerspoon/init.lua
+cat <<EOF >~/.hammerspoon/init.lua
 #!/usr/bin/env lua
 function printf(s,...)  print(s:format(...)) end
 wather = hs.caffeinate.watcher.new(function(eventType)
@@ -16,7 +16,6 @@ EOF
 brew install podman
 brew install --cask hammerspoon
 xattr -r -d com.apple.quarantine /Applications/Hammerspoon.app
-
 
 # /Applications/Hammerspoon.app
 # /usr/libexec/PlistBuddy -c "set :askForPassword 1" "${HOME}"/Library/Preferences/org.hammerspoon.Hammerspoon.plist

@@ -46,7 +46,7 @@ get_prerelease_suffix() {
 }
 
 check_if_on_release_branch() {
-  if [[ -n "${1:-${GITHUB_REF}}" ]] && [[ -n "${2:-${RELEASE_BRANCH}}" ]]; then
+  if [[ -n ${1:-${GITHUB_REF}} ]] && [[ -n ${2:-${RELEASE_BRANCH}} ]]; then
     local raw_ref="${1:-${GITHUB_REF}}"
     local -r ref="${raw_ref//refs\/heads\//}"
     local raw_release_branch="${2:-${RELEASE_BRANCH}}"

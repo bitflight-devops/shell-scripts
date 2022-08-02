@@ -173,7 +173,7 @@ basic_wget() {
 }
 
 configure_bastion_ssh_tunnel() {
-  if [[ -z "${BASTION_HOST}" ]] || [[ -z "${BASTION_USER}" ]] || [[ -z "${BASTION_PRIVATE_KEY}" ]]; then
+  if [[ -z ${BASTION_HOST} ]] || [[ -z ${BASTION_USER} ]] || [[ -z ${BASTION_PRIVATE_KEY} ]]; then
     error "One or more essential bastion variables missing: BASTION_PRIVATE_KEY:'${BASTION_PRIVATE_KEY:0:10}' BASTION_HOST:'${BASTION_HOST}' BASTION_USER:'${BASTION_USER}'"
     exit 1
   fi
@@ -235,10 +235,10 @@ run_flyway_migration() {
   if docker compose -p flyway --project-directory "${GITHUB_WORKSPACE:-./}" -f "${FLYWAY_DOCKER_COMPOSE_FILE}" run --rm flyway; then
     ERRORED=false
   fi
-  if [[ "${NETWORK_CREATED}" == true ]]; then
+  if [[ ${NETWORK_CREATED} == true ]]; then
     docker network rm api-backend || true
   fi
-  if [[ "${ERRORED}" != false ]]; then
+  if [[ ${ERRORED} != false ]]; then
     error_log "Flyway migration failed"
     return 1
   fi

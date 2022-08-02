@@ -10,7 +10,7 @@ env:
   SHELL_SCRIPTS_GITHUB_REPOSITORY: "bitflight-devops/shell-scripts"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Get Version To Checkout
       id: version

@@ -47,7 +47,7 @@ declare -a AVAILABLE_LIBRARIES=(
 # fi
 
 run_quietly() {
-  if [[ -z "${SHELL_SCRIPTS_QUIET:-}" ]] || [[ -n ${DEBUG:-} ]]; then
+  if [[ -z ${SHELL_SCRIPTS_QUIET:-} ]] || [[ -n ${DEBUG:-} ]]; then
     "$@"
   else
     "$@" >/dev/null 2>&1
@@ -99,7 +99,7 @@ fi
 
 run_quietly info "Loading libraries..."
 if load_libraries "${LOAD_LIBRARIES[@]}" >/dev/null && eval "$(load_libraries "${LOAD_LIBRARIES[@]}")"; then
-run_quietly info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+  run_quietly info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
 else
   error "Failed to load libraries"
 fi

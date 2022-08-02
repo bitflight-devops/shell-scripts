@@ -136,7 +136,7 @@ install_eb_cli() {
       set_env EB_INSTALLER_PATH "${HOME}/.cache/aws-elastic-beanstalk-cli-setup"
     fi
 
-    if [[ ! -d "${EB_INSTALLER_PATH}" ]]; then
+    if [[ ! -d ${EB_INSTALLER_PATH} ]]; then
       mkdir -p "${EB_INSTALLER_PATH}"
       git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
     else
@@ -641,7 +641,7 @@ stop_current_eb_processes() (
 )
 
 remove_passive() {
-  if [[ -n "${2:-}" ]]; then
+  if [[ -n ${2:-} ]]; then
     local -r env="${2:-}"
   else
     local -r env="$(environment_name_by_cname passive)"

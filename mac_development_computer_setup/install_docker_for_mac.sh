@@ -1,8 +1,8 @@
 #!/bin/sh
 
-cat <<EOF > ~/docker_installer.sh
+cat <<EOF >~/docker_installer.sh
 #!/usr/bin/env bash
-DOCKER_INSTALLER_PATH="$HOME/Downloads/Docker.dmg"
+DOCKER_INSTALLER_PATH="${HOME}/Downloads/Docker.dmg"
 if [[ \$(uname -p) == 'arm' ]]; then
   echo "Downloading Docker.dmg for M1 Chip"
   curl -fLl -o "\${DOCKER_INSTALLER_PATH}" 'https://desktop.docker.com/mac/main/arm64/Docker.dmg?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-mac-arm64'

@@ -29,7 +29,7 @@ fi
 echo "Mounting Docker.dmg"
 if hdiutil attach "\${DOCKER_INSTALLER_PATH}"; then
   echo "Installing Docker"
-  /Volumes/Docker/Docker.app/Contents/MacOS/install --accept-license 
+  /Volumes/Docker/Docker.app/Contents/MacOS/install --accept-license
 else
   echo "Docker.dmg could not be mounted - possibly damaged dmg"
 fi
@@ -64,7 +64,7 @@ sh -c "$(curl -fsSL https://git.io/get-zi)" -- -i skip  -a loader -b main
 # Connect to Third Party Brew Repos
 brew tap aws/tap
 brew tap lucagrulla/tap
-brew tap mutagen-io/mutagen 
+brew tap mutagen-io/mutagen
 brew tap sass/sass
 brew tap hashicorp/tap
 brew tap codacy/tap
@@ -74,7 +74,7 @@ brew install cask
 brew uninstall python2 2>/dev/null || true
 brew install python@3.10 python-tk@3.10
 python -m ensurepip --upgrade
-python-pip python-yq 
+python-pip python-yq
 brew install node groovy ruby rust golang
 brew install --cask temurin
 
@@ -477,7 +477,7 @@ docker container run --name explainshell --restart always -p 5437:5000 -d spacei
 -   [bat](<>)
 -   [fd](<>)
 -   [procs](<>)
--   [dust](<>) 
+-   [dust](<>)
 -   [tldr](<>) **npm install -g tldr**
 -   [broot](<>) **brew install broot**
 -   [gping](https://github.com/orf/gping)
