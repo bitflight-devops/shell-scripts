@@ -287,8 +287,7 @@ done
 
 ### `~/.zshrc`
 
-```zsh
-#!/usr/bin/env zsh
+```zshs
 #!/usr/bin/env zsh
 export TERM='xterm-256color'
 
