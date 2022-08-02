@@ -759,16 +759,18 @@ detect_platform() {
 }
 
 not_in_path() {
-  tr ':' '\n' <<<"${PATH}" | grep -q -e "^$1$"
+  local -r item="$(trim "${1}")"
+  local p="${PATH%:}"
+  grep -q -v ":${item}:" <<<":${p#:}:"
 }
 add_to_path() {
-  if [[ -d "${1}" ]]; then
+  # if [[ -d "${1}" ]]; then
     if [[ -z "${PATH}" ]]; then
       export PATH="${1}"
     elif not_in_path "${1}"; then
       export PATH="${1}:${PATH}"
     fi
-  fi
+  # fi
 }
 
 check_bin_dir() {
