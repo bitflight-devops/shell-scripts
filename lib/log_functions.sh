@@ -297,12 +297,13 @@ log_output() {
   fi
   shift
   local msg="${*}"
+  local -r logtype="$(get_log_type "${labelUppercase}")"
 
   if caller 1 >/dev/null 2>&1; then
     local function_name="$(caller 1 | awk '{print $2}')"
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
   fi
-  if running_in_github_actions; then
+  if running_in_github_actions && [[ -n "${logtype}" ]]; then
     github_log "${labelUppercase}" "${function_name:+${function_name}():}${msg}"
   else
     indent_width=7
