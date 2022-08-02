@@ -585,7 +585,7 @@ pipe_errors_from_ebs_to_github_actions() {
           local -r url="$(jq -r '.Message' "${loginfo_file}")"
           if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2>/dev/null; then
             mkdir -p "${log_output_path}"
-            unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz"
+            debug "UNZIP log files:\n$(unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz")"
             print_logs_from_zip "${log_output_path}"
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Success"
             return 0

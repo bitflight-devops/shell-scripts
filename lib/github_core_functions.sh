@@ -151,6 +151,8 @@ set_output() {
   fi
 }
 
+# add_to_path function moved to system_functions
+
 get_java_version() {
   if [[ -f .java-version ]]; then
     JAVA_VERSION="$(cat .java-version)"
