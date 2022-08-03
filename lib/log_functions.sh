@@ -315,18 +315,21 @@ debug() {
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   log_output "${return_code}" "DEBUG" "COLOR_BOLD_BLACK" "✎ ${*}"
 }
+debug_log() { debug "${@}"; }
 
 info() {
   local -r return_code=$?
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   log_output "${return_code}" "INFO" "COLOR_BOLD_WHITE" "★ ${*}"
 }
+info_log() { info "${@}"; }
 
 notice() {
   local -r return_code=$?
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   log_output "${return_code}" "NOTICE" "COLOR_BOLD_WHITE" "${*}"
 }
+notice_log() { notice "${@}"; }
 
 error() {
   local return_code=$?
@@ -334,6 +337,7 @@ error() {
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
   log_output "${return_code}" "ERROR" "COLOR_RED" "✗ ${*}" | to_stderr
 }
+error_log() { error "${@}"; }
 
 fatal() {
   local return_code=$?
@@ -342,12 +346,15 @@ fatal() {
   log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | to_stderr
 }
 
+fatal_log() { fatal "${@}"; }
+
 warn() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
   log_output "${return_code}" "WARN" "COLOR_YELLOW" "∴ ${*}" | to_stderr
 }
+warning() { warn "${@}"; }
 
 failure() {
   local -r message="${*}"

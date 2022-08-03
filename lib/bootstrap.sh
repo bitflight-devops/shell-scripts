@@ -4,7 +4,8 @@ if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
 fi
 
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
-  if grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; then
+  if command -v zsh >/dev/null 2>&1 && [[ $(${SHELL} -c 'echo ${ZSH_VERSION}') != '' ]] || { command -v ps >/dev/null 2>&1 && grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; }; then
+    # We are running in zsh
     # shellcheck disable=SC2296
     SCRIPTS_LIB_DIR="${0:a:h}"
     SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" >/dev/null 2>&1 && pwd -P)"
@@ -30,6 +31,7 @@ declare -a AVAILABLE_LIBRARIES=(
   "system_functions"
   "trace_functions"
   "yaml_functions"
+  "java_functions"
 )
 
 # PROVIDED_ARGS=("${@}")

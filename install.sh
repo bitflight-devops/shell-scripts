@@ -767,8 +767,12 @@ add_to_path() {
   # if [[ -d "${1}" ]]; then
   if [[ -z ${PATH} ]]; then
     export PATH="${1}"
+    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
+    debug "Path created: ${1}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
+    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
+    debug "Path added: ${1}"
   fi
   # fi
 }

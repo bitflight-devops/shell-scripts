@@ -125,16 +125,29 @@ downloadFile() {
   fi
 }
 
+app_installed() {
+  local -r app="${1}"
+  if command_exists apt-cache && apt-cache policy "${app}" | grep -q -v 'Unable to locate package'; then
+    return 1
+  elif command_exists yum && ! yum list installed "${app}" >/dev/null 2>&1; then
+    return 1
+  elif command_exists brew && ! brew list "${app}" >/dev/null 2>&1; then
+    return 1
+  else
+    return 0
+  fi
+}
+
 installCURLCommand() {
   APPS_TO_INSTALL=()
-  if apt-cache policy ca-certificates | grep -q -v 'Unable to locate package'; then
+  if ! app_installed "ca-certificates"; then
     APPS_TO_INSTALL+=("ca-certificates")
   fi
   if ! command_exists curl; then
     APPS_TO_INSTALL+=("curl")
   fi
   if [[ ${#APPS_TO_INSTALL[@]} -gt 0 ]]; then
-    install_app "${#APPS_TO_INSTALL[@]}"
+    install_app "${APPS_TO_INSTALL[@]}"
   fi
 }
 
@@ -225,8 +238,7 @@ close_bastion_ssh_tunnel() {
     ssh -T -O "exit" remotehost-proxy
   fi
 }
-
-run_flyway_migration() {
+function run_flyway_migration() {
   docker context use "default"
   if [[ -z "$(docker network list -q -f 'name=api-backend')" ]]; then
     docker network create --driver bridge api-backend

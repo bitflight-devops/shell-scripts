@@ -19,6 +19,7 @@ export ELASTICBEANSTALK_FUNCTIONS_LOADED=1
 [[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 [[ -z ${GENERAL_UTILITY_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/general_utility_functions.sh"
+[[ -z ${REMOTE_UTILITY_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/remote_utility_functions.sh"
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 
 # CLI Utility Functions
@@ -30,7 +31,7 @@ getProperty() {
 
 apt_fast_dependencies() {
   APPS_TO_INSTALL=()
-  if command_exists apt-cache && apt-cache policy ca-certificates | grep -q -v 'Unable to locate package'; then
+  if ! app_installed "ca-certificates"; then
     APPS_TO_INSTALL+=("ca-certificates")
   fi
   if ! command_exists aria2c; then
@@ -40,7 +41,7 @@ apt_fast_dependencies() {
     APPS_TO_INSTALL+=("curl")
   fi
   if [[ ${#APPS_TO_INSTALL[@]} -ne 0 ]]; then
-    run_as_root install_app "${APPS_TO_INSTALL[@]}"
+    install_app "${APPS_TO_INSTALL[@]}"
   fi
 }
 
@@ -178,13 +179,12 @@ eb_run() {
 }
 
 install_aws_cli() {
-  if is_darwin; then
-    if command_exists brew; then
-      brew install awscli@2
-    else
-      mkdir -p "${HOME}/Downloads"
-      curl -sSlL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "${HOME}/Downloads/AWSCLIV2.pkg"
-      cat <<EOF >/tmp/choices.xml
+  if command_exists brew; then
+    brew install awscli@2
+  elif is_darwin; then
+    mkdir -p "${HOME}/Downloads"
+    curl -sSlL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "${HOME}/Downloads/AWSCLIV2.pkg"
+    cat <<EOF >/tmp/choices.xml
     <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -200,19 +200,19 @@ install_aws_cli() {
   </array>
 </plist>
 EOF
-      /usr/sbin/installer -pkg "${HOME}/Downloads/AWSCLIV2.pkg" \
-        -target CurrentUserHomeDirectory \
-        -applyChoiceChangesXML /tmp/choices.xml
-      rm -f "${HOME}/Downloads/AWSCLIV2.pkg"
-      if [[ ${SHELL} == "/bin/zsh" ]]; then
-        local shell_profile="${HOME}/.zshrc"
-      else
-        local shell_profile="${HOME}/.bash_profile"
-      fi
-      touch "${shell_profile}"
-      echo "[[ -d ${HOME}/aws-cli/ ]] && PATH=${HOME}/aws-cli/:${PATH}" >>"${shell_profile}"
-      source "${shell_profile}"
+    /usr/sbin/installer -pkg "${HOME}/Downloads/AWSCLIV2.pkg" \
+      -target CurrentUserHomeDirectory \
+      -applyChoiceChangesXML /tmp/choices.xml
+    rm -f "${HOME}/Downloads/AWSCLIV2.pkg"
+    if [[ ${SHELL} == "/bin/zsh" ]]; then
+      local shell_profile="${HOME}/.zshrc"
+    else
+      local shell_profile="${HOME}/.bash_profile"
     fi
+    touch "${shell_profile}"
+    echo "[[ -d ${HOME}/aws-cli/ ]] && PATH=${HOME}/aws-cli/:${PATH}" >>"${shell_profile}"
+    source "${shell_profile}"
+
   else
     curl -sSlL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" >/dev/null 2>&1
     (cd /tmp && unzip awscliv2.zip && sudo ./aws/install >/dev/null 2>&1)
@@ -224,6 +224,101 @@ aws_run() {
     install_aws_cli >/dev/null 2>&1 || { echo "Failed to install aws cli" && exit 1; }
   fi
   aws "${@}"
+}
+
+install_chamber_version() {
+  if ! command_exists chamber; then
+    local chamber_url_base="https://github.com/segmentio/chamber/releases/download"
+    local chamber_url_version="${1:-v2.10.12}"
+    local chamber_url_platform
+    if [[ $(uname -p) == 'arm' ]]; then
+      chamber_url_arch="arm64"
+    else
+      chamber_url_arch="amd64"
+    fi
+
+    case "$(uname -s | tr '[:upper:]' '[:lower:]')" in
+    *darwin*) chamber_url_platform="darwin" ;;
+    *linux*) chamber_url_platform="linux" ;;
+    *) chamber_url_platform="linux" ;;
+    esac
+
+    if command_exists brew; then
+      brew install chamber && return 0
+    fi
+    local temp_file_location=$(mktemp -u)
+    local chamber_url="${chamber_url_base}/${chamber_url_version}/chamber-${chamber_url_version}-${chamber_url_platform}-${chamber_url_arch}"
+    downloadFile "${chamber_url}" "${temp_file_location}"
+    if [[ -f ${temp_file_location} ]]; then
+      chmod +x "${temp_file_location}"
+      local runcmd=$(root_available)
+      if root_available; then
+        ${runcmd} cp -f "${temp_file_location}" /usr/local/bin/chamber
+      else
+        local install_path="${HOME}/.local/bin/chamber"
+        local install_dir="$(dirname "${install_path}")"
+        mkdir -p "${install_dir}"
+        cp -f "${temp_file_location}" "${install_path}"
+        add_to_path "${install_dir}"
+      fi
+    fi
+  fi
+}
+
+add_user() {
+  if [[ $(id -un) != 'root' ]]; then
+    error "you must run add_user as root"
+    return 1
+  fi
+  local user_name="${1}"
+  if command_exists yum; then
+    if ! command_exists useradd; then
+      yum install -qq -y shadow-utils util-linux
+    fi
+  fi
+  useradd "${user_name}"
+
+}
+
+get_list_of_docker_tags() {
+  source "${DIR}"/get-app-name.sh
+  local -r DOCKER_IMAGE_NAME="${APPLICATION_PREFIX}"
+  aws_run ecr list-images --repository-name "${DOCKER_IMAGE_NAME}" --filter tagStatus=TAGGED --region us-east-1
+}
+
+function install_chamber() {
+  # is chamber already installed?
+  if ! command_exists chamber; then
+    debug_log "Installing Chamber"
+    install_chamber_version >/dev/null 2>&1
+    debug_log "Chamber now installed"
+  else
+    debug_log "Chamber installed already"
+  fi
+}
+
+function install_golang() {
+  mkdir -p "${GOPATH}"
+  chmod 766 /etc/go
+  export GOPATH="${GOPATH:-/etc/go}"
+  add_to_path "${GOPATH}"
+  add_to_path "/usr/local/go/bin"
+  export GO_VERSION="${GO_VERSION:-go1.15.3.linux-amd64.tar.gz}"
+  if ! command_exists go; then
+    debug_log "Installing GoLang"
+    curl -LsSO "https://dl.google.com/go/${GO_VERSION}"
+    tar -C /usr/local -xzf "${GO_VERSION}"
+    cat <<EOF >/etc/profile.d/go.sh
+export GOPATH=/etc/go
+export PATH=\$PATH:\$GOPATH/bin:/usr/local/go/bin
+EOF
+    chmod +x /etc/profile.d/go.sh
+    debug_log "Golang now installed"
+  else
+    debug_log "GoLang already Installed"
+  fi
+  # shellcheck disable=SC1091
+  source /etc/profile.d/go.sh
 }
 
 install_dependencies() {

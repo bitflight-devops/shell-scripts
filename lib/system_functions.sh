@@ -45,21 +45,82 @@ process_is_running() {
   return 1
 }
 
+shell_rc_file() {
+  case "${SHELL}" in
+  */bash*)
+    shell_rc="${HOME}/.bashrc"
+    ;;
+  */zsh*)
+    shell_rc="${HOME}/.zshrc"
+    ;;
+  *)
+    shell_rc="${HOME}/.profile"
+    export ENV=~/.profile
+    ;;
+  esac
+  echo "${shell_rc}"
+}
+
+set_env_var() {
+  local name="${1//\s/}"
+  local value="$2"
+  local file
+  local prefix=''
+
+  if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
+    file="${GITHUB_ENV}"
+  else
+    file="$(shell_rc_file)"
+    prefix='export '
+  fi
+  if [[ -z ${file:-} ]]; then
+    error "Could not find a shell profile file to set the environment variable in."
+    return 1
+  fi
+  if [[ ! -f ${file} ]]; then
+    "${TOUCH[@]:-touch}" "${file}" || return 1
+  fi
+  #  /[.*+?^${}()|[\]\\]/g, '\\$&'
+
+  if [[ -n ${value} ]]; then
+    if [[ ${value} == "${HOME}"* ]]; then
+      value="\$HOME${value#"${HOME}"}"
+    fi
+    if grep -q "^${prefix:-}${name}=" "${file}"; then
+      # Handle Mac or Linux if available
+      command_exists perl && perl -pi -e "s#^${prefix:-}${name}=.*#${prefix:-}${name}=${value}#g" "${file}" && return 0
+      # Handle Linux
+      command_exists sed && sed -i "s#^${prefix:-}${name}=.*#${prefix:-}${name}=${value}#g" "${file}" && return 0
+    else
+      echo "${prefix:-}${name}=${value}" >>"${file}" && return 0
+    fi
+  else
+    # Handle Mac or Linux if available
+    command_exists perl && perl -pi -e "/^${name}=.*/d" "${file}" && return 0
+    # Handle Linux
+    command_exists sed && sed -i "/^${name}=.*/d" "${file}" && return 0
+  fi
+  return 1
+}
+
 not_in_path() {
   local -r item="$(trim "${1}")"
   local p="${PATH%:}"
   grep -q -v ":${item}:" <<<":${p#:}:"
 }
+
 add_to_path() {
   # if [[ -d "${1}" ]]; then
   if [[ -z ${PATH} ]]; then
     export PATH="${1}"
     running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
     debug "Path created: ${1}"
+    set_env_var PATH "${1}:\${PATH}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
     running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
     debug "Path added: ${1}"
+    set_env_var PATH "${1}:\${PATH}"
   fi
   # fi
 }
@@ -95,6 +156,33 @@ runAptGetUpdate() (
   fi
 )
 
+root_available() {
+  local -r user="$(id -un 2>/dev/null || true)"
+  if [[ ${user} != 'root' ]]; then
+    if command_exists sudo; then
+      local bin_false="/bin/false"
+      uname | grep -q -i 'darwin' && bin_false="/usr/bin/false"
+      if [[ $(SUDO_ASKPASS="${bin_false}" sudo -A sh -c 'whoami;whoami' 2>&1 | wc -l) -eq 2 ]]; then
+        echo "sudo"
+        return 0
+      elif groups "${user}" | grep -q '(^|\b)(sudo|wheel)(\b|$)' && [[ -n ${INTERACTIVE:-} ]]; then
+        echo "sudo"
+        return 0
+      else
+        echo ""
+        return 1
+      fi
+    else
+      # not root, and don't have sudo
+      echo ""
+      return 1
+    fi
+  else
+    echo ""
+    return 0
+  fi
+}
+
 prefix_sudo() {
   if command_exists sudo && ! sudo -v >/dev/null 2>&1; then
     echo sudo
@@ -105,12 +193,12 @@ app_installer() (
   set +x
   if command_exists apt-fast; then
     runAptGetUpdate
-    run_as_root apt-fast -y "$@" --no-install-recommends
+    run_as_root apt-fast -y "$@"
   elif command_exists yum; then
-    run_as_root yum "$@"
+    run_as_root yum -y -t "$@"
   elif command_exists apt-get; then
     runAptGetUpdate
-    run_as_root apt-get -y "$@" --no-install-recommends
+    run_as_root apt-get -y "$@"
   elif command_exists brew; then
     brew "$@"
   else
@@ -118,6 +206,10 @@ app_installer() (
     return 1
   fi
 )
+
+installer() {
+  app_installer "$@"
+}
 
 install_app() (
   set +x

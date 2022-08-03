@@ -1,35 +1,13 @@
 version: 0.1
 cli:
-  version: 0.15.0-beta
-repo:
-  repo:
-    host: github.com
-    owner: z-shell
-    name: zsh-lint
+  version: 0.15.1-beta
+
 
 lint:
-  linters:
-    - name: zsh-n
-      files: [zsh]
-      type: pass_fail
-      command: [zsh, -fc, "zsh -n ${target} 2>&1"]
-      success_codes: [0, 1]
-      environment:
-        - name: PATH
-          list: ["${env.PATH}"]
-    - name: zsh-zcompile
-      files: [zsh]
-      type: pass_fail
-      command: [zsh, -fc, "zcompile -U ${target} rc=$?; rm -f ${target}.zwc; exit $rc"]
-      success_codes: [0, 1]
-      environment:
-        - name: PATH
-          list: ["${env.PATH}"]
   enabled:
-    - zsh-zcompile@system
-    - zsh-n@system
+    - markdownlint@0.31.1
     - git-diff-check@SYSTEM
-    - gitleaks@8.8.12
+    - gitleaks@8.9.0
     - hadolint@2.10.0
     - prettier@2.6.2
     - shellcheck@0.8.0
