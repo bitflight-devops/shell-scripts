@@ -21,16 +21,16 @@ export LOG_FUNCTIONS_LOADED=1
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
-if [[ -z ${LOG_DIR:-} ]]; then
-  case "$(uname -s)" in
-  *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
-  *) LOG_DIR="${LOG_DIR:-/var/log/shell_logs}" ;;
-  esac
-fi
-
 function logfileDir() {
   local parent_command="$([[ ${PPID} -gt 0 ]] && ps -o comm= "${PPID}")"
   local this_command="$(ps -o comm= $$)"
+
+  if [[ -z ${LOG_DIR:-} ]] && command_exists uname; then
+    case "$(uname -s)" in
+    *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
+    *) LOG_DIR="${LOG_DIR:-/var/log/shell_logs}" ;;
+    esac
+  fi
 
   if [[ ${this_command} == "bash" ]] && [[ ${parent_command} == "bash" ]]; then
     unset parent_command
