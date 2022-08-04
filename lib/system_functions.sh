@@ -117,12 +117,12 @@ add_to_path() {
     export PATH="${1}"
     running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
     debug "Path created: ${1}"
-    set_env_var PATH "${1}:\${PATH}"
+    set_env_var PATH "${1}:${PATH}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
     running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
     debug "Path added: ${1}"
-    set_env_var PATH "${1}:\${PATH}"
+    set_env_var PATH "${1}:${PATH}"
   fi
   # fi
 }
