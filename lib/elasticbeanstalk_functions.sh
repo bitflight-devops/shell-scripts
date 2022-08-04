@@ -99,7 +99,7 @@ add_ebcli_bin_paths() {
 
 install_eb_cli() {
   info "Install EB CLI with python3 $(python3 --version)"
-
+[[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   if ! command_exists git; then
     install_app git
   fi

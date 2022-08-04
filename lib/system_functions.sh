@@ -46,6 +46,7 @@ process_is_running() {
 }
 
 shell_rc_file() {
+  [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   case "${SHELL}" in
   */bash*)
     shell_rc="${HOME}/.bashrc"
@@ -66,6 +67,7 @@ set_env_var() {
   local value="$2"
   local file
   local prefix=''
+  [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
 
   if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
     file="${GITHUB_ENV}"
