@@ -86,7 +86,7 @@ set_env_var() {
 
   if [[ -n ${value} ]]; then
     if [[ ${value} == "${HOME}"* ]]; then
-      value="\$HOME${value#"${HOME}"}"
+      value="\${HOME}${value#"${HOME}"}"
     fi
     if grep -q "^${prefix:-}${name}=" "${file}"; then
       # Handle Mac or Linux if available
