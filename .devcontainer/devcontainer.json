@@ -26,11 +26,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "jetmartin.bats",
-        "rogalmic.bash-debug",
-        "foxundermoon.shell-format"
-      ]
+      "extensions": ["jetmartin.bats", "rogalmic.bash-debug", "foxundermoon.shell-format"]
     }
   }
 }

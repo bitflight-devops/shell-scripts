@@ -1,0 +1,34 @@
+## Ignore build output directories
+/dist/
+/lib/
+/dist*/
+
+## Ignore third party libraries
+node_modules/
+*.min.*
+
+## Ignore config files and directories that have generated content
+/.husky/
+/.trunk/
+/.vscode/
+/.yarn/
+/.*rc
+/.*rc.yaml
+/.*rc.yml
+/.*rc.json
+/.*rc.js
+/.*rc.xml
+/.*rc.conf
+/.*rc.properties
+/.*rc.ini
+/.*rc.env
+/.pnp.*js
+
+## Ignore dynamic files
+CHANGELOG.md
+package-lock.json
+
+## Ignore specialist app files
+
+### Angular
+**/*inline-template-*.component.html
