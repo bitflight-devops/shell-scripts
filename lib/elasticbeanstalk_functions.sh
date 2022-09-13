@@ -126,7 +126,7 @@ install_eb_cli() {
     add_ebcli_bin_paths
 
     if ! command_exists virtualenv || virtualenv --version | grep -q -v "virtualenv 2"; then
-      debug "Install virtualenv:\n$(python3 -m pipx install virtualenv 2>/dev/null || python3 -m pipx upgrade virtualenv)"
+      debug "Install virtualenv:\n$(python3 -m pipx install --system-site-packages virtualenv 2>/dev/null || python3 -m pipx --system-site-packages -f upgrade virtualenv)"
       add_ebcli_bin_paths
     fi
 
