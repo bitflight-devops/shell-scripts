@@ -15,7 +15,15 @@
     ".github/workflows/**",
     ".vscode/*.json"
   ],
-  "dictionaries": ["typescript", "softwareTerms", "node", "en_US", "npm", "misc", "filetypes"],
+  "dictionaries": [
+    "typescript",
+    "softwareTerms",
+    "node",
+    "en_US",
+    "npm",
+    "misc",
+    "filetypes"
+  ],
   "ignoreRegExpList": [
     "/```[\\w\\W]*?```/",
     "/~~~[\\w\\W]*?~~~/",
@@ -39,11 +47,14 @@
     "bigint",
     "bivariant",
     "blockless",
+    "browserslistrc",
     "btob",
     "codebases",
     "Codecov",
+    "codeowners",
     "contravariant",
     "Crockford",
+    "csslintrc",
     "declarators",
     "destructure",
     "destructured",
@@ -56,14 +67,21 @@
     "esrecurse",
     "estree",
     "exnext",
+    "gitmodules",
+    "gradlew",
+    "haml",
+    "htmlhintrc",
     "IDE's",
     "IIFE",
     "IIFEs",
+    "jshintignore",
     "libexec",
     "linebreaks",
+    "lzma",
     "necroing",
     "nocheck",
     "NONINTERACTIVE",
+    "npmignore",
     "nullish",
     "OOM",
     "OOMs",
@@ -86,6 +104,7 @@
     "ruleset",
     "rulesets",
     "serializers",
+    "stylelintrc",
     "superset",
     "thefuck",
     "thenables",
@@ -104,8 +123,14 @@
   "overrides": [
     {
       "filename": "**/*.{ts,js}",
-      "ignoreRegExpList": ["/@[a-z]+/", "/#(end)?region/"],
-      "includeRegExpList": ["/\\/\\*[\\s\\S]*?\\*\\/|([^\\\\:]|^)\\/\\/.*$/", "/(\\/\\/[^\\n\\r]*[\\n\\r]+)/"]
+      "ignoreRegExpList": [
+        "/@[a-z]+/",
+        "/#(end)?region/"
+      ],
+      "includeRegExpList": [
+        "/\\/\\*[\\s\\S]*?\\*\\/|([^\\\\:]|^)\\/\\/.*$/",
+        "/(\\/\\/[^\\n\\r]*[\\n\\r]+)/"
+      ]
     }
   ]
 }

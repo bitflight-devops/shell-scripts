@@ -1,0 +1,97 @@
+/target/
+/.idea
+/.classpath
+/.project
+/.settings
+/.virtualenv
+/s_*.py
+/serverless_sdk
+.requirements.zip
+.yarn/cache
+.trunk/actions
+.trunk/notifications
+.trunk/logs
+# Docker
+.portainer
+node_modules
+.serverless
+.mavencache
+docker_scripts/mysql_docker/dumps
+current_eb.json
+.requirements.zip
+**/.vscode/*
+# Project
+
+.env
+git.properties
+.m2
+.vscode
+**/__pycache__
+snyk-*
+snyk_*
+wearsafe-local.properties
+wearsafe-local.*.properties
+# idea files
+/.idea
+/*.iml
+pom.xml.versionsBackup
+**/db
+
+# Common
+*.pydevproject
+.DS_Store
+.metadata
+.gradle
+bin/
+**/target/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+*~.pyc
+local.properties
+.settings/
+.loadpath
+
+# Eclipse Core
+.project
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+
+# Java annotation processor (APT)
+.factorypath
+
+# PDT-specific
+.buildpath
+.attach_*
+# sbteclipse plugin
+.target
+
+# TeXlipse plugin
+.texlipse
+
+# STS (Spring Tool Suite)
+.springBeans
+/local-env.sh
+
+#legacy heroku
+Procfile
+/wearsafe-local.properties
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+.vscode/
+node_modules
