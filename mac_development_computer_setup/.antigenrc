@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 antigen use oh-my-zsh
 antigen bundles <<EOBUNDLES
 git
@@ -16,7 +17,12 @@ tmux
 vscode
 yarn
 zoxide
+python
+systemd
+gradle
+gnu-utils
 Aloxaf/fzf-tab
+colored-man-pages
 zdharma-continuum/fast-syntax-highlighting
 zsh-users/zsh-autosuggestions
 zsh-users/zsh-completions

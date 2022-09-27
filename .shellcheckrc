@@ -19,4 +19,4 @@ disable=SC2311
 disable=SC2312
 disable=SC2249
 
-ignore=~/.zshrc
+ignore=~/.zshrc,~/.antigen
