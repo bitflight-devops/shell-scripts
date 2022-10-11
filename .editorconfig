@@ -8,18 +8,14 @@ trim_trailing_whitespace = true
 end_of_line = lf
 charset = utf-8
 
-
-
-[{**/dist/**,**/build/**,**/node_modules/**,**/vendor/**,**/target/**}]
-indent_style = ignore
-indent_size = ignore
-insert_final_newline = ignore
-trim_trailing_whitespace = ignore
+[{Dockerfile,Makefile,*.go,script/add-grammar}]
+indent_style = tab
+indent_size = 4
 
 # Makefiles always use tabs for indentation
 [**/Makefile*]
 indent_style = tab
-indent_size = 8
+indent_size = 4
 
 # Minified JavaScript files shouldn't be changed
 [**.min.js]
@@ -57,3 +53,12 @@ indent_size = 2
 indent_size = 2
 trim_trailing_whitespace = false
 x-soft-wrap-text = true
+
+# Ignore fixtures and vendored files
+[{grammars,test/fixtures,samples,vendor,dist,build,node_modules,target}/**]
+charset = unset
+end_of_line = unset
+indent_size = unset
+indent_style = unset
+insert_final_newline = unset
+trim_trailing_spaces = unset

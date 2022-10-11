@@ -43,6 +43,7 @@
     "autofix",
     "autofixers",
     "autofixes",
+    "autoupdate",
     "backticks",
     "bigint",
     "bivariant",

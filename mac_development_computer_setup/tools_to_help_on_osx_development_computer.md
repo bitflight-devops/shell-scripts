@@ -82,22 +82,29 @@ brew install --cask temurin
 brew install --cask rectangle  graphiql # GUI utilities
 brew install --cask iterm2 font-hack-nerd-font # Terminal Gui
 
+merge.renormalize true
 # ZSH Terminal Enhancements
-brew install \
+
+brew tap homebrew/dupes
+HOMEBREW_NO_ENV_HINTS=1 brew install \
   antigen \
   asciinema \
   autoconf \
   automake \
+  binutils \
   brotli \
   ca-certificates \
   cask \
   confd \
   coreutils \
   curl \
+  diffutils \
   dust \
+  ed \
   emacs \
   fontconfig \
   fzf \
+  gawk \
   gcc \
   gd \
   gdbm \
@@ -105,13 +112,19 @@ brew install \
   git \
   glances \
   glib \
+  gnu-indent \
   gnu-sed \
+  gnu-tar \
+  gnu-which \
   gnupg \
   gnupg2 \
   gnutils \
+  gnutls \
   google-java-format \
   graphite2 \
+  grep \
   guile \
+  gzip \
   htop \
   hyperfine \
   jasper \
@@ -149,6 +162,7 @@ brew install \
   remake \
   ruby-build \
   sass \
+  screen \
   shellcheck \
   shfmt \
   telnet \
@@ -157,40 +171,28 @@ brew install \
   tree \
   unzip \
   vim \
+  watch \
+  wdiff \
   wget \
   xmlstarlet \
-  gnu-tar
+  --quiet --binaries --overwrite --force
+
+brew bundle install
+
+PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
 
 # Install Development Tools + Docker Tools
 brew install mutagen mutagen-compose hadolint # Docker Helpers
 brew install act actionlint gh hub # GitHub CLI Tools
-brew install podman # Alternitive To Docker
+
 
 # Install Java Utilities
 brew install maven gradle groovy jenv
 
 # Install Cloud Utilities
 brew install --cask aws-vault
-brew tap homebrew/dupes
-brew install coreutils
-brew install binutils
-brew install diffutils
-brew install ed --with-default-names
-brew install gawk
-brew install gnu-indent --with-default-names
-brew install gnu-sed --with-default-names
-brew install gnu-tar --with-default-names
-brew install gnu-which --with-default-names
-brew install gnutls
-brew install grep --quiet --binaries --overwrite
-PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
-brew install gzip
-brew install screen
-brew install watch
-brew install wdiff --with-gettext
-brew install wget
-brew install gnupg
-brew install gnupg2
+
+
 
 brew install \
   awscli \

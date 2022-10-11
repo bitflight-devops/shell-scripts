@@ -100,7 +100,7 @@ downloadFile() {
     DOWNLOAD_ARGS=(--timestamping -q --no-dns-cache --no-hsts)
     DOWNLOAD_ARGS+=(--no-http-keep-alive --compression=auto --continue)
     DOWNLOAD_ARGS+=(--dns-timeout=3 --waitretry=2 --tries=2)
-    DOWNLOAD_ARGS+=(--read-timeout=-1 --connect-timeout=30 --xattr)
+    DOWNLOAD_ARGS+=(--connect-timeout=30 --xattr)
     if [[ -z ${TO_STD_OUT:-} ]] && [[ ${overwrite} == 'false' ]]; then
       DOWNLOAD_ARGS+=(--no-clobber)
     fi
