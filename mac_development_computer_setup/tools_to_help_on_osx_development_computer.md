@@ -58,7 +58,7 @@ sudo sh -c "compaudit | xargs chmod go-w" # Fix permissions on all files in /usr
 sh -c "$(curl -fsSL https://git.io/get-zi)" -- -i skip  -a loader -b main
 ```
 
-### Install utilities:
+### Install utilities
 
 ````zsh
 # Connect to Third Party Brew Repos

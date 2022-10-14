@@ -1,15 +1,23 @@
 version: 0.1
+runtimes:
+  enabled:
+    - go@1.18.3
+    - node@16.14.2
+actions:
+  enabled:
+    - trunk-cache-prune
+    - trunk-upgrade-available
 cli:
-  version: 0.17.0-beta
+  version: 0.18.1-beta
 
 
 lint:
   enabled:
-    - markdownlint@0.31.1
+    - markdownlint@0.32.2
     - git-diff-check@SYSTEM
     - gitleaks@8.9.0
     - hadolint@2.10.0
-    - prettier@2.6.2
+    - prettier@2.7.1
     - shellcheck@0.8.0
     - shfmt@3.5.0
   ignore:

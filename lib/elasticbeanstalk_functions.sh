@@ -150,7 +150,6 @@ install_eb_cli() {
       fi
     fi
 
-
     if [[ -z ${EB_PACKAGE_PATH:-} ]]; then
       set_env EB_PACKAGE_PATH "${HOME}/.local/aws-elastic-beanstalk-cli-package"
     fi

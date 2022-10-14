@@ -209,5 +209,5 @@ get_last_github_author_name() {
 }
 
 add_github_to_known_hosts() {
-          mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+  mkdir -p ~/.ssh && ssh-keyscan github.com >>~/.ssh/known_hosts
 }
