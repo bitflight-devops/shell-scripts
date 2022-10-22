@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cat <<EOF >~/docker_installer.sh
+cat << EOF > ~/docker_installer.sh
 #!/usr/bin/env bash
 DOCKER_INSTALLER_PATH="${HOME}/Downloads/Docker.dmg"
 if [[ \$(uname -p) == 'arm' ]]; then
