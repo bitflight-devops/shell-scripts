@@ -983,7 +983,7 @@ next_steps() {
   local shell_profile="$(shell_rc_file)"
   local repo_var="export BFD_REPOSITORY=${BFD_REPOSITORY}"
   if [[ -n ${INTERACTIVE:-} ]]; then
-    notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${BFD_REPOSITORY}/lib/bootstrap.sh${COLOR_RESET}"
+    notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}eval \"\$\(bash -- \"\${BFD_REPOSITORY}/lib/bootstrap.sh\"\)\"${COLOR_RESET}"
     if [[ -f ${shell_profile} ]] && grep -q "${repo_var}" "${shell_profile}"; then
       debug "Environment variable\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nalready configured in ${shell_profile}"
     else

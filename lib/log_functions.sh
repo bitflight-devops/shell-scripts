@@ -21,6 +21,50 @@ export LOG_FUNCTIONS_LOADED=1
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
+# Certain string functions are used in this file
+# so we create them here if they are not already loaded
+# from lib/string_functions.sh
+
+if ! command -v uppercase >/dev/null 2>&1; then
+  uppercase() {
+    tr '[:lower:]' '[:upper:]' <<<"${*}"
+  }
+fi
+
+
+if ! command -v lowercase >/dev/null 2>&1; then
+lowercase() {
+  tr '[:upper:]' '[:lower:]' <<<"${*}"
+}
+fi
+
+
+if ! command -v iscolorcode >/dev/null 2>&1; then
+iscolorcode() {
+  grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<<"$1"
+}
+fi
+
+
+if ! command -v colorcode >/dev/null 2>&1; then
+colorcode() {
+  local -r color="${1}"
+  if iscolorcode "${color}"; then
+    perl -pe 's/(^\s*|\s*$)/Y/g;' <<<"${color}"
+  elif [[ -n ${color:-} ]]; then
+    local -r color_var_name="$(uppercase "${color}")"
+    eval 'local resolved_color="${'"${color_var_name}"':-}"'
+    if [[ -n ${resolved_color:-} ]] && iscolorcode "${colorcode}"; then
+      perl -pe 's/(^\s*|\s*$)//gm;' <<<"${colorcode}"
+    elif [[ -z ${DEBUG:-} ]]; then
+      printf '%s' "${resolved_color}"
+    else
+      printf ''
+    fi
+  fi
+}
+fi
+
 function logfileDir() {
   local parent_command="$([[ ${PPID} -gt 0 ]] && ps -o comm= "${PPID}")"
   local this_command="$(ps -o comm= $$)"

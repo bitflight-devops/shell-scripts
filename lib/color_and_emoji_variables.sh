@@ -73,7 +73,7 @@ if test -t 1 && command_exists tput && [[ $(tput colors 2>/dev/null || printf '0
 fi
 
 export DEBUG_ICON=$'🛠️'
-export INFO_ICON=$'ℹ️'
+export INFO_ICON=$'ℹ'
 export STARTING_STAR=$'⭐'
 export STEP_STAR=$'✨'
 export HOURGLASS_IN_PROGRESS=$'⏳' # ⏳ hourglass in progress

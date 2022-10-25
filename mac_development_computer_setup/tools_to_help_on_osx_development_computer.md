@@ -645,8 +645,8 @@ done
 
 ```zsh
 #!/usr/bin/env zsh
-
-
+curl -sSlL https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh | bash
+curl -sS https://starship.rs/install.sh | sh
 
 add_to_path() {
   if [[ -d "${1}" ]]; then

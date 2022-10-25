@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+
+# Load the plugin
+eval "$(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"

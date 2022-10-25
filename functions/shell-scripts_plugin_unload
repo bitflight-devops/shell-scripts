@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+
+# unload the plugin
+eval "$(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --unload)"
+
