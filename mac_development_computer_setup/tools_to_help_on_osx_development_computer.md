@@ -645,53 +645,8 @@ done
 
 ```zsh
 #!/usr/bin/env zsh
-export TERM='xterm-256color'
 
-ANTIGEN_SOURCE_PATH=/usr/local/share/antigen/antigen.zsh
 
-if [[ ! -f "${ANTIGEN_SOURCE_PATH}" ]]; then
-  mkdir -p "$(dirname "${ANTIGEN_SOURCE_PATH}")"
-  curl -L git.io/antigen >"${ANTIGEN_SOURCE_PATH}"
-fi
-
-run_after_wait() {
-  local -r wait_in_seconds="$1"
-  shift
-  sleep "${wait_in_seconds}"s
-  "$@"
-}
-
-generate_antigen_cache() {
-  SECONDS_IN_DAY=86400
-  SECONDS_IN_WEEK=$((SECONDS_IN_DAY * 7))
-
-  mkdir -p ~/.cache/antigen
-  run_timer="${HOME}/.cache/antigen/antigen.cachegen.last_run"
-
-  if [[ ! -f "${run_timer}" ]]; then
-    touch "${run_timer}"
-    last_run_time="$(date +%s)"
-  else
-    last_run_time="$(stat -f "%m" "${run_timer}")"
-  fi
-
-  if [[ "$(date +%s)" -gt "$((last_run_time + SECONDS_IN_WEEK))" ]]; then
-    touch "${run_timer}"
-    setopt local_options no_notify no_monitor
-    run_after_wait "$((130 + RANDOM % 100))" antigen cache-gen &
-  fi
-}
-
-source "${ANTIGEN_SOURCE_PATH}"
-antigen init ~/.antigenrc
-# generate_antigen_cache
-[[ -n ${ZSH_CACHE_DIR} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions"
-
-# export PROMPT='$(gbt $?)'
-
-command_exists() {
-  command -v "$@" >/dev/null 2>&1
-}
 
 add_to_path() {
   if [[ -d "${1}" ]]; then

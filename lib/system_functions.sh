@@ -127,6 +127,8 @@ add_to_path() {
   # fi
 }
 
+
+
 getLastAptGetUpdate() {
   local aptDate="$(stat -c %Y '/var/cache/apt')"
   local nowDate="$(date +'%s')"
@@ -227,3 +229,34 @@ install_app() (
     fi
   fi
 )
+
+
+in_brew() {
+  NONINTERACTIVE=1 HOMEBREW_NO_ANALYTICS=1 brew info -q --json --formula "$@" >/dev/null 2>&1
+}
+
+install_if_missing() {
+  cli_command="$1"
+  shift
+  brew_app_name="$1"
+  shift
+  alternate_install_script_url="$1"
+  shift
+  install_flags=("$@")
+  if ! command_exists "${cli_command}"; then
+    if command_exists brew && in_brew ${brew_app_name}; then
+      brew install ${brew_app_name} >/dev/null 2>&1 || true &
+    elif [[ -n ${alternate_install_script_url-} ]]; then
+      installer_file=$(mktemp -q -u -t installerXXXX)
+      curl -fsSLl -o "${installer_file}" "${alternate_install_script_url}"
+      if [[ "${#install_flags}" -gt 0 ]]; then
+        chmod +x "${installer_file}" &&
+          NONINTERACTIVE=1 "${installer_file}" "${install_flags[@]}"
+      else
+        NONINTERACTIVE=1 source <(curl -Ls "${alternate_install_script_url}")
+      fi
+    else
+      echo "$0: Could not install ${cli_command} because it is not available via brew and no alternate install script was provided."
+    fi
+  fi
+}
