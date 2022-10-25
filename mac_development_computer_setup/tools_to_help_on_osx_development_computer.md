@@ -174,6 +174,11 @@ install_global_python() {
 
 }
 install_global_python
+
+# Python utilities
+pipx install emoji-fzf
+
+
 ```
 
 ### Install Java Runtimes
@@ -191,9 +196,21 @@ brew_install_all --cask temurin temurin8 temurin11 temurin18 # Java JDK's
 pipx install meta-package-manager || true
 ```
 
+## ZSH Frameworks
+
+### [Zim](https://zimfw.sh)
+```sh
+curl -fsSL https://raw.githubusercontent.com/zimfw/install/master/install.zsh | zsh
+```
+
+### [Alf](https://github.com/psyrendust/alf)
+
+```sh
+curl -sSL https://raw.githubusercontent.com/psyrendust/alf/master/bootstrap/baseline.zsh | zsh
+```
 
 
-# Collect and Install all the packages
+## Collect and Install all the packages
 
 ```sh
 ## Install Shell Utilities
@@ -350,6 +367,7 @@ brew_apps+=("fd") # A simple, fast and user-friendly alternative to find
 ## CLI Help and Documentation tools
 brew_apps+=("cheat") # Create and view interactive cheat sheets for *nix commands
 brew_apps+=("tldr") # Simplified and community-driven man pages
+brew_apps+=("navi") # An interactive cheatsheet tool for the command-line
 
 ## CLI Recording tools
 brew_apps+=("asciinema") # Record and share terminal sessions
@@ -484,10 +502,6 @@ brew_apps+=("gh") # GitHub command-line tool
 brew_apps+=("hub") # Add GitHub support to git on the command-line
 brew_apps+=("ghq") # Remote repository management made easy
 
-helmsmanh
-helm
-
-
 ## Install Cloud Utilities
 brew_apps+=("azure-cli") # Microsoft Azure CLI 2.0
 brew_apps+=("aws-elasticbeanstalk") # Client for Amazon Elastic Beanstalk web service
@@ -521,16 +535,22 @@ brew_apps+=("docker-credential-helper-ecr") # Docker Credential Helper for Amazo
 ```
 
 
-# brew bundle install
+### brew bundle install
 
-brew cleanup
+TODO: Add section here with details about how to install the brew bundle
 
-# Install Other Utilities (Not in Homebrew)
+
+
+## Install Other Utilities (Not in Homebrew)
+
+```zsh
 npm install -g tldr # Manuals and HowTo's
 curl -fsSL https://git.io/shellspec | sh -s -- --yes # Shell Check for running tests against shell scripts
+```
 
+### Initialise Utilities (TODO: remove podman setup, it's not needed)
 
-# Initialise Utilities
+```zsh
 podman machine init -v "${HOME}:${HOME}"
 ssh-add ~/.ssh/podman-machine-default  2>/dev/null || true
 podman machine set --rootful # Optionally Enable root permissions to allow access to low port numbers 0-1024
@@ -591,9 +611,14 @@ fi
 podman machine stop || true
 podman machine start
 
-# Add ASDF's application manager
+```
+
+## Add ASDF's application manager
+
+```zsh
 ## brew uninstall nodejs gtop python python-yq packer maven make jq jmespath jib temurin zoxide jenv
 # gradle groovy maven awscli bat
+
 asdf plugin add direnv
 asdf global direnv latest
 asdf install direnv latest

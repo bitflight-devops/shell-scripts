@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+## <script src="https://get-fig-io.s3.us-west-1.amazonaws.com/readability.js"></script>
+## <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-core.min.js" data-manual></script>
+## <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-bash.min.js"></script>
+## <style>body {color: #272822; background-color: #272822; font-size: 0.8em;} </style>
+
 # shellcheck disable=SC2034
 
 # Download the latest version of the script from the following URL:
@@ -1032,3 +1038,12 @@ fi
 if [[ -x /usr/bin/sudo ]] && ! /usr/bin/sudo -n -v 2>/dev/null; then
   trap '/usr/bin/sudo -k' EXIT
 fi
+
+# ------------------------------------------
+#   Notes
+# ------------------------------------------
+#
+# This script contains hidden JavaScript which is used to improve
+# readability in the browser (via syntax highlighting, etc), right-click
+# and "View source" of this page to see the entire bash script!
+# -- style code from https://fig.io/install
