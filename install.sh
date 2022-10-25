@@ -11,15 +11,15 @@
 # https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh
 
 set -eu
-BOLD="$(tput bold 2>/dev/null || printf '')"
-GREY="$(tput setaf 0 2>/dev/null || printf '')"
-UNDERLINE="$(tput smul 2>/dev/null || printf '')"
-RED="$(tput setaf 1 2>/dev/null || printf '')"
-GREEN="$(tput setaf 2 2>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-BLUE="$(tput setaf 4 2>/dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2>/dev/null || printf '')"
-NO_COLOR="$(tput sgr0 2>/dev/null || printf '')"
+BOLD="$(tput bold 2> /dev/null || printf '')"
+GREY="$(tput setaf 0 2> /dev/null || printf '')"
+UNDERLINE="$(tput smul 2> /dev/null || printf '')"
+RED="$(tput setaf 1 2> /dev/null || printf '')"
+GREEN="$(tput setaf 2 2> /dev/null || printf '')"
+YELLOW="$(tput setaf 3 2> /dev/null || printf '')"
+BLUE="$(tput setaf 4 2> /dev/null || printf '')"
+MAGENTA="$(tput setaf 5 2> /dev/null || printf '')"
+NO_COLOR="$(tput sgr0 2> /dev/null || printf '')"
 
 COLOR_BOLD_BLACK=$'\e[1;30m'
 COLOR_BOLD_RED=$'\e[1;31m'
@@ -32,7 +32,7 @@ COLOR_BOLD_WHITE=$'\e[1;37m'
 COLOR_BOLD=$'\e[1m'
 COLOR_BOLD_YELLOW=$'\e[1;33m'
 COLOR_RESET=$'\e[0m'
-CLEAR_SCREEN="$(tput rc 2>/dev/null || printf '')"
+CLEAR_SCREEN="$(tput rc 2> /dev/null || printf '')"
 
 COLOR_BRIGHT_BLACK=$'\e[0;90m'
 COLOR_BRIGHT_RED=$'\e[0;91m'
@@ -66,13 +66,13 @@ CROSS_MARK=$'❌'            # ❌ cross mark
 SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
-MAIN_USER="$(id -un 2>/dev/null || true)"
+MAIN_USER="$(id -un 2> /dev/null || true)"
 
 sourced=0
 if [[ -n ${ZSH_VERSION:-} ]]; then
   case ${ZSH_EVAL_CONTEXT:-} in *:file) sourced=1 ;; esac
 elif [[ -n ${BASH_VERSION:-} ]]; then
-  (return 0 2>/dev/null) && sourced=1
+  (return 0 2> /dev/null) && sourced=1
 else # All other shells: examine $0 for known shell binary filenames.
   # Detects `sh` and `dash`; add additional shell filenames as needed.
   case ${0##*/} in sh | -sh | dash | -dash) sourced=1 ;; esac
@@ -96,13 +96,13 @@ in_quiet_mode() {
 
 run_quietly() {
   if in_quiet_mode; then
-    "$@" >/dev/null 2>&1
+    "$@" > /dev/null 2>&1
   else
     "$@"
   fi
 }
 
-command_exists() { command -v "$@" >/dev/null 2>&1; }
+command_exists() { command -v "$@" > /dev/null 2>&1; }
 is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
 
 shell_join() {
@@ -141,7 +141,7 @@ get_log_type() {
       "step"
     )
   fi
-  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
   if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
     printf '%s' "${logtype}"
   else
@@ -181,7 +181,7 @@ get_log_color() {
   LOG_COLOR_step="${COLOR_BOLD_CYAN}"
   LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
   LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
-  local arg="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
 
   if [[ ! ${arg} =~ (success|failure|step) ]]; then
     local -r logtype="$(get_log_type "${arg}")"
@@ -197,7 +197,7 @@ get_log_color() {
 
 stripcolor() {
   # shellcheck disable=SC2001
-  sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" <<<"${*}"
+  sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" <<< "${*}"
 }
 
 indent_style() {
@@ -206,38 +206,38 @@ indent_style() {
 
   local final_style=''
   case "${logtype}" in
-  notice)
-    style=" "
-    final_style="${STARTING_STAR}"
-    ;;
-  step)
-    style=" "
-    final_style="${STEP_STAR}"
-    ;;
-  failure)
-    style=" "
-    final_style="${CROSS_MARK}"
-    ;;
-  success)
-    style=" "
-    final_style="${CHECK_MARK_BUTTON}"
-    ;;
-  info)
-    style=" "
-    final_style="${INFO_ICON} "
-    # logtype=''
-    ;;
-  debug)
-    style=" "
-    final_style="${DEBUG_ICON:-} "
-    ;;
-  *)
-    style=""
-    final_style="-->"
-    ;;
+    notice)
+      style=" "
+      final_style="${STARTING_STAR}"
+      ;;
+    step)
+      style=" "
+      final_style="${STEP_STAR}"
+      ;;
+    failure)
+      style=" "
+      final_style="${CROSS_MARK}"
+      ;;
+    success)
+      style=" "
+      final_style="${CHECK_MARK_BUTTON}"
+      ;;
+    info)
+      style=" "
+      final_style="${INFO_ICON} "
+      # logtype=''
+      ;;
+    debug)
+      style=" "
+      final_style="${DEBUG_ICON:-} "
+      ;;
+    *)
+      style=""
+      final_style="-->"
+      ;;
   esac
   local -r indent_length="$((width - ${#logtype}))"
-  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
+  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
   printf -- "${style}%.0s" $(seq "${indent_length}")
   printf '%s' "${final_style}"
 }
@@ -256,7 +256,8 @@ simple_log() {
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
-      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
+      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
+      msg="$(sed -e "s/\\t/$'\t'/g" <<<"${msg}")"
     else
       printf -v log_prefix '::%s ::' "${logtype}"
       local -r msg="$(escape_github_command_data "${*}")"
@@ -351,7 +352,7 @@ if [[ -z ${USER:-} ]]; then
 fi
 
 # First check OS.
-OS="$(/usr/bin/uname 2>/dev/null || uname)"
+OS="$(/usr/bin/uname 2> /dev/null || uname)"
 if [[ ${OS} == "Linux" ]]; then
   SHELL_SCRIPTS_LINUX=1
 elif [[ ${OS} != "Darwin" ]]; then
@@ -389,7 +390,7 @@ MKDIR=("/bin/mkdir" "-p")
 unset HAVE_SUDO_ACCESS # unset this from the environment
 
 have_sudo_access() {
-  local -r user="$(id -un 2>/dev/null || true)"
+  local -r user="$(id -un 2> /dev/null || true)"
   if [[ ${user} == "root" ]]; then
 
     return 0
@@ -407,9 +408,9 @@ have_sudo_access() {
 
   if [[ -z ${HAVE_SUDO_ACCESS-} ]]; then
     if [[ -n ${NONINTERACTIVE-} ]]; then
-      "${SUDO[@]}" -l mkdir &>/dev/null
+      "${SUDO[@]}" -l mkdir &> /dev/null
     else
-      "${SUDO[@]}" -v && "${SUDO[@]}" -l mkdir &>/dev/null
+      "${SUDO[@]}" -v && "${SUDO[@]}" -l mkdir &> /dev/null
     fi
     HAVE_SUDO_ACCESS="$?"
   fi
@@ -422,7 +423,7 @@ have_sudo_access() {
 }
 
 root_available() {
-  local -r user="$(id -un 2>/dev/null || true)"
+  local -r user="$(id -un 2> /dev/null || true)"
   if [[ ${user} != 'root' ]]; then
     if command_exists sudo; then
       if [[ $(SUDO_ASKPASS="${BIN_FALSE[*]}" sudo -A sh -c 'whoami;whoami' 2>&1 | wc -l) -eq 2 ]]; then
@@ -468,7 +469,7 @@ test_writeable() {
   local path
   for path in "$@"; do
     if [[ -d ${path} ]]; then
-      "${TOUCH[@]:-touch}" "${path%/}"/test-writeable-file 2>/dev/null
+      "${TOUCH[@]:-touch}" "${path%/}"/test-writeable-file 2> /dev/null
       if [[ -f "${path%/}"/test-writeable-file ]]; then
         rm "${path%/}"/test-writeable-file
       else
@@ -480,7 +481,7 @@ test_writeable() {
 }
 
 create_script_directory() {
-  local -r user="$(id -un 2>/dev/null || true)"
+  local -r user="$(id -un 2> /dev/null || true)"
   local -r path="$1"
   local -r permissions="0755"
   local fix_ownership='false'
@@ -512,9 +513,9 @@ create_script_directory() {
 
   if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
     info "Setting ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2>/dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
+    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
     info "Setting permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
-    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2>/dev/null || abort "Failed to set permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
+    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
   fi
 
   info "Verifying that ${YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
@@ -566,7 +567,7 @@ configure_git() {
   # that the git user is set.
   if command_exists git; then
     # If we get the name and it succeeds
-    if git config --global user.name >/dev/null 2>&1; then
+    if git config --global user.name > /dev/null 2>&1; then
       # And that name is not empty
       if [[ -z "$(git config --global user.name)" ]]; then
         git config --global user.name "$(get_last_github_author_name)"
@@ -575,7 +576,7 @@ configure_git() {
       git config --global user.email "$(get_last_github_author_name)"
     fi
     local -r user="$(git config --global user.name)"
-    if git config --global user.email >/dev/null 2>&1; then
+    if git config --global user.email > /dev/null 2>&1; then
       if [[ -z "$(git config --global user.email)" ]]; then
         git config --global user.email "$(get_last_github_author_email "${user}")"
       fi
@@ -590,15 +591,15 @@ configure_git() {
 git_ref_type() {
   if [[ -z $1 ]]; then
     echo "no_ref_given"
-  elif git rev-parse -q --verify "$1^{tag}" 2>/dev/null; then
+  elif git rev-parse -q --verify "$1^{tag}" 2> /dev/null; then
     echo tag
-  elif git show-ref -q --verify "refs/heads/$1" 2>/dev/null; then
+  elif git show-ref -q --verify "refs/heads/$1" 2> /dev/null; then
     echo "branch"
-  elif git show-ref -q --verify "refs/tags/$1" 2>/dev/null; then
+  elif git show-ref -q --verify "refs/tags/$1" 2> /dev/null; then
     echo "tag"
-  elif git show-ref -q --verify "refs/remote/$1" 2>/dev/null; then
+  elif git show-ref -q --verify "refs/remote/$1" 2> /dev/null; then
     echo "remote"
-  elif git rev-parse --verify "$1^{commit}" >/dev/null 2>&1; then
+  elif git rev-parse --verify "$1^{commit}" > /dev/null 2>&1; then
     echo "hash"
   else
     echo "unknown"
@@ -615,7 +616,7 @@ download_shell_scripts() {
   if command_exists git; then
     (
 
-      cd "${BFD_REPOSITORY}" >/dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
+      cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
       # we do it in four steps to avoid merge errors when reinstalling
       execute "git" "init" "-q"
@@ -626,23 +627,27 @@ download_shell_scripts() {
       # ensure we don't munge line endings on checkout
       execute "git" "config" "core.autocrlf" "false"
 
-      execute "git" "fetch" "--force" "origin" >/dev/null 2>&1
-      execute "git" "fetch" "--force" "--tags" "origin" >/dev/null 2>&1
-      execute "git" "remote" "set-head" "origin" "--auto" >/dev/null
-      execute "git" "reset" "--hard" "origin/${SHELL_SCRIPTS_REF}" >/dev/null 2>&1
+      execute "git" "fetch" "--force" "origin" > /dev/null 2>&1
+      execute "git" "fetch" "--force" "--tags" "origin" > /dev/null 2>&1
+      execute "git" "remote" "set-head" "origin" "--auto" > /dev/null
+      execute "git" "reset" "--hard" "origin/${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
       info "Pulling latest shell scripts - starting..."
-      execute "git" "pull" "--quiet" "--force" "origin" "${SHELL_SCRIPTS_REF}" >/dev/null 2>&1
+      execute "git" "pull" "--quiet" "--force" "origin" "${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
       info "Pulling latest shell scripts - completed."
     )
   else
     (
-      cd "${BFD_REPOSITORY}" >/dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
+      cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
         unpack "${bfd_cache}/master.zip" "${BFD_REPOSITORY}" && rm -rf "${bfd_cache}"
       else
         rm -rf "${bfd_cache}"
-        abort "Unable to download shell-scripts from\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
+        abort_msg=(
+          "Unable to download shell-scripts from\n"
+          "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
+        )
+        abort "${abort_msg[*]}"
       fi
     )
   fi
@@ -669,23 +674,23 @@ unpack() {
   sudo=${3-}
 
   case "${archive}" in
-  *.tar.gz)
-    flags=$(test -n "${VERBOSE-}" && echo "-xzvof" || echo "-xzof")
-    ${sudo} tar "${flags}" "${archive}" -C "${bin_dir}"
-    return 0
-    ;;
-  *.zip)
-    flags=$(test -z "${VERBOSE-}" && echo "-qqo" || echo "-o")
-    UNZIP="${flags}" ${sudo} unzip "${archive}" -d "${bin_dir}"
-    return 0
-    ;;
-  *)
-    error "Unknown package extension."
-    printf "\n"
-    info "This almost certainly results from a bug in this script--please file a"
-    info "bug report at https://github.com/starship/starship/issues"
-    return 1
-    ;;
+    *.tar.gz)
+      flags=$(test -n "${VERBOSE-}" && echo "-xzvof" || echo "-xzof")
+      ${sudo} tar "${flags}" "${archive}" -C "${bin_dir}"
+      return 0
+      ;;
+    *.zip)
+      flags=$(test -z "${VERBOSE-}" && echo "-qqo" || echo "-o")
+      UNZIP="${flags}" ${sudo} unzip "${archive}" -d "${bin_dir}"
+      return 0
+      ;;
+    *)
+      error "Unknown package extension."
+      printf "\n"
+      info "This almost certainly results from a bug in this script--please file a"
+      info "bug report at https://github.com/starship/starship/issues"
+      return 1
+      ;;
   esac
 }
 
@@ -747,18 +752,18 @@ detect_platform() {
   platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
   case "${platform}" in
-  msys_nt*) platform="pc-windows-msvc" ;;
-  cygwin_nt*) platform="pc-windows-msvc" ;;
-  # mingw is Git-Bash
-  mingw*) platform="pc-windows-msvc" ;;
-  # use the statically compiled musl bins on linux to avoid linking issues.
-  linux) platform="unknown-linux-musl" ;;
-  darwin) platform="apple-darwin" ;;
-  freebsd) platform="unknown-freebsd" ;;
-  *)
-    error "Unsupported platform: ${platform}"
-    exit 1
-    ;;
+    msys_nt*) platform="pc-windows-msvc" ;;
+    cygwin_nt*) platform="pc-windows-msvc" ;;
+    # mingw is Git-Bash
+    mingw*) platform="pc-windows-msvc" ;;
+    # use the statically compiled musl bins on linux to avoid linking issues.
+    linux) platform="unknown-linux-musl" ;;
+    darwin) platform="apple-darwin" ;;
+    freebsd) platform="unknown-freebsd" ;;
+    *)
+      error "Unsupported platform: ${platform}"
+      exit 1
+      ;;
   esac
 
   printf '%s' "${platform}"
@@ -767,17 +772,17 @@ detect_platform() {
 not_in_path() {
   local -r item="$(trim "${1}")"
   local p="${PATH%:}"
-  grep -q -v ":${item}:" <<<":${p#:}:"
+  grep -q -v ":${item}:" <<< ":${p#:}:"
 }
 add_to_path() {
   # if [[ -d "${1}" ]]; then
   if [[ -z ${PATH} ]]; then
     export PATH="${1}"
-    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
+    running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
     debug "Path created: ${1}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
-    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
+    running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
     debug "Path added: ${1}"
   fi
   # fi
@@ -856,7 +861,7 @@ install_dependencies() {
       export APT_LISTCHANGES_FRONTEND=none
       # >/dev/null 2>&1
       run_as_root apt-get -o Acquire::Max-FutureTime=86400 -qq -y update # Handle out of sync docker containers
-      run_as_root apt-get -o Acquire::Max-FutureTime=86400 -o Dpkg::Options::="--force-confnew" install -qq -y "${dependencies[@]}" >/dev/null 2>&1
+      run_as_root apt-get -o Acquire::Max-FutureTime=86400 -o Dpkg::Options::="--force-confnew" install -qq -y "${dependencies[@]}" > /dev/null 2>&1
     elif [[ -x "$(command -v yum)" ]]; then
       run_as_root yum install -y "${dependencies[@]}"
     elif [[ -x "$(command -v pacman)" ]]; then
@@ -881,7 +886,7 @@ install_dependencies() {
 }
 
 installer_dependencies() {
-  read -r -a REQUIRED_DEPENDENCIES <<<"$(missing_dependencies)" 2>/dev/null || read -r -A REQUIRED_DEPENDENCIES <<<"$(missing_dependencies)"
+  read -r -a REQUIRED_DEPENDENCIES <<< "$(missing_dependencies)" 2> /dev/null || read -r -A REQUIRED_DEPENDENCIES <<< "$(missing_dependencies)"
 
   INSTALL_DEPS=false
   if [[ ${#REQUIRED_DEPENDENCIES[@]} -eq 0 ]]; then
@@ -929,16 +934,16 @@ print_or_execute() {
 }
 shell_rc_file() {
   case "${SHELL}" in
-  */bash*)
-    shell_rc="${HOME}/.bashrc"
-    ;;
-  */zsh*)
-    shell_rc="${HOME}/.zshrc"
-    ;;
-  *)
-    shell_rc="${HOME}/.profile"
-    export ENV=~/.profile
-    ;;
+    */bash*)
+      shell_rc="${HOME}/.bashrc"
+      ;;
+    */zsh*)
+      shell_rc="${HOME}/.zshrc"
+      ;;
+    *)
+      shell_rc="${HOME}/.profile"
+      export ENV=~/.profile
+      ;;
   esac
   echo "${shell_rc}"
 }
@@ -968,7 +973,7 @@ set_env_var() {
     if grep -q "^${prefix}${name}=" "${file}"; then
       perl -pi -e "s#^${prefix}${name}=.*#${prefix}${name}=${value}#g" "${file}" && return 0
     else
-      echo "${prefix}${name}=${value}" >>"${file}" && return 0
+      echo "${prefix}${name}=${value}" >> "${file}" && return 0
     fi
   else
     perl -pi -e "/^${name}=.*/d" "${file}" && return 0
@@ -979,28 +984,61 @@ set_env_var() {
 next_steps() {
 
   ohai "Next steps:"
-
+  local bootstrap_loader="eval \"\$(bash -- ~\"${BFD_REPOSITORY#"${HOME}"}/lib/bootstrap.sh\")\""
   local shell_profile="$(shell_rc_file)"
   local repo_var="export BFD_REPOSITORY=${BFD_REPOSITORY}"
   if [[ -n ${INTERACTIVE:-} ]]; then
-    notice "To use the installed functions add this to your scripts:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}eval \"\$\(bash -- \"\${BFD_REPOSITORY}/lib/bootstrap.sh\"\)\"${COLOR_RESET}"
+    notice_msg=(
+      "To use the installed functions add this to your scripts:\n"
+      "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${bootstrap_loader}${COLOR_RESET}"
+    )
+    notice "${notice_msg[*]}"
     if [[ -f ${shell_profile} ]] && grep -q "${repo_var}" "${shell_profile}"; then
-      debug "Environment variable\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nalready configured in ${shell_profile}"
+      debug_msg=(
+        "Environment variable\n"
+        "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
+        "${repo_var}"
+        "${COLOR_RESET}\n"
+        "is already set in ${shell_profile}."
+      )
+      debug "${debug_msg[*]}"
     else
-      start_step "Do you want to add this to your ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] ${COLOR_RESET}"
+      start_step_msg=(
+        "Do you want to add this to\n"
+        "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} "
+        "now? [Y/n] "
+        "${COLOR_RESET}"
+      )
+      start_step "${start_step_msg[*]}"
       read -r -n 1 -t 120 add_to_shell
       printf "\n"
       if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
-        info "Adding environment variable:\n${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\nto ${shell_profile}"
+        info_msg=("Adding environment variable:\n"
+          "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
+          "${repo_var}"
+          "${COLOR_RESET}\n"
+          "to ${shell_profile}"
+        )
+        info "${info_msg[*]}"
         set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}" && return 0
       fi
     fi
-    info "Run this command in the shell to set the shell-scripts directory:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\n"
-    info "Or reload the shell:\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}source ${shell_profile}${COLOR_RESET}"
+    info_msg=(
+      "Run this command in the shell to set the shell-scripts directory:\n"
+      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\n"
+      "Or reload the shell:\n"
+      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
+      "source ${shell_profile}${COLOR_RESET}"
+    )
+    info "${info_msg[*]}"
   fi
 
   if [[ -n ${NONINTERACTIVE:-} ]] || [[ -n ${GITHUB_ACTIONS:-} ]]; then
-    info "Adding environment variable\n   ${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}"
+    info_msg=(
+      "Adding environment variable\n"
+      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}"
+    )
+    info "${info_msg[*]}"
     set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}"
   fi
 
@@ -1029,13 +1067,14 @@ install() {
 
 # check_bin_dir "${BIN_DIR}"
 install || failure "Installation failed"
+
 if [[ -z ${NONINTERACTIVE-} ]]; then
   ring_bell
   # wait_for_user
 fi
 
 # Invalidate sudo timestamp before exiting (if it wasn't active before).
-if [[ -x /usr/bin/sudo ]] && ! /usr/bin/sudo -n -v 2>/dev/null; then
+if [[ -x /usr/bin/sudo ]] && ! /usr/bin/sudo -n -v 2> /dev/null; then
   trap '/usr/bin/sudo -k' EXIT
 fi
 

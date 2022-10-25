@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Current Script Directory
-if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -x ${BFD_REPOSITORY} ]]; then
-  SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
+if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -d ${BFD_REPOSITORY} ]]; then
+  : "${SCRIPTS_LIB_DIR:="${BFD_REPOSITORY}/lib"}"
 fi
 if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if grep -q 'zsh' <<< "$(ps -c -ocomm= -p $$)"; then
