@@ -25,27 +25,19 @@ if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   if command -v zsh >/dev/null 2>&1 && [[ $(${SHELL} -c 'echo ${ZSH_VERSION}') != '' ]] || { command -v ps >/dev/null 2>&1 && grep -q 'zsh' <<<"$(ps -c -ocomm= -p $$)"; }; then
     # We are running in zsh
     # shellcheck disable=SC2296
-    RAW_SCRIPTS_LIB_DIR="${0:a:h}"
-    SCRIPTS_LIB_DIR="$(cd "${RAW_SCRIPTS_LIB_DIR}" >/dev/null 2>&1 && pwd -P)"
+    RAW_BFD_REPOSITORY="${0:a:h}"
+    BFD_REPOSITORY="$(cd "${RAW_BFD_REPOSITORY}" >/dev/null 2>&1 && pwd -P)"
   else
-    SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+    BFD_REPOSITORY="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
+  SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi
-
-shell-scripts_plugin_unload() {
-  # Uninstall the plugin
-  eval "$(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --unload)"
-}
-
-shell-scripts_plugin_load() {
-  # Uninstall the plugin
-  eval "$(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
-}
 
 # Standard Plugins Hash
 # https://z.digitalclouds.dev/community/zsh_plugin_standard#standard-plugins-hash
 typeset -gA Plugins
-Plugins[BFD_REPO_DIR]="${_shell_scripts_plugin_basedir}"
+Plugins[BFD_REPOSITORY]="${_shell_scripts_plugin_basedir}"
+export BFD_REPOSITORY SCRIPTS_LIB_DIR
 autoload -Uz shell-scripts_plugin_load shell-scripts_plugin_unload
 shell-scripts_plugin_load
-export BFD_REPOSITORY
+
