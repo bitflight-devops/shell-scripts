@@ -15,7 +15,7 @@ then
 fi
 
 # Set BitFlight Repository Directory
-: ${BFD_REPOSITORY:=${_shell_scripts_plugin_basedir}}
+BFD_REPOSITORY=${_shell_scripts_plugin_basedir}
 
 if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -d ${BFD_REPOSITORY} ]]; then
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
