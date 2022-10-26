@@ -21,8 +21,7 @@ if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
   fi
 fi
 
-export SCRIPTS_LIB_DIR
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
+BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 # shellcheck disable=SC2034
 SHELL_SCRIPTS_BOOTSTRAP_LOADED=1
 
@@ -84,7 +83,7 @@ unload_library() {
 
 load_libraries() {
   declare -a LIBRARIES=("$@")
-  if [[ -n ${SCRIPTS_LIB_DIR:-} ]] && [[ -x ${SCRIPTS_LIB_DIR} ]]; then
+  if [[ -n ${SCRIPTS_LIB_DIR:-} ]] && [[ -d ${SCRIPTS_LIB_DIR} ]]; then
     for library in "${LIBRARIES[@]}"; do
       load_library "${library}" || bootstrap_exec error "Library ${library} not found"
     done
@@ -95,7 +94,7 @@ load_libraries() {
 
 unload_libraries() {
   declare -a LIBRARIES=("$@")
-  if [[ -n ${SCRIPTS_LIB_DIR:-} ]] && [[ -x ${SCRIPTS_LIB_DIR} ]]; then
+  if [[ -n ${SCRIPTS_LIB_DIR:-} ]] && [[ -d ${SCRIPTS_LIB_DIR} ]]; then
     for library in "${LIBRARIES[@]}"; do
       unload_library "${library}" || bootstrap_exec error "Library ${library} not found"
     done
