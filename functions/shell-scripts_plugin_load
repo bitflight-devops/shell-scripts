@@ -3,4 +3,4 @@ emulate -L zsh
 # setopt extended_glob warn_create_global typeset_silent \
 #         no_short_loops rc_quotes no_auto_pushd
 # Load the plugin
-eval "$(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
+eval "$(zsh -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
