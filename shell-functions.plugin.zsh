@@ -48,3 +48,4 @@ typeset -gA Plugins
 Plugins[BFD_REPO_DIR]="${_shell_scripts_plugin_basedir}"
 autoload -Uz shell-scripts_plugin_load shell-scripts_plugin_unload
 shell-scripts_plugin_load
+export BFD_REPOSITORY

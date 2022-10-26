@@ -7,6 +7,11 @@
 
 # shellcheck disable=SC2034
 
+# ENVIRONMENT VARIABLES
+# ----------------------------------------
+# NONINTERACTIVE=1    # Set this to 1 to disable interactive prompts
+# BFD_CLEAN_INSTALL=1 # Set to 1 to force a clean install
+
 # Download the latest version of the script from the following URL:
 # https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh
 
@@ -257,7 +262,7 @@ simple_log() {
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
       local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
-      msg="$(sed -e "s/\\t/$'\t'/g" <<<"${msg}")"
+      msg="$(sed -e "s/\\t/$'\t'/g" <<< "${msg}")"
     else
       printf -v log_prefix '::%s ::' "${logtype}"
       local -r msg="$(escape_github_command_data "${*}")"
@@ -304,6 +309,32 @@ fi
 
 if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
   BFD_PREFIX="${HOME%./}"
+fi
+if [[ -n "${BFD_REPOSITORY}" ]]; then
+  if [[ -n "${BFD_CLEAN_INSTALL}" ]]; then
+    # Try to safely remove the existing installation
+    if [[ "${BFD_REPOSITORY}" == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}" ]]; then
+      rm -rf "${BFD_REPOSITORY}"
+    fi
+    timeNowSecondsEpoch=$(date +%s)
+    if grep -q "${BFD_REPOSITORY}" "${HOME}/.bashrc"; then
+      sed -i."${timeNowSecondsEpoch}" "/${BFD_REPOSITORY}/d" "${HOME}/.bashrc"
+    fi
+    if grep -q "${BFD_REPOSITORY}" "${HOME}/.zshrc"; then
+      sed -i."${timeNowSecondsEpoch}" "/${BFD_REPOSITORY}/d" "${HOME}/.zshrc"
+    fi
+    if grep -q "${BFD_REPOSITORY}" "${HOME}/.profile"; then
+      sed -i."${timeNowSecondsEpoch}" "/${BFD_REPOSITORY}/d" "${HOME}/.profile"
+    fi
+    if grep -q "${BFD_REPOSITORY}" "${HOME}/.bash_profile"; then
+      sed -i."${timeNowSecondsEpoch}" "/${BFD_REPOSITORY}/d" "${HOME}/.bash_profile"
+    fi
+    unset BFD_REPOSITORY
+  else
+    # We are already installed.
+    # Just trigger an update
+    BFD_EXISTING_INSTALLATION="${BFD_REPOSITORY}"
+  fi
 fi
 
 # Check if script is run with force-interactive mode in CI
@@ -358,9 +389,12 @@ if [[ ${OS} == "Linux" ]]; then
 elif [[ ${OS} != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
-BFD_PREFIX_DEFAULT="${HOME}"
-BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/.${SHELL_SCRIPTS_REPOSITORY_NAME}"
-
+if [[ -n "${BFD_EXISTING_INSTALLATION}" ]]; then
+  BFD_REPOSITORY="${BFD_EXISTING_INSTALLATION}"
+else
+  BFD_PREFIX_DEFAULT="${HOME}/.local/${SHELL_SCRIPTS_OWNER}"
+  BFD_REPOSITORY="${BFD_PREFIX:-${BFD_PREFIX_DEFAULT}}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
+fi
 if [[ -z ${SHELL_SCRIPTS_LINUX-} ]]; then
   UNAME_MACHINE="$(/usr/bin/uname -m)"
 

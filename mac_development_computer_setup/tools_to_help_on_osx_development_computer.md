@@ -1,130 +1,194 @@
 # Tools and Shell Improvements for MacOS Development Computer
 
-```bash
-#!/usr/bin/env bash
+## Required Package Managers for MacOS
 
-#--------------------------------------------------------------------------------------------------
-```
+Where possible packages are installed to userspace, but some packages require root access.
+If you see an opportunity to switch any of the root access installations to userspace, please [submit a PR](https://github.com/bitflight-devops/shell-scripts/pulls),or a [new issue](https://github.com/bitflight-devops/shell-scripts/issues/new/choose).
 
-## OSX
-
-### Install Docker
-
-<https://docs.docker.com/desktop/install/mac-install/>
-
-Or paste [this script](install_docker_for_mac.sh) into your terminal:
-
-```sh
-cat <<EOF > ~/docker_installer.sh
-#!/usr/bin/env bash
-DOCKER_INSTALLER_PATH="$HOME/Downloads/Docker.dmg"
-if [[ $(uname -p) == 'arm' ]]; then
-  echo "Downloading Docker.dmg for M1 Chip"
-  curl -fLl -o "\${DOCKER_INSTALLER_PATH}" 'https://desktop.docker.com/mac/main/arm64/Docker.dmg?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-mac-arm64'
-else
-  echo "Downloading Docker.dmg for Intel Chip"
-  curl -fLl -o "\${DOCKER_INSTALLER_PATH}" 'https://desktop.docker.com/mac/main/amd64/Docker.dmg?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-mac-amd64'
-fi
-
-echo "Mounting Docker.dmg"
-if hdiutil attach "\${DOCKER_INSTALLER_PATH}"; then
-  echo "Installing Docker"
-  /Volumes/Docker/Docker.app/Contents/MacOS/install --accept-license
-else
-  echo "Docker.dmg could not be mounted - possibly damaged dmg"
-fi
-echo "Unmounting Docker.dmg"
-hdiutil detach /Volumes/Docker
-echo "Removing Docker.dmg"
-rm -f "\${DOCKER_INSTALLER_PATH}"
-EOF
-chmod +x ~/docker_installer.sh
-sudo ~/docker_installer.sh
-```
+-   [Homebrew](https://brew.sh/) is the most ubiquitous package manager for MacOS. It is required for installing many of the tools listed below.
+-   [Docker for Mac](https://docs.docker.com/desktop/install/mac-install/) is the most integrated container manager for MacOS, and is required for running many of the tools listed below. 
+-   [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) is the package manager for Rust, and is required for installing some of the high performance tools listed below.
+-   [pipx](https://pipxproject.github.io/pipx/) is the package manager for Python, and is required for installing some of the python tools listed below, into _userspace_.
 
 ### Install [Homebrew](https://brew.sh/)
 
-```sh
-xcode-select --install 2>/dev/null || true # Install Xcode command line tools
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-sudo sh -c "compaudit | xargs chown -R \"$(whoami)\"" # Fix permissions for Homebrew
-sudo sh -c "compaudit | xargs chmod go-w" # Fix permissions on all files in /usr/local
+Install Homebrew without being prompted for input.
 
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
+NONINTERACTIVE=1 sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Fix permissions for Homebrew
+sudo zsh -c "$(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\"" 
+# Fix permissions on all files in /usr/local
+sudo zsh -c "$(declare -f compaudit);compaudit | xargs chmod go-w"
 ```
 
-### Create convenient shell functions
+</details>
 
-```sh
+### Install [Docker for Mac](https://docs.docker.com/desktop/install/mac-install/)
 
-## Create helper shell functions
-command_exists() {
-  command -v "$@" >/dev/null 2>&1
-}
+<details><summary>Mac Intel Chip Requirements</summary>
+* macOS must be version 10.15 or newer. That is, Catalina, Big Sur, or Monterey. We recommend upgrading to the latest version of macOS.
+* At least 4 GB of RAM.
+* VirtualBox prior to version 4.3.30 must not be installed as it is not compatible with Docker Desktop.
 
-reshim() {
-  # Reshim ASDF if it is installed
-  if command_exists asdf; then
-    asdf reshim
-  fi
-  # Reshim jenv if it is installed
-  if command_exists jenv; then
-    jenv reshim
-  fi
-}
+</details>
+<details><summary>Mac M1 Chip Requirements</summary>
 
-slurp() {
-  if [[ -p /dev/stdin ]]; then
-    cat -
-  fi
-  if [[ "$#" -ne 0 ]]; then
-    echo "$@"
-  fi
-}
-get_tool_info() {
-  brew info --json "$1" | jq -r '.[] | "brew_apps+=(\""+(.name)+"\") # "+(.desc)'
-}
-brew_tap_individually() {
-  NONINTERACTIVE=1 xargs -t -P1 -I'{}' -n1 bash -c "brew tap -q --repair ${*} '{}' || true"
-}
-brew_install_individually() {
-  NONINTERACTIVE=1 xargs -t -P1 -I'{}' -n1 bash -c "brew install -q -f ${*} '{}' || true"
-}
-brew_info_individually() {
-  info_func="$(declare -f get_tool_info)"
-  NONINTERACTIVE=1 xargs -P5 -I'{}' -n1 bash -c "${info_func};get_tool_info '{}' || true"
-}
-brew_tap_all() {
-  taps=($(slurp "$@"))
-  brew_tap_individually <<< "${taps[*]}"
-}
+-   Beginning with Docker Desktop 4.3.0, we have removed the hard requirement to install Rosetta 2. There are a few optional command line tools that still require Rosetta 2 when using Darwin/AMD64. See the Known issues section. However, to get the best experience, we recommend that you install Rosetta 2. To install Rosetta 2 manually from the command line, run the following command:
 
-brew_install_all() {
-  # Install all packages supplied via stdin, and as arguments
-  # Attempt to install all packages, even if some fail
-  formula=($(slurp "$@"))
-  if [[ "${#formula[@]}" -eq 0 ]]; then
-    echo "No formulae supplied to brew_install_all" >&2
-    return 1
-  fi
-  if grep -q -- "--cask" <<<"${formula[*]}"; then
-    iscask="--cask"
-    formula=(${formula[@]/${iscask}})
-    echo "Installing ${formula[*]} as casks"
-  else
-    echo "Installing ${formula[*]}"
-  fi
-  # 2>/dev/null
-  NONINTERACTIVE=1 brew install -f ${iscask-} "${formula[@]}" || \
-    brew_install_individually ${iscask-} <<< "${formula[*]}"
-}
+    ```zsh
+      softwareupdate --install-rosetta
+    ```
 
+</details>
 
+<details><summary>🗒️ Setup Instructions</summary>
 
+-   Manual install via a package installer are [available via the docker website](https://docs.docker.com/desktop/install/mac-install/).
+
+-   Scripted install via [install_docker_for_mac.sh](install_docker_for_mac.sh) script in your terminal:
+
+    ```zsh
+    # It requires root access, so you will be prompted for your password if you are not already root
+    sudo -v # Prompt for sudo first
+    curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/mac_development_computer_setup/install_docker_for_mac.sh" | bash
+    ```
+
+</details>
+
+## Install [Rustup](https://rust-lang.github.io/rustup/installation/other.html)/[Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+
+Instructions to download and install the official compiler for the Rust
+programming language, and its package manager, <a href="https://doc.rust-lang.org/cargo/getting-started/installation.html">Cargo</a>.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+[Rustup](https://rust-lang.github.io/rustup/installation/other.html) metadata and toolchains will be installed into the Rustup home directory, located at:
+
+```zsh
+  ~/.rustup
 ```
 
-## Setup Brew Taps - alternate software repositories
+This can be modified with the `RUSTUP_HOME` environment variable.
+
+The Cargo home directory is located at:
+
+```zsh
+  ~/.cargo
+```
+
+This can be modified with the `CARGO_HOME` environment variable.
+
+The `cargo`, `rustc`, `rustup` and other commands will be added to
+Cargo's bin directory, located at:
+
+```zsh
+  ~/.cargo/bin
+```
+
+This path will then be added to your `PATH` environment variable by
+modifying the profile files located at:
+
+```zsh
+  /Users/jamienelson/.profile
+  /Users/jamienelson/.bash_profile
+  /Users/jamienelson/.bashrc
+  /Users/jamienelson/.zshenv
+```
+
+You can uninstall at any time with `rustup self uninstall` and
+these changes will be reverted.
+
+```zsh
+# Remove any existing rust installations in brew
+brew list rust >/dev/null 2>&1 && brew uninstall rust
+# TODO add `asdf` check and uninstall
+
+# Install rustup: 
+# Options: -y = non-interactive, -q = quiet, -v = verbose
+#          --default-host <default-host>              Choose a default host triple
+#          --default-toolchain <default-toolchain>    Choose a default toolchain to install
+#          --default-toolchain none                   Do not install any toolchains
+#          --profile [minimal|default|complete]       Choose a profile
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain nightly
+```
+
+</details>
+
+### Install Python and [pipx](https://pipxproject.github.io/pipx/)
+
+The latest version of python is installed via Homebrew, and pipx is installed via pip.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
+## Drop python 2.7 support
+brew uninstall --force --quiet python2 2>/dev/null || true
+if [ -x /usr/bin/python ]; then
+  if [[ $(/usr/bin/python --version 2>&1) == Python\ 2.7* ]]; then
+    echo "Old python version found at /usr/bin/python"
+    echo "You probably should upgrade your OS to remove this"
+    echo "If you are on a Mac, you can try running 'softwareupdate --install --all'"
+  fi
+fi
+
+install_global_python() {
+  brew_install_all python3 python-tk python@3.10 python-tk@3.10
+  pip install --upgrade "setuptools<60" wheel
+  python -m ensurepip --upgrade
+  pip install --upgrade pip  2>&1 | grep -v "DEPRECATION:"
+  pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
+  # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
+
+}
+install_global_python
+```
+
+</details>
+
+
+### Install [meta-package-manager](https://kdeldycke.github.io/meta-package-manager/install.html) (mpm)
 
 ```sh
+pipx install meta-package-manager || true
+```
+
+
+## Installation Helper Functions
+
+**NOTE:** _These shell functions are required for the rest of the setup_
+Add [these helper functions](mac_development_computer_setup/helper_functions.sh) to your shell profile.
+They are required for the rest of the installation process.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
+helper_script="${HOME}/.local/shell-scripts/lib/mac_development_computer_setup/helper_functions.sh"
+mkdir -p "$(dirname "${helper_script}")" || return 1
+curl -SfslL -o "${helper_script}" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/mac_development_computer_setup/helper_functions.sh"
+
+if [[ -f "${helper_script}" ]]; then
+  source "${helper_script}"
+  # Adds them if they are not there, otherwise does nothing
+  add_helper_functions_to_profile
+fi
+```
+
+</details>
+
+## Configure Package Repositories
+
+### Setup Brew Taps
+
+custom software repositories
+
+**NOTE:** This requires the [helper functions from this step](#installation-helper-functions) to be available.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
 # Bring brew up to date
 NONINTERACTIVE=1 brew update --force --quiet
 NONINTERACTIVE=1 brew upgrade --force --quiet
@@ -149,70 +213,50 @@ sass/sass
 EOF
 ```
 
+</details>
+
 ## Install Runtimes
-
-### Python First
-
-```sh
-## Drop python 2.7 support
-brew uninstall --force --quiet python2 2>/dev/null || true
-if [ -x /usr/bin/python ]; then
-  if [[ $(/usr/bin/python --version 2>&1) == Python\ 2.7* ]]; then
-    echo "Old python version found at /usr/bin/python"
-    echo "You probably should upgrade your OS to remove this"
-    echo "If you are on a Mac, you can try running 'softwareupdate --install --all'"
-  fi
-fi
-
-install_global_python() {
-  brew_install_all python3 python-tk python@3.10 python-tk@3.10
-  pip install --upgrade "setuptools<60" wheel
-  python -m ensurepip --upgrade
-  pip install --upgrade pip  2>&1 | grep -v "DEPRECATION:"
-  pip install --upgrade pipx 2>&1 | grep -v "DEPRECATION:"
-  # Install setuptools under version 60.0.0 to avoid breaking a few dependencies like numba
-
-}
-install_global_python
-
-# Python utilities
-pipx install emoji-fzf
-
-
-```
 
 ### Install Java Runtimes
 
-```sh
+Java has been depreciated from oracle, and is now only available from 3rd party providers.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
 ### The adoptopenjdk/openjdk tap is deprecated use homebrew/cask-versions instead
 brew untap adoptopenjdk/openjdk || true
 
 brew_install_all --cask temurin temurin8 temurin11 temurin18 # Java JDK's
 ```
 
-## Install [meta-package-manager](https://kdeldycke.github.io/meta-package-manager/install.html) (mpm)
+</details>
 
-```sh
-pipx install meta-package-manager || true
+
+## ZSH Plugin Frameworks
+
+### [zr](https://github.com/jedahan/zr)
+
+Quick, simple zsh plugin manager
+
+Configuration of this plugin manager is done later in this document.
+
+<details><summary>🗒️ Setup Instructions</summary>
+
+```zsh
+cargo install zr
 ```
 
-## ZSH Frameworks
+</details>
 
-### [Zim](https://zimfw.sh)
-```sh
-curl -fsSL https://raw.githubusercontent.com/zimfw/install/master/install.zsh | zsh
-```
+## Collect and Install Mac Development Support Tools
 
-### [Alf](https://github.com/psyrendust/alf)
+### Brew Packages and Casks
 
-```sh
-curl -sSL https://raw.githubusercontent.com/psyrendust/alf/master/bootstrap/baseline.zsh | zsh
-```
+<details><summary>🗒️ Setup Instructions</summary>
 
-
-## Collect and Install all the packages
-
-```sh
+```zsh
+brew_apps=()
 ## Install Shell Utilities
 brew_apps+=("antigen") # Plugin manager for zsh, inspired by oh-my-zsh and vundle
 brew_apps+=("zsh") # UNIX shell (command interpreter)
@@ -529,96 +573,33 @@ brew_apps+=("gcloud") # Google Cloud SDK
 brew_apps+=("gcloud-completion") # Bash completion for gcloud
 brew_apps+=("docker-credential-helper-ecr") # Docker Credential Helper for Amazon ECR
 
-
-
-
+brew_install_all "${brew_apps[@]}"
 ```
 
+</details>
 
 ### brew bundle install
 
 TODO: Add section here with details about how to install the brew bundle
 
-
-
-## Install Other Utilities (Not in Homebrew)
+### Install Other Utilities (Not in Homebrew)
 
 ```zsh
+pipx install emoji-fzf
 npm install -g tldr # Manuals and HowTo's
 curl -fsSL https://git.io/shellspec | sh -s -- --yes # Shell Check for running tests against shell scripts
 ```
 
-### Initialise Utilities (TODO: remove podman setup, it's not needed)
-
-```zsh
-podman machine init -v "${HOME}:${HOME}"
-ssh-add ~/.ssh/podman-machine-default  2>/dev/null || true
-podman machine set --rootful # Optionally Enable root permissions to allow access to low port numbers 0-1024
-sudo "$(brew --prefix podman)/bin/podman-mac-helper" install # Install podman-mac-helper
-# Add podman desktop helper, which will allow you to auto start podman at computer startup
-sudo -v # Ask for sudo password
-PODMAN_DMG_VOLUME="/Volumes/Podman"
-PODMAN_APP="/Applications/Podman.app"
-PODMAN_TMP_JSON="$(mktemp --suffix ".json")"
-PODMAN_GUI_INSTALLER_PATH="$HOME/Downloads/Podman.dmg"
-# if [[ $(uname -p) == 'arm' ]]; then
-curl -slL  -o "${PODMAN_TMP_JSON}" 'https://api.github.com/repos/heyvito/podman-macos/releases/latest'
-PODMAN_TAG_NAME="$(jq -r '.tag_name' "${PODMAN_TMP_JSON}")"
-jq -r '.assets[] | select(.name | test("Podman.dmg")) | .browser_download_url' "${PODMAN_TMP_JSON}" | xargs curl -sSfL -o "${PODMAN_GUI_INSTALLER_PATH}" && echo "Downloaded ${PODMAN_GUI_INSTALLER_PATH}"
-rm -f "${PODMAN_TMP_JSON}"
-# else
-# curl -fLl -o "\${PODMAN_GUI_INSTALLER_PATH}" 'https://github.com/heyvito/podman-macos/releases/download/latest/Podman.dmg'
-# fi
-
-echo "Mounting ${PODMAN_GUI_INSTALLER_PATH}"
-if hdiutil attach -nobrowse -mountpoint "${PODMAN_DMG_VOLUME}" "${PODMAN_GUI_INSTALLER_PATH}"; then
-  echo "Installing Podman GUI"
-  if [[ -x "${PODMAN_DMG_VOLUME}/Podman.app" ]]; then
-    sudo cp -rf "${PODMAN_DMG_VOLUME}/Podman.app" "${PODMAN_APP%/*}"
-    if [[ -x "${PODMAN_APP}" ]]; then
-     echo "Installed to ${PODMAN_APP}"
-    else
-      echo "Failed to install to ${PODMAN_APP}"
-    fi
-  fi
-  sudo xattr -r -d com.apple.quarantine "${PODMAN_APP}"
-  open "${PODMAN_APP}"
-else
-  echo "${PODMAN_GUI_INSTALLER_PATH} could not be mounted - possibly damaged dmg"
-fi
-echo "Unmounting ${PODMAN_DMG_VOLUME}"
-hdiutil detach "${PODMAN_DMG_VOLUME}"
-echo "Removing ${PODMAN_GUI_INSTALLER_PATH}"
-rm -f "${PODMAN_GUI_INSTALLER_PATH}"
-
-# Configure Podman to run a bash language server in the background in a docker container
-# https://github.com/bash-lsp/bash-language-server
-# Use port 5023 instead of 5000 as a lot of other services use port 5000
-podman container run --rm --name explainshell -p 5023:5000 -d spaceinvaderone/explainshell
-EXS_CONTAINER_ID="$(podman container ps -f name=explainshell --format='{{.ID}}' 2>/dev/null)"
-# Configure the container to start up at boot
-if [[ -n ${EXS_CONTAINER_ID:-} ]]; then
-podman machine ssh "podman generate systemd --new --name \"${EXS_CONTAINER_ID}\" >> \"/etc/systemd/system/${EXS_CONTAINER_ID}.service\""
-"podman generate systemd --new --name \"${EXS_CONTAINER_ID}\" \>\> \"/etc/systemd/system/${EXS_CONTAINER_ID}.service\""
-podman machine ssh systemctl enable "${EXS_CONTAINER_ID}.service"
-podman machine ssh systemctl start "${EXS_CONTAINER_ID}.service"
-fi
-else
-  echo "Failed to identify explainshell container"
-  podman ps container -f name=explainshell
-fi
-
-podman machine stop || true
-podman machine start
-
-```
-
 ## Add ASDF's application manager
+
+ASDF is a tool that allows you to manage multiple language runtime versions on your local system. It is similar to tools like `nvm` and `rbenv` in that it allows you to have multiple versions of a language runtime installed on your system and switch between them.
+
+<details><summary>🗒️ Setup Instructions</summary>
 
 ```zsh
 ## brew uninstall nodejs gtop python python-yq packer maven make jq jmespath jib temurin zoxide jenv
 # gradle groovy maven awscli bat
-
+brew install asdf
 asdf plugin add direnv
 asdf global direnv latest
 asdf install direnv latest
@@ -640,79 +621,65 @@ version=${version:+latest:${version}}
 done
 
 ```
+</details>
 
-### `~/.zshrc`
+## Configure ZSH
+
+Via `~/.zshrc`
+
+<details><summary>🗒️ Setup Instructions</summary>
 
 ```zsh
 #!/usr/bin/env zsh
-curl -sSlL https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh | bash
-curl -sS https://starship.rs/install.sh | sh
-
-add_to_path() {
-  if [[ -d "${1}" ]]; then
-    if [[ -z "${PATH}" ]]; then
-      export PATH="${1}"
-    elif grep -q -v "${1}" <<<"${PATH}"; then
-      export PATH="${1}:${PATH}"
-    fi
-  fi
-}
-
-export FZF_BASE="$(brew --prefix fzf)"
-if [[ ~/.vimrc ]]; then
-  if grep -q -v 'set rtp+=/usr/local/opt/fzf' ~/.vimrc; then
-    echo 'set rtp+=/usr/local/opt/fzf' >>~/.vimrc
-  fi
-else
-  echo 'set rtp+=/usr/local/opt/fzf' >~/.vimrc
-fi
-
-[[ ! -f ~/.fzf.zsh ]] && [[ -f /usr/local/opt/fzf/install ]] && /usr/local/opt/fzf/install --completion --key-bindings --all >/dev/null 2>&1
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
+# Fig pre block. Keep at the top of this file.
+[[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
 # Preferred editor for local and remote sessions
 if [[ -n $SSH_CONNECTION ]]; then
   export EDITOR='vim'
 else
-  export EDITOR='mvim'
+  export EDITOR='code'
 fi
 
-[[ -f /usr/local/opt/asdf/libexec/asdf.sh ]] && \. /usr/local/opt/asdf/libexec/asdf.sh
-eval $(thefuck --alias)
+command_exists() {
+  command -v "$@" >/dev/null 2>&1
+}
 
-# You may need to manually set your language environment
-export LANG=en_US.UTF-8
-export GPG_TTY=${TTY}
+mkdir -p ~/.local/bin
+# Generate new ~/.config/zr.zsh if it does not exist or if ~/.zshrc has been changed
+if [[ ! -f ~/.config/zr.zsh ]] || [[ ~/.zshrc -nt ~/.config/zr.zsh ]]; then
+  zr \
+    https://github.com/bitflight-devops/shell-scripts \
+    > ~/.config/zr.zsh
+fi
 
-# Compilation flags
-export ARCHFLAGS="-arch x86_64"
+source ~/.config/zr.zsh
 
-# Set personal aliases, overriding those provided by oh-my-zsh libs,
-# plugins, and themes. Aliases can be placed here, though oh-my-zsh
-# users are encouraged to define aliases within the ZSH_CUSTOM folder.
-# For a full list of active aliases, run `alias`.
-#
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
+# Enable Touchbar support for iTerm2
+TOUCHBAR_GIT_ENABLED=true
 
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+install_if_missing starship starship "https://starship.rs/install.sh" "-f" "-b" "$HOME/.local/bin"
+install_if_missing fig fig "https://fig.io/install"
 
-alias pyauth='chamber exec dev-ws/us-east-1 GOOGLE_API_KEY -- pipenv run'
-export AWS_SESSION_TOKEN_TTL=8h
+[[ -f /usr/local/opt/asdf/libexec/asdf.sh ]] && source /usr/local/opt/asdf/libexec/asdf.sh
+[[ -f ~/wearsafe/github_login_tokens.sh ]] && source ~/wearsafe/github_login_tokens.sh
+[[ -f ~/.asdf/plugins/java/set-java-home.zsh ]] && source ~/.asdf/plugins/java/set-java-home.zsh
+[[ -n ${ZSH_CACHE_DIR} ]] && [[ ! -d "${ZSH_CACHE_DIR}/completions" ]] && mkdir -p "${ZSH_CACHE_DIR}/completions"
 
-# tabtab source for packages
-# uninstall by removing these lines
-[[ -f ~/.config/tabtab/__tabtab.zsh ]] && . ~/.config/tabtab/__tabtab.zsh || true
+run_after_wait() {
+  local -r wait_in_seconds="$1"
+  shift
+  sleep "${wait_in_seconds}"s
+  "$@"
+}
 
-# export ZSH_HIGHLIGHT_HIGHLIGHTERS_DIR=/usr/local/share/zsh-syntax-highlighting/highlighters
+# bun completions
+[ -s "/usr/local/share/zsh/site-functions/_bun" ] && source "/usr/local/share/zsh/site-functions/_bun"
+
+# bun completions
+[ -s "/Users/jamienelson/.bun/_bun" ] && source "/Users/jamienelson/.bun/_bun"
+
+export ZSH_WAKATIME_PROJECT_DETECTION=true
+
 [[ -f /usr/local/share/zsh/site-functions ]] && . /usr/local/share/zsh/site-functions
 add_to_path "/usr/local/opt/ruby/bin"
 add_to_path "$HOME/.yarn/bin"
@@ -724,68 +691,46 @@ add_to_path "/usr/local/opt/gnu-tar/libexec/gnubin"
 add_to_path "/usr/local/opt/gnu-sed/libexec/gnubin"
 if type brew &>/dev/null; then
   FPATH=$(brew --prefix)/share/zsh-completions:$FPATH
-
   autoload -Uz compinit
   compinit
 fi
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-source ~/wearsafe/github_login_tokens.sh
-
-source "${XDG_CONFIG_HOME:-$HOME/.config}/asdf-direnv/zshrc"
-. ~/.asdf/plugins/java/set-java-home.zsh
-
-# bun completions
-[ -s "/usr/local/share/zsh/site-functions/_bun" ] && source "/usr/local/share/zsh/site-functions/_bun"
-
-# bun completions
-[ -s "/Users/jamienelson/.bun/_bun" ] && source "/Users/jamienelson/.bun/_bun"
-
-export DOCKER_HOST='unix:///Users/jamienelson/.local/share/containers/podman/machine/podman-machine-default/podman.sock'
-alias docker=podman
-export BFD_REPOSITORY="${HOME}/.shell-scripts"
+# Start Starship prompt is available
+if command_exists starship; then
+  eval "$(starship init zsh)"
+else
+  NONINTERACTIVE=1 curl -sS https://starship.rs/install.sh | sh
+fi
+# Fig post block. Keep at the bottom of this file.
+[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
 
 ```
 
+</details>
+
 ## VS Code Setup
+
+Install and setup VS Code
+
+<details><summary>🗒️ Setup Instructions</summary>
 
 ```sh
 # Install VS Code
 brew install --cask visual-studio-code
-command -v code >/dev/null 2>&1 || { echo >&2 "VS Code is not installed.  Aborting."; exit 1; }
-docker container run --name explainshell --restart always -p 5437:5000 -d spaceinvaderone/explainshell
 ```
 
-# Install VS Code extensions
+</details>
 
-## Suggested Extra Tools:
+### Install VS Code extensions
 
--   [asdf](<>)
--   [gtop](<>)
--   [topgrade](<>)
--   [bat](<>)
--   [fd](<>)
--   [procs](<>)
--   [dust](<>)
--   [tldr](<>) **npm install -g tldr**
--   [broot](<>) **brew install broot**
--   [gping](https://github.com/orf/gping)
--   [glances](https://github.com/nicolargo/glances) **brew install glances**
--   [hyperfine](https://github.com/sharkdp/hyperfine) **brew install hyperfine**
+TODO: Add instructions for installing VS Code extensions
 
-## [Hyperfine](https://github.com/sharkdp/hyperfine)
+## Benchmarking Shell functions and aliases
 
-### Shell functions and aliases
+### If you are using bash, you can export shell functions to directly benchmark them with hyperfine:
 
-#### If you are using bash, you can export shell functions to directly benchmark them with hyperfine:
-
-```sh
-$ my_function() { sleep 1; }
-$ export -f my_function
-$ hyperfine my_function
-```
-
-```
-
+```zsh
+     my_function() { sleep 1; }
+     export -f my_function
+     hyperfine my_function
 ```
