@@ -116,7 +116,7 @@ append_path_var() {
     # Var was saved
   fi
     # update local shell
-    export "${new_path?}"
+    export PATH="${2}:${PATH}"
 
 }
 set_env_var() {
