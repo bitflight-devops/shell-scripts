@@ -62,13 +62,11 @@ shell_rc_file() {
   echo "${shell_rc}"
 }
 sed_inplace() {
-  set -x
   if grep -q "GNU sed" <<< "$(sed --version 2> /dev/null || true)"; then
     sed -i"" "$@" || true
   else
     sed -i "" "$@" || true
   fi
-  set +x
 }
 save_env_var() {
   local -r var_name="$1"
