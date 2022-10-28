@@ -437,7 +437,7 @@ print_single_log_file() {
   export GITHUB_LOG_FILE="${1}"
   if [[ -f ${GITHUB_LOG_FILE} ]]; then
     if running_in_github_actions; then
-      short_filename="$(basename "${GITHUB_LOG_FILE}")"
+      short_filename="$(/usr/bin/dirname "${GITHUB_LOG_FILE}")"
       echo "::group::📄 ${short_filename}"
 
       if [[ -f "${GITHUB_LOG_FILE}.processed" ]]; then

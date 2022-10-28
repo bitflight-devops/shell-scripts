@@ -28,7 +28,7 @@ if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
     RAW_BFD_REPOSITORY="${0:a:h}"
     BFD_REPOSITORY="$(cd "${RAW_BFD_REPOSITORY}" >/dev/null 2>&1 && pwd -P)"
   else
-    BFD_REPOSITORY="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
+    BFD_REPOSITORY="$(cd "$(/usr/bin/dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
   SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
 fi

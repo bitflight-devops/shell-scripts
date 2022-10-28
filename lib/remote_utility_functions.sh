@@ -97,8 +97,8 @@ downloadFile() {
     fi
 
     # Download
-    dirPath="$(dirname "${destinationFile}")"
-    fileName="$(basename "${destinationFile}")"
+    dirPath="$(/usr/bin/dirname "${destinationFile}")"
+    fileName="$(/usr/bin/basename "${destinationFile}")"
     debug "\nDownloading '${url}' to '${destinationFile}'\n"
   else
     local TO_STD_OUT=true
@@ -189,7 +189,7 @@ basic_wget() {
     echo "accept: */*"
     echo
   } >&3
-  sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(basename "$1")"
+  sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(/usr/bin/basename "$1")"
 }
 
 configure_bastion_ssh_tunnel() {
