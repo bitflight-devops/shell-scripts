@@ -5,22 +5,22 @@ get_iso_time() {
 }
 
 command_exists() {
-  command -v "$@" >/dev/null 2>&1
+  command -v "$@" > /dev/null 2>&1
 }
 
 is_darwin() {
   case "$(uname -s)" in
-  *darwin*) true ;;
-  *Darwin*) true ;;
-  *) false ;;
+    *darwin*) true ;;
+    *Darwin*) true ;;
+    *) false ;;
   esac
 }
 
 is_wsl() {
   case "$(uname -r)" in
-  *microsoft*) true ;; # WSL 2
-  *Microsoft*) true ;; # WSL 1
-  *) false ;;
+    *microsoft*) true ;; # WSL 2
+    *Microsoft*) true ;; # WSL 1
+    *) false ;;
   esac
 }
 
@@ -38,7 +38,7 @@ get_distribution() {
 process_is_running() {
   PID="$1"
   if [[ -n ${PID:-} ]]; then
-    kill -0 "${PID}" >/dev/null 2>&1
+    kill -0 "${PID}" > /dev/null 2>&1
     return $?
   fi
   printf "%s(): No PID provided" "${0}"
@@ -48,20 +48,77 @@ process_is_running() {
 shell_rc_file() {
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   case "${SHELL}" in
-  */bash*)
-    shell_rc="${HOME}/.bashrc"
-    ;;
-  */zsh*)
-    shell_rc="${HOME}/.zshrc"
-    ;;
-  *)
-    shell_rc="${HOME}/.profile"
-    export ENV=~/.profile
-    ;;
+    */bash*)
+      shell_rc="${HOME}/.bashrc"
+      ;;
+    */zsh*)
+      shell_rc="${HOME}/.zshrc"
+      ;;
+    *)
+      shell_rc="${HOME}/.profile"
+      export ENV=~/.profile
+      ;;
   esac
   echo "${shell_rc}"
 }
+sed_inplace() {
+  set -x
+  if grep -q "GNU sed" <<< "$(sed --version 2> /dev/null || true)"; then
+    sed -i"" "$@" || true
+  else
+    sed -i "" "$@" || true
+  fi
+  set +x
+}
+save_env_var() {
+  local -r var_name="$1"
+  local -r var_value="${2}" # "$(printf '%q' "${2}")"
+  local -r shell_rc="$(shell_rc_file)"
+  if [[ -f "${shell_rc}" ]]; then
+    if grep -q "${var_name}" "${shell_rc}"; then
+      sed_inplace "s|${var_name}=.*|${var_name}=${var_value}|" "${shell_rc}"
+    else
+      echo "${var_name}=${var_value}" >> "${shell_rc}"
+    fi
+  else
+    echo "${var_name}=${var_value}" > "${shell_rc}"
+  fi
+}
 
+append_path_var() {
+  # This can be run alone, or eval'd to update the current shell
+  # USAGE: to save to file and update local shell:
+  # eval "export $(append_path_var true /path/to/dir)"
+  # USAGE: to save to file only:
+  # append_path_var save /path/to/dir
+  # USAGE: to update local shell only:
+  # eval "export $(append_path_var false /path/to/dir)"
+
+  local -r var_name="PATH"
+  local -r save_var="${1}"
+  local -r new_path="PATH=${2}:\${PATH}"
+  if running_in_github_actions; then
+    # In GITHUB Actions, we can't write to the shell_rc_file
+      local -r file="${GITHUB_PATH}"
+      echo "${2}" >> "${file}"
+  elif [[ "${save_var}" == "true" ]]; then
+    local -r file="$(shell_rc_file)"
+
+    if [[ -f "${file}" ]]; then
+      if grep -q "${new_path}" "${file}"; then
+        # Path already exists in file
+        return
+      fi
+    fi
+    # Path does not exist in file, so add it
+    touch "${file}"
+    printf '%s\n' "${new_path}" >> "${file}"
+    # Var was saved
+  fi
+    # update local shell
+    export "${new_path?}"
+
+}
 set_env_var() {
   local name="${1//\s/}"
   local value="$2"
@@ -69,8 +126,12 @@ set_env_var() {
   local prefix=''
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
 
-  if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
-    file="${GITHUB_ENV}"
+  if running_in_github_actions; then
+    if [[ ${name} == "PATH" ]]; then
+      file="${GITHUB_PATH}"
+    else
+      file="${GITHUB_ENV}"
+    fi
   else
     file="$(shell_rc_file)"
     prefix='export '
@@ -83,19 +144,15 @@ set_env_var() {
     "${TOUCH[@]:-touch}" "${file}" || return 1
   fi
   #  /[.*+?^${}()|[\]\\]/g, '\\$&'
-
-  if [[ -n ${value} ]]; then
+  if [[ "${name}" == "PATH" ]]; then
+    # we adding a new path variable, so just add a new line
+    eval "export $(append_path_var "true" "${value}")"
+    return
+  elif [[ -n ${value} ]]; then
     if [[ ${value} == "${HOME}"* ]]; then
       value="\${HOME}${value#"${HOME}"}"
     fi
-    if grep -q "^${prefix:-}${name}=" "${file}"; then
-      # Handle Mac or Linux if available
-      command_exists perl && perl -pi -e "s#^${prefix:-}${name}=.*#${prefix:-}${name}=${value}#g" "${file}" && return 0
-      # Handle Linux
-      command_exists sed && sed -i "s#^${prefix:-}${name}=.*#${prefix:-}${name}=${value}#g" "${file}" && return 0
-    else
-      echo "${prefix:-}${name}=${value}" >>"${file}" && return 0
-    fi
+    save_env_var "${name}" "${value}"
   else
     # Handle Mac or Linux if available
     command_exists perl && perl -pi -e "/^${name}=.*/d" "${file}" && return 0
@@ -108,26 +165,12 @@ set_env_var() {
 not_in_path() {
   local -r item="$(trim "${1}")"
   local p="${PATH%:}"
-  grep -q -v ":${item}:" <<<":${p#:}:"
+  grep -q -v ":${item}:" <<< ":${p#:}:"
 }
 
 add_to_path() {
-  # if [[ -d "${1}" ]]; then
-  if [[ -z ${PATH} ]]; then
-    export PATH="${1}"
-    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
-    debug "Path created: ${1}"
-    set_env_var PATH "${1}:${PATH}"
-  elif not_in_path "${1}"; then
-    export PATH="${1}:${PATH}"
-    running_in_github_actions && echo "${1}" >>"${GITHUB_PATH}"
-    debug "Path added: ${1}"
-    set_env_var PATH "${1}:${PATH}"
-  fi
-  # fi
+  append_path_var "${2:-"false"}" "${1}"
 }
-
-
 
 getLastAptGetUpdate() {
   local aptDate="$(stat -c %Y '/var/cache/apt')"
@@ -161,7 +204,7 @@ runAptGetUpdate() (
 )
 
 root_available() {
-  local -r user="$(id -un 2>/dev/null || true)"
+  local -r user="$(id -un 2> /dev/null || true)"
   if [[ ${user} != 'root' ]]; then
     if command_exists sudo; then
       local bin_false="/bin/false"
@@ -188,7 +231,7 @@ root_available() {
 }
 
 prefix_sudo() {
-  if command_exists sudo && ! sudo -v >/dev/null 2>&1; then
+  if command_exists sudo && ! sudo -v > /dev/null 2>&1; then
     echo sudo
   fi
 }
@@ -230,9 +273,8 @@ install_app() (
   fi
 )
 
-
 in_brew() {
-  NONINTERACTIVE=1 HOMEBREW_NO_ANALYTICS=1 brew info -q --json --formula "$@" >/dev/null 2>&1
+  NONINTERACTIVE=1 HOMEBREW_NO_ANALYTICS=1 brew info -q --json --formula "$@" > /dev/null 2>&1
 }
 
 install_if_missing() {
@@ -245,13 +287,13 @@ install_if_missing() {
   install_flags=("$@")
   if ! command_exists "${cli_command}"; then
     if command_exists brew && in_brew ${brew_app_name}; then
-      brew install ${brew_app_name} >/dev/null 2>&1 || true &
+      brew install ${brew_app_name} > /dev/null 2>&1 || true &
     elif [[ -n ${alternate_install_script_url-} ]]; then
       installer_file=$(mktemp -q -u -t installerXXXX)
       curl -fsSLl -o "${installer_file}" "${alternate_install_script_url}"
       if [[ "${#install_flags}" -gt 0 ]]; then
-        chmod +x "${installer_file}" &&
-          NONINTERACTIVE=1 "${installer_file}" "${install_flags[@]}"
+        chmod +x "${installer_file}" \
+                                     && NONINTERACTIVE=1 "${installer_file}" "${install_flags[@]}"
       else
         NONINTERACTIVE=1 source <(curl -Ls "${alternate_install_script_url}")
       fi
