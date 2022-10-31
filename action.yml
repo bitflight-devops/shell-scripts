@@ -24,7 +24,9 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
-        NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
+        [[ -z ${BFD_REPOSITORY} ]] && NONINTERACTIVE=1 bash -c 'source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")'
+        [[ -z ${BFD_REPOSITORY} ]] || eval "$(${SHELL} -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
+        # NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
         set_env BOOTSTRAP "${BFD_REPOSITORY}/lib/bootstrap.sh"
         set_env SHELL_SCRIPTS_QUIET "1"
         set_env NONINTERACTIVE "1"

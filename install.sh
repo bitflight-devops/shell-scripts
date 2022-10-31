@@ -10,6 +10,7 @@
 # ENVIRONMENT VARIABLES
 # ----------------------------------------
 # NONINTERACTIVE=1    # Set this to 1 to disable interactive prompts
+# INTERACTIVE=1       # Set this to 1 to enable interactive prompts
 # BFD_CLEAN_INSTALL=1 # Set to 1 to force a clean install
 
 # Download the latest version of the script from the following URL:
@@ -72,6 +73,18 @@ SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
 MAIN_USER="$(id -un 2> /dev/null || true)"
+
+if command -v zsh > /dev/null 2>&1 && [[ $(${SHELL} -c 'echo ${ZSH_VERSION}') != '' ]] || {
+    command -v ps > /dev/null 2>&1 && grep -q 'zsh' <<< "$(ps -c -ocomm= -p $$)"
+}; then
+  SHELL_TYPE="zsh"
+else
+  SHELL_TYPE="bash"
+fi
+
+is_zsh() {
+  [[ "${SHELL_TYPE}" == "zsh" ]]
+}
 
 sourced=0
 if [[ -n ${ZSH_VERSION:-} ]]; then
@@ -251,18 +264,20 @@ simple_log() {
   in_quiet_mode && return 0
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
+  local msg
   if [[ -z ${logtype} ]]; then
-    printf '%s%s\n' "${NO_COLOR}" "${*}"
+    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
+    printf '%s%s\n' "${NO_COLOR}" "${msg}"
   else
     shift
+    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
     if [[ ${logcolor} != "::" ]]; then
       local indent_width=11
       local indent="$(indent_style "${logtype}" "${indent_width}")"
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
-      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
-      msg="$(sed -e "s/\\t/$'\t'/g" <<< "${msg}")"
+      msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
     else
       printf -v log_prefix '::%s ::' "${logtype}"
       local -r msg="$(escape_github_command_data "${*}")"
@@ -303,15 +318,15 @@ downloader_installed() {
 # Fail fast with a concise message when not using bash
 # Single brackets are needed here for POSIX compatibility
 # shellcheck disable=SC2292
-if [ -z "${BASH_VERSION:-}" ]; then
-  abort "Bash is required to interpret this script."
-fi
+# if [ -z "${BASH_VERSION:-}" ]; then
+#   abort "Bash is required to interpret this script."
+# fi
 
 if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
   BFD_PREFIX="${HOME%./}"
 fi
-if [[ -n "${BFD_REPOSITORY}" ]]; then
-  if [[ -n "${BFD_CLEAN_INSTALL}" ]]; then
+if [[ -n "${BFD_REPOSITORY:-}" ]]; then
+  if [[ -n "${BFD_CLEAN_INSTALL:-}" ]]; then
     # Try to safely remove the existing installation
     if [[ "${BFD_REPOSITORY}" == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}" ]]; then
       rm -rf "${BFD_REPOSITORY}"
@@ -936,7 +951,11 @@ installer_dependencies() {
     if root_available; then
       notice "${message}\nThese dependencies can be installed for you as root.\n"
       start_step "Do you want to install them now? [Y/n] "
-      read -r -n 1 -t 120 install_deps_answer
+      if is_zsh; then
+        read -k 1 -r -q answer
+      else
+        read -r -n 1 -t 120 install_deps_answer
+      fi
       printf "\n"
       if [[ ${install_deps_answer:-y} =~ [Yy] ]]; then
         INSTALL_DEPS=true

@@ -151,10 +151,23 @@ set_output() {
     return 1
   fi
   if running_in_github_actions; then
-    echo "::set-output name=${1}::${2}"
+    echo "${1}=${2}" >> "${GITHUB_OUTPUT}"
     debug "Output Variable set: ${1}=${2}"
   else
     debug "Not in CI, Output Variable not set: ${1}=${2}"
+  fi
+}
+
+set_state() {
+  if [[ $# -ne 2 ]]; then
+    error "${0}: You need to provide two arguments. Provided args ${*}"
+    return 1
+  fi
+  if running_in_github_actions; then
+    echo "${1}=${2}" >> "${GITHUB_STATE}"
+    debug "State Variable set: ${1}=${2}"
+  else
+    debug "Not in CI, State Variable not set: ${1}=${2}"
   fi
 }
 
