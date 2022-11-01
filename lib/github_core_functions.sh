@@ -175,7 +175,7 @@ set_state() {
 
 get_java_version() {
   if [[ -f .java-version ]]; then
-    JAVA_VERSION="$(cat .java-version)"
+    JAVA_VERSION="$(awk '{print $1;}' .java-version)"
   else
     JAVA_VERSION="11.0"
   fi
