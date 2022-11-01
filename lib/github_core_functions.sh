@@ -181,6 +181,7 @@ get_java_version() {
   fi
   echo "Java Version is: ${JAVA_VERSION}"
   set_output version "${JAVA_VERSION}"
+  set_output java_version "${JAVA_VERSION}"
 }
 
 set_build_framework_output() {
