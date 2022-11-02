@@ -72,18 +72,31 @@ CROSS_MARK=$'❌'            # ❌ cross mark
 SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
-MAIN_USER="$(id -un 2> /dev/null || true)"
-
-if command -v zsh > /dev/null 2>&1 && [[ $(${SHELL} -c 'echo ${ZSH_VERSION}') != '' ]] || {
-    command -v ps > /dev/null 2>&1 && grep -q 'zsh' <<< "$(ps -c -ocomm= -p $$)"
-}; then
-  SHELL_TYPE="zsh"
+if [[ -n "${SUDO_USER:-}" ]]; then
+  MAIN_USER="${SUDO_USER}"
 else
-  SHELL_TYPE="bash"
+  MAIN_USER="$(id -un 2> /dev/null || true)"
 fi
 
+command_exists() { command -v "$@" > /dev/null 2>&1; }
+# by using a HEREDOC, we are disabling shellcheck and shfmt
+read -r -d '' LOOKUP_SHELL_FUNCTION <<-'EOF'
+	lookup_shell() {
+		export whichshell
+		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
+		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
+		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
+		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
+		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+	}
+EOF
+
+eval "${LOOKUP_SHELL_FUNCTION}"
+# shellcheck enable=all
+lookup_shell
+
 is_zsh() {
-  [[ "${SHELL_TYPE}" == "zsh" ]]
+  [[ "${whichshell}" == "zsh" ]]
 }
 
 sourced=0
@@ -404,7 +417,7 @@ if [[ ${OS} == "Linux" ]]; then
 elif [[ ${OS} != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
-if [[ -n "${BFD_EXISTING_INSTALLATION}" ]]; then
+if [[ -n "${BFD_EXISTING_INSTALLATION:-}" ]]; then
   BFD_REPOSITORY="${BFD_EXISTING_INSTALLATION}"
 else
   BFD_PREFIX_DEFAULT="${HOME}/.local/${SHELL_SCRIPTS_OWNER}"
@@ -900,7 +913,7 @@ repeat() {
 install_dependencies() {
   local dependencies=("$@")
   if [[ -n ${SHELL_SCRIPTS_LINUX:-} ]]; then
-    if ! have_sudo_access || [[ ${MAIN_USER} != 'root' ]]; then
+    if ! have_sudo_access || [[ $(id -un 2> /dev/null || echo "${USER:-}") != 'root'  ]]; then
       ohai "This script requires sudo access to install system dependencies."
       ohai "If you already have sudo access, you can run this script with 'sudo'."
       abort "Please re-run this script with sudo."
@@ -1037,64 +1050,66 @@ set_env_var() {
 next_steps() {
 
   ohai "Next steps:"
-  local bootstrap_loader="eval \"\$(bash -- ~\"${BFD_REPOSITORY#"${HOME}"}/lib/bootstrap.sh\")\""
+  RC_CONTENT="source \"${BFD_REPOSITORY}/.shellscriptsrc\""
+
   local shell_profile="$(shell_rc_file)"
-  local repo_var="export BFD_REPOSITORY=${BFD_REPOSITORY}"
+
   if [[ -n ${INTERACTIVE:-} ]]; then
     notice_msg=(
       "To use the installed functions add this to your scripts:\n"
-      "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${bootstrap_loader}${COLOR_RESET}"
+      "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
     )
     notice "${notice_msg[*]}"
-    if [[ -f ${shell_profile} ]] && grep -q "${repo_var}" "${shell_profile}"; then
-      debug_msg=(
+    if [[ -f ${shell_profile} ]] && grep -m 1 -q -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
+      matches="$(awk '/.*(BFD_REPOSITORY|shellscripts).*/ {print "On line "NR" --> "$0};' "${shell_profile}")"
+      info_msg=(
         "Environment variable\n"
-        "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
-        "${repo_var}"
-        "${COLOR_RESET}\n"
-        "is already set in ${shell_profile}."
+        "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
+        "is possibly already set in ${shell_profile}.\n"
+        "Matches:\n"
+        "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${matches}${COLOR_RESET}"
       )
-      debug "${debug_msg[*]}"
+      info "${debug_msg[*]}"
     else
       start_step_msg=(
         "Do you want to add this to\n"
-        "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} "
-        "now? [Y/n] "
+        "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] "
         "${COLOR_RESET}"
       )
       start_step "${start_step_msg[*]}"
-      read -r -n 1 -t 120 add_to_shell
+      add_to_shell="$(bash -c 'read -r -n 1 -t 30 prompt; echo "${prompt:-}"')"
       printf "\n"
       if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
-        info_msg=("Adding environment variable:\n"
+        info_msg=("Adding script source:\n"
           "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
-          "${repo_var}"
+          "${RC_CONTENT}"
           "${COLOR_RESET}\n"
           "to ${shell_profile}"
         )
         info "${info_msg[*]}"
-        set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}" && return 0
+        tee -a "${shell_profile}" <<< "${RC_CONTENT}" && return 0
       fi
     fi
     info_msg=(
-      "Run this command in the shell to set the shell-scripts directory:\n"
-      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}\n"
+      "Run this command in the shell to load the scripts now:\n"
+      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
       "Or reload the shell:\n"
       "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
-      "source ${shell_profile}${COLOR_RESET}"
+      "exec ${whichshell}${COLOR_RESET}"
     )
     info "${info_msg[*]}"
   fi
 
   if [[ -n ${NONINTERACTIVE:-} ]] || [[ -n ${GITHUB_ACTIONS:-} ]]; then
-    info_msg=(
-      "Adding environment variable\n"
-      "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${repo_var}${COLOR_RESET}"
-    )
-    info "${info_msg[*]}"
-    set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}"
+    if grep -m 1 -q -v -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
+      info_msg=(
+        "Adding environment variable\n"
+        "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
+      )
+      info "${info_msg[*]}"
+      tee -a "${shell_profile}" <<< "${RC_CONTENT}" && return 0
+    fi
   fi
-
 }
 
 installer_dependencies
