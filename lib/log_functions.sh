@@ -8,13 +8,16 @@ command_exists() { command -v "$@" > /dev/null 2>&1; }
 if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   LC_ALL=C
   export LC_ALL
+  set +e
   read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
 	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	SCRIPTS_LIB_DIR="${0:a:h}"
 	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
 	EOF
+  set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
+  set +e
   read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 	lookup_shell() {
 		export whichshell
@@ -25,6 +28,7 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 	EOF
+  set -e
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
@@ -56,42 +60,39 @@ fi
 
 if ! command_exists uppercase; then
   uppercase() {
-    tr '[:lower:]' '[:upper:]' <<<"${*}"
+    tr '[:lower:]' '[:upper:]' <<< "${*}"
   }
 fi
 
-
 if ! command_exists lowercase; then
-lowercase() {
-  tr '[:upper:]' '[:lower:]' <<<"${*}"
-}
+  lowercase() {
+    tr '[:upper:]' '[:lower:]' <<< "${*}"
+  }
 fi
-
 
 if ! command_exists iscolorcode; then
-iscolorcode() {
-  grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<<"$1"
-}
+  iscolorcode() {
+    grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<< "$1"
+  }
 fi
 
-
 if ! command_exists colorcode; then
-colorcode() {
-  local -r color="${1}"
-  if iscolorcode "${color}"; then
-    perl -pe 's/(^\s*|\s*$)/Y/g;' <<<"${color}"
-  elif [[ -n ${color:-} ]]; then
-    local -r color_var_name="$(uppercase "${color}")"
-    eval 'local resolved_color="${'"${color_var_name}"':-}"'
-    if [[ -n ${resolved_color:-} ]] && iscolorcode "${colorcode}"; then
-      perl -pe 's/(^\s*|\s*$)//gm;' <<<"${colorcode}"
-    elif [[ -z ${DEBUG:-} ]]; then
-      printf '%s' "${resolved_color}"
-    else
-      printf ''
+  colorcode() {
+    local -r color="${1}"
+    if iscolorcode "${color}"; then
+      perl -pe 's/(^\s*|\s*$)/Y/g;' <<< "${color}"
+    elif [[ -n ${color:-} ]]; then
+      local -r color_var_name="$(uppercase "${color}")"
+      eval 'local resolved_color="${'"${color_var_name}"':-}"'
+      if [[ -n ${resolved_color:-} ]] && iscolorcode "${colorcode}"; then
+        perl -pe 's/(^\s*|\s*$)//gm;' <<< "${colorcode}"
+      elif [[ -z ${DEBUG:-} ]]; then
+        printf '%s' "${resolved_color}"
+      else
+        printf ''
+      fi
     fi
-  fi
-}
+  }
 fi
 
 function logfileDir() {
@@ -100,8 +101,8 @@ function logfileDir() {
 
   if [[ -z ${LOG_DIR:-} ]] && command_exists uname; then
     case "$(uname -s)" in
-    *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
-    *) LOG_DIR="${LOG_DIR:-/var/log/shell_logs}" ;;
+      *darwin* | *Darwin*) LOG_DIR=/usr/local/var/log/shell_logs ;;
+      *) LOG_DIR="${LOG_DIR:-/var/log/shell_logs}" ;;
     esac
   fi
 
@@ -112,7 +113,7 @@ function logfileDir() {
   # sed 's/\x0/ \n/g' "/proc/$$/cmdline"
   # echo "endcommand:"
   local log_file_dir=$(printf '%s%s/%s' "${LOG_DIR}" "${parent_command:+/${parent_command}}" "${this_command}" | tr -s '/')
-  mkdir -p "${log_file_dir}" 2>/dev/null || true
+  mkdir -p "${log_file_dir}" 2> /dev/null || true
   printf '%s' "${log_file_dir}"
 }
 
@@ -140,7 +141,7 @@ function whatIsMyName() {
 
 # Check if the command is available in this shell
 command_exists() {
-  command -v "$@" >/dev/null 2>&1
+  command -v "$@" > /dev/null 2>&1
 }
 
 running_in_github_actions() {
@@ -168,7 +169,7 @@ get_log_type() {
       "step"
     )
   fi
-  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
   if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
     printf '%s' "${logtype}"
   else
@@ -193,7 +194,7 @@ get_log_color() {
   LOG_COLOR_step="${COLOR_BOLD_CYAN}"
   LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
   LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
-  local arg="$(tr '[:upper:]' '[:lower:]' <<<"${1}")"
+  local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
   local -r logtype="$(get_log_type "${arg}")"
 
   if [[ -z ${logtype} ]]; then
@@ -209,43 +210,43 @@ indent_style() {
 
   local final_style=''
   case "${logtype}" in
-  notice)
-    style=" "
-    final_style="${STARTING_STAR}"
-    ;;
-  step)
-    style=" "
-    final_style="${STEP_STAR}"
-    ;;
-  failure)
-    style=" "
-    final_style="${CROSS_MARK}"
-    ;;
-  success)
-    style=" "
-    final_style="${CHECK_MARK_BUTTON}"
-    ;;
-  info)
-    style=" "
-    final_style="${INFO_ICON} "
-    ;;
-  debug)
-    style="-"
-    final_style="${DEBUG_ICON:-} "
-    ;;
-  *)
-    style=""
-    final_style="-->"
-    ;;
+    notice)
+      style=" "
+      final_style="${STARTING_STAR}"
+      ;;
+    step)
+      style=" "
+      final_style="${STEP_STAR}"
+      ;;
+    failure)
+      style=" "
+      final_style="${CROSS_MARK}"
+      ;;
+    success)
+      style=" "
+      final_style="${CHECK_MARK_BUTTON}"
+      ;;
+    info)
+      style=" "
+      final_style="${INFO_ICON} "
+      ;;
+    debug)
+      style="-"
+      final_style="${DEBUG_ICON:-} "
+      ;;
+    *)
+      style=""
+      final_style="-->"
+      ;;
   esac
   local -r indent_length="$((width - ${#logtype}))"
-  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<<"${logtype}")"
+  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
   printf -- "${style}%.0s" $(seq "${indent_length}")
   printf '%s' "${final_style}"
 }
 
 simple_log() {
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
   if [[ -z ${logtype} ]]; then
@@ -258,7 +259,7 @@ simple_log() {
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
-      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
+      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
     else
       printf -v log_prefix '::%s ::' "${logtype}"
       local -r msg="$(escape_github_command_data "${*}")"
@@ -269,9 +270,9 @@ simple_log() {
 
 plain_log() {
   set +x
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
   shift
-  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<<"${fulllogtype}")"
+  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<< "${fulllogtype}")"
   local -r msg="${*}"
 
   printf "[%7s] %s\n" "${logtypeUppercase}" "${msg}"
@@ -297,7 +298,7 @@ join_by() {
 
 github_log() {
   set +x
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<<"${1}")"
+  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
   local -r logtype="$(get_log_type "${1}")"
   shift
 
@@ -324,7 +325,7 @@ github_log() {
         ARGS="$(join_by , "${LOG_ARGS[@]}")"
         LOG_STRING+=("${ARGS}")
       fi
-      perl -pe 'tr/ //s;s/::\s*/::/g;' <<<"${LOG_STRING[*]}::${msg}"
+      perl -pe 'tr/ //s;s/::\s*/::/g;' <<< "${LOG_STRING[*]}::${msg}"
     else
       plain_log "${fulllogtype}" "${msg}"
     fi
@@ -334,7 +335,7 @@ github_log() {
 # shellcheck disable=SC2120
 to_stderr() {
   if [[ $# -eq 0 ]]; then
-    echo >&2 "$(</dev/stdin)"
+    echo >&2 "$(< /dev/stdin)"
   else
     echo >&2 "${*}"
   fi
@@ -362,7 +363,7 @@ log_output() {
   local msg="${*}"
   local -r logtype="$(get_log_type "${labelUppercase}")"
 
-  if caller 1 >/dev/null 2>&1; then
+  if caller 1 > /dev/null 2>&1; then
     local function_name="$(caller 1 | awk '{print $2}')"
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
   fi
@@ -371,15 +372,15 @@ log_output() {
   else
     indent_width=7
     printf -v space "%*s" "$((indent_width))" ''
-    local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<<"${*}")"
+    local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
     printf "%s[%s%5s%s] %s%s\n" "${COLOR_RESET:-}" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}: }" "${msg}"
   fi
   if ! running_in_github_actions; then
     {
       nocolor_msg="$(stripcolor "${msg}")"
-      timestamp_log "${labelUppercase}" "${function_name:+${function_name}():}" "${nocolor_msg}" >>"$(logfileName "${return_code}")" 2>&1 &
+      timestamp_log "${labelUppercase}" "${function_name:+${function_name}():}" "${nocolor_msg}" >> "$(logfileName "${return_code}")" 2>&1 &
       disown
-    } 2>/dev/null
+    } 2> /dev/null
   fi
 }
 
@@ -444,7 +445,7 @@ success() {
 }
 
 pipe_errors_to_github_workflow() {
-  local -r log_file_path="$(tr -s '/' <<<"${1}")"
+  local -r log_file_path="$(tr -s '/' <<< "${1}")"
   if [[ ${GITHUB_FILE_PROCESSED} == 'true' ]]; then
     cat "${log_file_path}"
   elif [[ -f "${SCRIPTS_LIB_DIR}/parse_logs.perl" ]]; then
@@ -481,7 +482,7 @@ print_single_log_file() {
 
 log_file_contents() (
   set +x +e
-  export GITHUB_LOG_FILE_RAW="$(tr -s '/' <<<"${1}")"
+  export GITHUB_LOG_FILE_RAW="$(tr -s '/' <<< "${1}")"
   local logdir="$(dirname "${GITHUB_LOG_FILE_RAW}")"
   if [[ -d ${logdir} ]]; then
     find "${logdir}" -type f -iname "$(basename "${GITHUB_LOG_FILE_RAW}")" -print0 | while IFS= read -r -d $'\0' file; do
@@ -507,14 +508,14 @@ print_logs_from_zip() {
 }
 
 run_as_root() {
-  user="$(id -un 2>/dev/null || true)"
+  user="$(id -un 2> /dev/null || true)"
 
   export sh_c=""
   if [[ ${user} != 'root' ]]; then
     if command_exists sudo; then
       export sh_c='sudo'
     else
-      cat >&2 <<-'EOF'
+      cat >&2 <<- 'EOF'
 				Error: this command needs the ability to run other commands as root.
 				We are unable to find "sudo" available to make this happen.
 			EOF
