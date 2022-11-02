@@ -36,13 +36,14 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
+# SCRIPTS_LIB_DIR
 
 # End Lookup Current Script Directory
 ##########################################################
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-export LOG_FUNCTIONS_LOADED=1
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${LOG_FUNCTIONS_LOADED:=1}"
+
 [[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${COLOR_AND_EMOJI_VARIABLES_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/color_and_emoji_variables.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -53,28 +54,28 @@ export LOG_FUNCTIONS_LOADED=1
 # so we create them here if they are not already loaded
 # from lib/string_functions.sh
 
-if ! command -v uppercase >/dev/null 2>&1; then
+if ! command_exists uppercase; then
   uppercase() {
     tr '[:lower:]' '[:upper:]' <<<"${*}"
   }
 fi
 
 
-if ! command -v lowercase >/dev/null 2>&1; then
+if ! command_exists lowercase; then
 lowercase() {
   tr '[:upper:]' '[:lower:]' <<<"${*}"
 }
 fi
 
 
-if ! command -v iscolorcode >/dev/null 2>&1; then
+if ! command_exists iscolorcode; then
 iscolorcode() {
   grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<<"$1"
 }
 fi
 
 
-if ! command -v colorcode >/dev/null 2>&1; then
+if ! command_exists colorcode; then
 colorcode() {
   local -r color="${1}"
   if iscolorcode "${color}"; then

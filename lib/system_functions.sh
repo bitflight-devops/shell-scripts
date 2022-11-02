@@ -36,13 +36,13 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
 
 # End Lookup Current Script Directory
 ##########################################################
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-export SYSTEM_FUNCTIONS_LOADED=1
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${SYSTEM_FUNCTIONS_LOADED:=1}"
+
 get_iso_time() {
   date +%Y-%m-%dT%H:%M:%S%z
 }

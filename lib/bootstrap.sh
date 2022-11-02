@@ -36,14 +36,12 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
 
 # End Lookup Current Script Directory
 ##########################################################
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${SHELL_SCRIPTS_BOOTSTRAP_LOADED:=1}"
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-# shellcheck disable=SC2034
-SHELL_SCRIPTS_BOOTSTRAP_LOADED=1
 
 declare -a AVAILABLE_LIBRARIES=(
   "color_and_emoji_variables"

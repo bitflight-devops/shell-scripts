@@ -36,24 +36,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
 
 # End Lookup Current Script Directory
 ##########################################################
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-export GITHUB_CORE_FUNCTIONS_LOADED=1
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${GITHUB_CORE_FUNCTIONS_LOADED:=1}"
+
 [[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
 check_if_tag_created() {
-  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" >/dev/null 2>&1 &&
-    git describe --exact-match >/dev/null 2>&1
+  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" > /dev/null 2>&1 \
+                                                                        && git describe --exact-match > /dev/null 2>&1
 }
 
 get_tag_name() {
-  git describe --exact-match 2>/dev/null
+  git describe --exact-match 2> /dev/null
 }
 set_tag_as_output_if_available() {
   if check_if_tag_created; then
@@ -101,7 +101,7 @@ running_in_github_actions || GITHUB_STEP_SUMMARY="summary.md"
 
 step_summary() (
   set +x +e
-  echo "${*}" >>"${GITHUB_STEP_SUMMARY}"
+  echo "${*}" >> "${GITHUB_STEP_SUMMARY}"
   return 0
 )
 
@@ -113,19 +113,19 @@ step_summary_display() {
 step_summary_title() (
   if [[ ${#} -eq 0 ]]; then
     # Show existing title
-    sed -n '1 p' "${GITHUB_STEP_SUMMARY}" 2>/dev/null || true
+    sed -n '1 p' "${GITHUB_STEP_SUMMARY}" 2> /dev/null || true
   else
     local title="${*}"
     title="# $(titlecase "${title}")"
     if [[ ! -f ${GITHUB_STEP_SUMMARY} ]]; then
       # No File, create it and add the Title
-      echo "${title}" >"${GITHUB_STEP_SUMMARY}"
+      echo "${title}" > "${GITHUB_STEP_SUMMARY}"
     else
       # File exists, Add or Update the Title
       SEDARGS=(-i)
       is_darwin && SEDARGS+=("''")
       info "Setting Step Summary Title to: ${title}"
-      if sed -n '1 p' "${GITHUB_STEP_SUMMARY}" 2>/dev/null | grep -q -e "^#"; then
+      if sed -n '1 p' "${GITHUB_STEP_SUMMARY}" 2> /dev/null | grep -q -e "^#"; then
         # Update title
         sed "${SEDARGS[@]}" "1 s/^.*$/${title}/" "${GITHUB_STEP_SUMMARY}" || true
       else
@@ -141,7 +141,7 @@ step_summary_append() (
   set +x +e
   info "${0}(): Appending to Step Summary: ${*}"
   running_in_github_actions || GITHUB_STEP_SUMMARY="summary.md"
-  echo "${*}" >>"${GITHUB_STEP_SUMMARY}"
+  echo "${*}" >> "${GITHUB_STEP_SUMMARY}"
   return 0
 )
 
@@ -159,7 +159,7 @@ set_env() {
     fi
   fi
   if running_in_ci; then
-    echo "${key}=${value}" >>"${GITHUB_ENV}"
+    echo "${key}=${value}" >> "${GITHUB_ENV}"
   fi
   export "${key}=${value}"
   debug "Environment Variable set: ${key}=${value}"
@@ -251,5 +251,5 @@ get_last_github_author_name() {
 }
 
 add_github_to_known_hosts() {
-  mkdir -p ~/.ssh && ssh-keyscan github.com >>~/.ssh/known_hosts
+  mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 }

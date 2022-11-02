@@ -36,13 +36,13 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
 
 # End Lookup Current Script Directory
 ##########################################################
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-export REMOTE_UTILITY_FUNCTIONS_LOADED=1
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${REMOTE_UTILITY_FUNCTIONS_LOADED:=1}"
+
 [[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
@@ -184,8 +184,7 @@ existURL() {
   # Install Curl
   installCURLCommand > '/dev/null'
   # Check URL
-  if (curl -f --head -L "${url}" -o '/dev/null' -s \
-                                                   || curl -f -L "${url}" -o '/dev/null' -r 0-0 -s); then
+  if curl -f --head -L "${url}" -o '/dev/null' -s || curl -f -L "${url}" -o '/dev/null' -r 0-0 -s; then
     echo 'true' && return 0
   fi
   echo 'false' && return 1

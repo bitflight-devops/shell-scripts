@@ -41,9 +41,8 @@ export SCRIPTS_LIB_DIR
 # End Lookup Current Script Directory
 ##########################################################
 
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
-
-export OSX_UTILITY_FUNCTIONS_LOADED=1
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
+: "${OSX_UTILITY_FUNCTIONS_LOADED:=1}"
 
 brew_app_directory() {
   if command_exists brew; then
