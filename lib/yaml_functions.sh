@@ -8,13 +8,16 @@ command_exists() { command -v "$@" > /dev/null 2>&1; }
 if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   LC_ALL=C
   export LC_ALL
+  set +e
   read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
 	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	SCRIPTS_LIB_DIR="${0:a:h}"
 	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
 	EOF
+  set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
+  set +e
   read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 	lookup_shell() {
 		export whichshell
@@ -25,6 +28,7 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 	EOF
+  set -e
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
@@ -53,8 +57,8 @@ parse_yaml() {
   fs="$(echo @ | tr @ '\034')"
   #shellcheck disable=SC1087
   sed -ne "s|^\(${s}\)\(${w}\)${s}:${s}\"\(.*\)\"${s}\$|\1${fs}\2${fs}\3|p" \
-    -e "s|^\(${s}\)\(${w}\)${s}[:-]${s}\(.*\)${s}\$|\1${fs}\2${fs}\3|p" "$1" |
-    awk -F"${fs}" '{
+    -e "s|^\(${s}\)\(${w}\)${s}[:-]${s}\(.*\)${s}\$|\1${fs}\2${fs}\3|p" "$1" \
+                                                                             | awk -F"${fs}" '{
     indent = length($1)/2;
     vname[indent] = $2;
     for (i in vname) {if (i > indent) {delete vname[i]}}

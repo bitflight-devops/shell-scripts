@@ -80,7 +80,8 @@ fi
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 # by using a HEREDOC, we are disabling shellcheck and shfmt
-read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+set +e
+read -r -d '' LOOKUP_SHELL_FUNCTION <<'EOF'
 	lookup_shell() {
 		export whichshell
 		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
@@ -90,7 +91,7 @@ read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 EOF
-
+set -e
 eval "${LOOKUP_SHELL_FUNCTION}"
 # shellcheck enable=all
 lookup_shell

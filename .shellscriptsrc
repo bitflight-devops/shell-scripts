@@ -8,6 +8,7 @@ command_exists() { command -v "$@" > /dev/null 2>&1; }
 LC_ALL=C
 export LC_ALL
 : # by using a HEREDOC, we are disabling shellcheck and shfmt
+set +e
 read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 	lookup_shell() {
 		export whichshell
@@ -18,17 +19,19 @@ read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 EOF
+set -e
 eval "${LOOKUP_SHELL_FUNCTION}"
 lookup_shell
 
 if [[ -z "${BFD_REPOSITORY:-}" ]]; then
-
+  set +e
   read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
 	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	BFD_REPOSITORY="${0:a:h}"
 	BFD_REPOSITORY="$(cd "${BFD_REPOSITORY}" > /dev/null 2>&1 && pwd -P)"
 	EOF
+  set -e
 # shellcheck enable=all
   if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
     # We are running in zsh
