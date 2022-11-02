@@ -80,7 +80,7 @@ fi
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 # by using a HEREDOC, we are disabling shellcheck and shfmt
-read -r -d '' LOOKUP_SHELL_FUNCTION <<-'EOF'
+read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
 	lookup_shell() {
 		export whichshell
 		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
@@ -1100,14 +1100,18 @@ next_steps() {
     info "${info_msg[*]}"
   fi
 
-  if [[ -n ${NONINTERACTIVE:-} ]] || [[ -n ${GITHUB_ACTIONS:-} ]]; then
-    if grep -m 1 -q -v -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
+  if [[ -n ${NONINTERACTIVE:-} ]]; then
+
       info_msg=(
         "Adding environment variable\n"
         "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
-      )
+    )
       info "${info_msg[*]}"
-      tee -a "${shell_profile}" <<< "${RC_CONTENT}" && return 0
+      if grep -m 1 -q -v -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
+        tee -a "${shell_profile}" <<< "${RC_CONTENT}"
+    fi
+    if [[ -n ${GITHUB_ACTIONS:-} ]]; then
+      set_env_var BFD_REPOSITORY "${BFD_REPOSITORY}" && return 0
     fi
   fi
 }
