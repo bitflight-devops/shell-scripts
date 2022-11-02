@@ -1,25 +1,46 @@
 #!/usr/bin/env bash
-# Current Script Directory
-if [[ -n ${BFD_REPOSITORY:-} ]] && [[ -d ${BFD_REPOSITORY} ]]; then
-  : "${SCRIPTS_LIB_DIR:="${BFD_REPOSITORY}/lib"}"
-fi
-if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
-  if command -v zsh > /dev/null 2>&1 && [[ $(${SHELL} -c 'echo ${ZSH_VERSION}') != '' ]] || {
-     command -v ps > /dev/null 2>&1 && grep -q 'zsh' <<< "$(ps -c -ocomm= -p $$)"
-  }; then
+
+##########################################################
+##### Lookup Current Script Directory
+
+command_exists() { command -v "$@" > /dev/null 2>&1; }
+
+if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+  LC_ALL=C
+  export LC_ALL
+  read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
+	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
+	0="${${(M)0:#/*}:-$PWD/$0}"
+	SCRIPTS_LIB_DIR="${0:a:h}"
+	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
+	EOF
+  # by using a HEREDOC, we are disabling shellcheck and shfmt
+  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+	lookup_shell() {
+		export whichshell
+		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
+		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
+		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
+		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
+		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+	}
+	EOF
+  eval "${LOOKUP_SHELL_FUNCTION}"
+  # shellcheck enable=all
+  lookup_shell
+  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
     # We are running in zsh
-    # shellcheck disable=SC2296,SC2299,SC2250,SC2296,SC2299,SC2277,SC2298
-    # trunk-ignore(shfmt/parse)
-    0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
-    # shellcheck disable=SC2296,SC2299,SC2250,SC2296,SC2299,SC2277,SC2298
-    0="${${(M)0:#/*}:-$PWD/$0}"
-    SCRIPTS_LIB_DIR="${0:a:h}"
-    SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
+    eval "${GET_LIB_DIR_IN_ZSH}"
   else
+    # we are running in bash/sh
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
 export SCRIPTS_LIB_DIR
+
+# End Lookup Current Script Directory
+##########################################################
+
 export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
 export REMOTE_UTILITY_FUNCTIONS_LOADED=1
 [[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
@@ -63,7 +84,7 @@ withBackoff() {
 
 checkExistURL() {
   local -r url="${1}"
-  if grep -q 'X-Amz-Credential' <<<"${url}"; then
+  if grep -q 'X-Amz-Credential' <<< "${url}"; then
     warning "Skipping checkExistURL for ${url}, it is a presigned URL"
     return 0
   fi
@@ -112,7 +133,7 @@ downloadFile() {
       DOWNLOAD_ARGS+=(--no-clobber)
     fi
     withBackoff wget -q -O "${destinationFile}" "${url}" "${DOWNLOAD_ARGS[@]}"
-  elif command_exists curl || installCURLCommand >/dev/null 2>&1; then
+  elif command_exists curl || installCURLCommand > /dev/null 2>&1; then
     DOWNLOAD_ARGS=(--create-dirs)
     DOWNLOAD_ARGS+=(--fail --remote-time --compressed)
     if [[ -z ${TO_STD_OUT} ]] && [[ -f ${destinationFile:-} ]]; then
@@ -136,9 +157,9 @@ app_installed() {
   local -r app="${1}"
   if command_exists apt-cache && apt-cache policy "${app}" | grep -q -v 'Unable to locate package'; then
     return 1
-  elif command_exists yum && ! yum list installed "${app}" >/dev/null 2>&1; then
+  elif command_exists yum && ! yum list installed "${app}" > /dev/null 2>&1; then
     return 1
-  elif command_exists brew && ! brew list "${app}" >/dev/null 2>&1; then
+  elif command_exists brew && ! brew list "${app}" > /dev/null 2>&1; then
     return 1
   else
     return 0
@@ -161,10 +182,10 @@ installCURLCommand() {
 existURL() {
   local -r url="${1}"
   # Install Curl
-  installCURLCommand >'/dev/null'
+  installCURLCommand > '/dev/null'
   # Check URL
-  if (curl -f --head -L "${url}" -o '/dev/null' -s ||
-    curl -f -L "${url}" -o '/dev/null' -r 0-0 -s); then
+  if (curl -f --head -L "${url}" -o '/dev/null' -s \
+                                                   || curl -f -L "${url}" -o '/dev/null' -r 0-0 -s); then
     echo 'true' && return 0
   fi
   echo 'false' && return 1
@@ -178,8 +199,8 @@ getRemoteFileContent() {
 
 basic_wget() {
   # shellcheck disable=SC2034
-  IFS=/ read -r proto z host query <<<"$1"
-  exec 3<"/dev/tcp/${host}/80"
+  IFS=/ read -r proto z host query <<< "$1"
+  exec 3< "/dev/tcp/${host}/80"
   {
     echo "GET /${query} HTTP/1.1"
     echo "connection: close"
@@ -189,7 +210,7 @@ basic_wget() {
     echo "accept: */*"
     echo
   } >&3
-  sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 >"$(/usr/bin/basename "$1")"
+  sed '1,/^$/d;s/<[^>]*>/ /g;' <&3 > "$(/usr/bin/basename "$1")"
 }
 
 configure_bastion_ssh_tunnel() {
@@ -202,7 +223,7 @@ configure_bastion_ssh_tunnel() {
     touch "${HOME}/.ssh/config"
   fi
   if ! grep -q "remotehost-proxy" "${HOME}/.ssh/config"; then
-    cat <<EOF >>"${HOME}/.ssh/config"
+    cat << EOF >> "${HOME}/.ssh/config"
 Host remotehost-proxy
     HostName ${BASTION_HOST}
     User ${BASTION_USER}
@@ -219,17 +240,17 @@ EOF
   # ControlPath ~/.ssh/remotehost-proxy.ctl
   touch ~/.ssh/known_hosts
   rm -f ~/.ssh/bastion.pem
-  echo "${BASTION_PRIVATE_KEY}" | base64 -d >~/.ssh/bastion.pem
+  echo "${BASTION_PRIVATE_KEY}" | base64 -d > ~/.ssh/bastion.pem
   chmod 700 ~/.ssh || true
   chmod 600 ~/.ssh/bastion.pem || true
   if ! grep -q "${BASTION_HOST}" ~/.ssh/known_hosts; then
-    ssh-keyscan -T 15 -t rsa "${BASTION_HOST}" >>~/.ssh/known_hosts || true
+    ssh-keyscan -T 15 -t rsa "${BASTION_HOST}" >> ~/.ssh/known_hosts || true
   fi
 
 }
 
 check_ssh_tunnel() {
-  ssh -O check remotehost-proxy >/dev/null 2>&1
+  ssh -O check remotehost-proxy > /dev/null 2>&1
 }
 
 open_bastion_ssh_tunnel() {
