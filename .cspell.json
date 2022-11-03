@@ -108,6 +108,7 @@
     "Runtimes",
     "Rustup",
     "serializers",
+    "shellscriptsrc",
     "stylelintrc",
     "superset",
     "thefuck",

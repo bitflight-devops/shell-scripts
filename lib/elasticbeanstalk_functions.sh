@@ -429,13 +429,15 @@ function install_golang() {
       if [[ ! -f "${package_path}" ]]; then
         downloadFile "${url}" "${package_path}" "true" || fatal "Failed to download golang"
       fi
+
       if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
         local install_path="/usr/local"
         run_as_root bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
       else
         local install_path="${HOME}/.local"
-        bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"      fi
+        bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
       fi
+
       rm -f "${package_path}"
       add_to_path "${install_path}/go/bin" "true"
       which go
