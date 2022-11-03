@@ -343,45 +343,6 @@ golang_os() {
   esac
 }
 
-install_package_to_path() {
-  local current_file="${1}"
-  local install_path="${2}"
-  if [[ -f "${current_file}" ]]; then
-    local install_dir="$(dirname "${install_path}")"
-    mkdir -p "${install_dir}"
-    rm -f "${install_path}"
-    mv "${temp_file_location}" "${install_path}"
-    add_to_path "${install_dir}"
-    chmod +x "${install_path}"
-    info "Installed ${current_file} to ${install_path}"
-  else
-    fatal "Failed to install ${current_file} to ${install_path}"
-  fi
-}
-
-install_chamber_version() {
-  if ! command_exists chamber; then
-    if command_exists brew; then
-      brew install chamber && return 0
-    fi
-    local url_base="https://github.com/segmentio/chamber/releases/download"
-    local url_version="${1:-v2.10.12}"
-    local url_platform="$(golang_os)"
-    local url_arch="$(golang_arch)"
-
-    local temp_file_location=$(mktemp -u)
-    local url="${url_base}/${url_version}/chamber-${url_version}-${url_platform}-${url_arch}"
-    downloadFile "${url}" "${temp_file_location}"
-
-    if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
-      local install_path="/usr/local/bin/chamber"
-      run_as_root install_package_to_path "${temp_file_location}" "${install_path}"
-    else
-      local install_path="${HOME}/.local/bin/chamber"
-      install_package_to_path "${temp_file_location}" "${install_path}"
-    fi
-  fi
-}
 
 add_user() {
   if [[ $(id -un) != 'root' ]]; then
@@ -414,6 +375,46 @@ function install_chamber() {
   fi
 }
 
+function install_package_to_path() {
+  local current_file="${1}"
+  local install_path="${2}"
+  if [[ -f "${current_file}" ]]; then
+    local install_dir="$(dirname "${install_path}")"
+    mkdir -p "${install_dir}"
+    rm -f "${install_path}"
+    mv "${temp_file_location}" "${install_path}"
+    add_to_path "${install_dir}"
+    chmod +x "${install_path}"
+    info "Installed ${current_file} to ${install_path}"
+  else
+    fatal "Failed to install ${current_file} to ${install_path}"
+  fi
+}
+
+install_chamber_version() {
+  if ! command_exists chamber; then
+    if command_exists brew; then
+      brew install chamber && return 0
+    fi
+    local url_base="https://github.com/segmentio/chamber/releases/download"
+    local url_version="${1:-v2.10.12}"
+    local url_platform="$(golang_os)"
+    local url_arch="$(golang_arch)"
+
+    local temp_file_location=$(mktemp -u)
+    local url="${url_base}/${url_version}/chamber-${url_version}-${url_platform}-${url_arch}"
+    downloadFile "${url}" "${temp_file_location}"
+
+    if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+      local install_path="/usr/local/bin/chamber"
+     $(root_available) install_package_to_path "${temp_file_location}" "${install_path}"
+    else
+      local install_path="${HOME}/.local/bin/chamber"
+      install_package_to_path "${temp_file_location}" "${install_path}"
+    fi
+  fi
+}
+
 function install_golang() {
   if ! command_exists go; then
     if command_exists brew; then
@@ -432,7 +433,7 @@ function install_golang() {
 
       if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
         local install_path="/usr/local"
-        run_as_root bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
+        $(root_available) bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
       else
         local install_path="${HOME}/.local"
         bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
