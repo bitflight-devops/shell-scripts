@@ -166,9 +166,10 @@ set_env() {
     fi
   fi
   if running_in_ci; then
-    echo "${key}=${value}" >> "${GITHUB_ENV}"
+    touch "${GITHUB_ENV}"
+    echo "${key}"="${value}" >> "${GITHUB_ENV}"
   fi
-  export "${key}=${value}"
+  export "${key}"="${value}"
   debug "Environment Variable set: ${key}=${value}"
   return 0
 }
@@ -179,7 +180,8 @@ set_output() {
     return 1
   fi
   if running_in_github_actions; then
-    echo "${1}=${2}" >> "${GITHUB_OUTPUT}"
+    touch "${GITHUB_OUTPUT}"
+    echo "${1}"="${2}" >> "${GITHUB_OUTPUT}"
     debug "Output Variable set: ${1}=${2}"
   else
     debug "Not in CI, Output Variable not set: ${1}=${2}"
@@ -192,7 +194,8 @@ set_state() {
     return 1
   fi
   if running_in_github_actions; then
-    echo "${1}=${2}" >> "${GITHUB_STATE}"
+    touch "${GITHUB_STATE}"
+    echo "${1}"="${2}" >> "${GITHUB_STATE}"
     debug "State Variable set: ${1}=${2}"
   else
     debug "Not in CI, State Variable not set: ${1}=${2}"
