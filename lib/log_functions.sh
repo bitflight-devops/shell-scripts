@@ -418,6 +418,7 @@ fatal() {
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
   log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | to_stderr
+  exit "${return_code}"
 }
 
 fatal_log() { fatal "${@}"; }

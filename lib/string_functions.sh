@@ -112,7 +112,7 @@ empty() {
 
 # Alias for empty
 isEmptyString() {
-  empty "${*}"
+  squash_output empty "${*}"
 }
 
 trim_dash() {

@@ -60,6 +60,31 @@ fi
 # timeout is given by TIMEOUT in seconds (default 1.)
 #
 # Successive backoffs double the timeout.
+
+installCURLCommand() {
+  APPS_TO_INSTALL=()
+  if ! app_installed "ca-certificates"; then
+    APPS_TO_INSTALL+=("ca-certificates")
+  fi
+  if ! command_exists curl; then
+    APPS_TO_INSTALL+=("curl")
+  fi
+  if [[ ${#APPS_TO_INSTALL[@]} -gt 0 ]]; then
+    install_app "${APPS_TO_INSTALL[@]}"
+  fi
+}
+
+existURL() {
+  local -r url="${1}"
+  # Install Curl
+  installCURLCommand > '/dev/null'
+  # Check URL
+  if curl -f --head -L "${url}" -o '/dev/null' -s || curl -f -L "${url}" -o '/dev/null' -r 0-0 -s; then
+    echo 'true' && return 0
+  fi
+  echo 'false' && return 1
+}
+
 withBackoff() {
   local max_attempts=${ATTEMPTS:-5}
   local timeout=${TIMEOUT:-1}
@@ -168,30 +193,6 @@ app_installed() {
   else
     return 0
   fi
-}
-
-installCURLCommand() {
-  APPS_TO_INSTALL=()
-  if ! app_installed "ca-certificates"; then
-    APPS_TO_INSTALL+=("ca-certificates")
-  fi
-  if ! command_exists curl; then
-    APPS_TO_INSTALL+=("curl")
-  fi
-  if [[ ${#APPS_TO_INSTALL[@]} -gt 0 ]]; then
-    install_app "${APPS_TO_INSTALL[@]}"
-  fi
-}
-
-existURL() {
-  local -r url="${1}"
-  # Install Curl
-  installCURLCommand > '/dev/null'
-  # Check URL
-  if curl -f --head -L "${url}" -o '/dev/null' -s || curl -f -L "${url}" -o '/dev/null' -r 0-0 -s; then
-    echo 'true' && return 0
-  fi
-  echo 'false' && return 1
 }
 
 getRemoteFileContent() {

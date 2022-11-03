@@ -108,6 +108,7 @@ shell_rc_file() {
   esac
   echo "${shell_rc}"
 }
+
 sed_inplace() {
   if grep -q "GNU sed" <<< "$(sed --version 2> /dev/null || true)"; then
     sed -i"" "$@" || true
@@ -115,6 +116,7 @@ sed_inplace() {
     sed -i "" "$@" || true
   fi
 }
+
 save_env_var() {
   local -r var_name="$1"
   local -r var_value="${2}" # "$(printf '%q' "${2}")"
@@ -235,16 +237,16 @@ runAptGetUpdate() (
 
   if [[ ${lastAptGetUpdate} -gt ${updateInterval} ]]; then
     if command_exists apt-fast; then
-      info "apt-fast update -qq"
+      debug "apt-fast update -qq"
       run_as_root apt-fast update -qq -m
     else
-      info "apt-get update -qq"
+      debug "apt-get update -qq"
       run_as_root apt-get update -qq -m
     fi
   else
     local lastUpdate="$(date -u -d @"${lastAptGetUpdate}" +'%-Hh %-Mm %-Ss')"
 
-    info "\nSkip apt-get update because its last run was '${lastUpdate}' ago"
+    info "Skip apt-get update because its last run was '${lastUpdate}' ago"
   fi
 )
 
@@ -281,26 +283,105 @@ prefix_sudo() {
   fi
 }
 
-app_installer() (
-  set +x
-  if command_exists apt-fast; then
-    runAptGetUpdate
-    run_as_root apt-fast -y "$@"
-  elif command_exists yum; then
-    run_as_root yum -y -t "$@"
-  elif command_exists apt-get; then
-    runAptGetUpdate
-    run_as_root apt-get -y "$@"
-  elif command_exists brew; then
-    brew "$@"
+ubuntu_package_installed() {
+  if command_exists dpkg-query; then
+    dpkg-query -W "${1}" > /dev/null 2>&1
   else
-    debug "Can't install: " "$@"
+    error "dpkg-query not found, checking for ${*} failed"
     return 1
+  fi
+}
+yum_package_installed() {
+  if command_exists rpm; then
+    rpm -q "${1}" > /dev/null 2>&1
+  elif command_exists yum; then
+    yum list installed "${1}" > /dev/null 2>&1
+  else
+    error "rpm, yum not found, checking for ${*} failed"
+    return 1
+  fi
+}
+pip_package_installed() {
+  if command_exists pip3; then
+    pip3 show "${1}" > /dev/null 2>&1
+  else
+    error "pip not found, checking for ${*} failed"
+    return 1
+  fi
+}
+install_python3_suite() {
+  declare -a MISSING_APPS
+  if ! command_exists python3; then
+    MISSING_APPS+=("python3")
+  fi
+  if ! command_exists pip3; then
+      MISSING_APPS+=("python3-pip")
+  fi
+  if ! command_exists virtualenv; then
+      MISSING_APPS+=("python3-venv")
+  fi
+  if ! squash_output pip_package_installed setuptools; then
+      MISSING_APPS+=("python3-setuptools")
+  fi
+  if ! squash_output pip_package_installed wheel; then
+      MISSING_APPS+=("python3-wheel")
+  fi
+  if [[ "${#MISSING_APPS[@]}" -ne 0 ]]; then
+    { command_exists apt && squash_output install_apt-fast; } || true
+    install_app "${MISSING_APPS[@]}" || true
+  fi
+
+  if ! command_exists pipx; then
+    python3 -m pip install -U --quiet pipx || true
+    squash_output python3 -m pipx ensurepath
+  fi
+  add_to_path "${HOME}/.local/bin"
+}
+
+install_meta_package_manager() {
+  install_python3_suite
+  pipx install meta-package-manager
+
+}
+
+package_manager() (
+  set +x
+
+  if command_exists apt; then
+    runAptGetUpdate 2> /dev/null
+  fi
+  if command_exists brew; then
+    brew "$@"
+  elif command_exists apt-fast; then
+    DEBIAN_FRONTEND=noninteractive run_as_root apt-fast -y -qq "$@"
+  elif command_exists yum; then
+    run_as_root yum -y -qq -t "$@"
+  elif command_exists dnf; then
+    run_as_root dnf -y "$@"
+  elif command_exists zypper; then
+    run_as_root zypper -n "$@"
+  elif command_exists apk; then
+    run_as_root apk "$@"
+  elif command_exists pacman; then
+    run_as_root pacman -S --noconfirm "$@"
+  elif command_exists apt-get; then
+    DEBIAN_FRONTEND=noninteractive run_as_root apt-get -y -qq "$@"
+  else
+    if ! command_exists mpm && [[ ! -f "${HOME}/.installing-meta-package-manager" ]]; then
+      touch "${HOME}/.installing-meta-package-manager"
+      install_meta_package_manager
+    fi
+    if command_exists mpm; then
+      run_as_root mpm install --continue-on-error --time -v CRITICAL "${@}"
+    else
+      error "No package manager found"
+      return 1
+    fi
   fi
 )
 
 installer() {
-  app_installer "$@"
+  package_manager "$@"
 }
 
 install_app() (
@@ -311,9 +392,9 @@ install_app() (
 
   if [[ ${#INSTALL_LIST[@]} -gt 0 ]]; then
     if is_darwin; then
-      app_installer install "${INSTALL_LIST[@]}"
+      package_manager install "${INSTALL_LIST[@]}"
     elif [[ "$(uname -s | cut -c1-5)" == "Linux" ]]; then
-      app_installer install -y -qq "${INSTALL_LIST[@]}"
+      package_manager install "${INSTALL_LIST[@]}"
     fi
   fi
 )
@@ -331,8 +412,8 @@ install_if_missing() {
   shift
   install_flags=("$@")
   if ! command_exists "${cli_command}"; then
-    if command_exists brew && in_brew ${brew_app_name}; then
-      brew install ${brew_app_name} > /dev/null 2>&1 || true &
+    if command_exists brew && in_brew "${brew_app_name}"; then
+      brew install "${brew_app_name}" > /dev/null 2>&1 || true &
     elif [[ -n ${alternate_install_script_url-} ]]; then
       installer_file=$(mktemp -q -u -t installerXXXX)
       curl -fsSLl -o "${installer_file}" "${alternate_install_script_url}"

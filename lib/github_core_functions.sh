@@ -52,13 +52,16 @@ fi
 [[ -z ${LOG_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/log_functions.sh"
 
 check_if_tag_created() {
-  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" > /dev/null 2>&1 \
-                                                                        && git describe --exact-match > /dev/null 2>&1
+  if ! git describe --exact-match > /dev/null 2>&1; then
+  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" > /dev/null 2>&1 || return 1
+  git describe --exact-match > /dev/null 2>&1 || return 1
+  fi
 }
 
 get_tag_name() {
   git describe --exact-match 2> /dev/null
 }
+
 set_tag_as_output_if_available() {
   if check_if_tag_created; then
     set_env GITHUB_TAG "$(get_tag_name)"

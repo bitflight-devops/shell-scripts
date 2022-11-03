@@ -55,16 +55,28 @@ export BOOLEAN_TRUE="(true|on|yes|1)"
 export BOOLEAN_FALSE="(false|off|no|0)"
 
 isTrue() {
-  grep -i -E "${BOOLEAN_TRUE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_TRUE}" <<<"${1}"
 }
 
 isFalse() {
-  grep -i -E "${BOOLEAN_FALSE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_FALSE}" <<<"${1}"
+}
+
+squash_output() {
+  "$@" > /dev/null 2>&1
+}
+
+run_quietly() {
+  if in_quiet_mode; then
+    "$@" > /dev/null 2>&1
+  else
+    "$@"
+  fi
 }
 
 returnBoolean() {
   local value="${1}"
-  if grep -i -E "${BOOLEAN_TRUE}" <<<"${UTILITY_EMPTY_BOOLEAN_AS_FALSE:-false}"; then
+  if isTrue "${UTILITY_EMPTY_BOOLEAN_AS_FALSE:-false}"; then
     if [[ ${#value} -eq 0 ]]; then
       error "Non-boolean value"
       return 2
@@ -94,7 +106,7 @@ isBoolean() {
     return 0
   else
     if isEmptyString "${errorMessage}"; then
-      errorMessage="'${value}' is not 'true' or 'false'"
+      errorMessage="'${value}' doesn't match ${BOOLEAN_TRUE} or ${BOOLEAN_TRUE}"
     fi
     error "${errorMessage}" && return 1
   fi
@@ -102,10 +114,10 @@ isBoolean() {
 
 # Run the command given by "$@" in the background
 silent_background() {
-  if [[ -n ${ZSH_VERSION:-} ]]; then # zsh:  https://superuser.com/a/1285272/365890
+  if [[ "${whichshell}" == "zsh" ]]; then # zsh:  https://superuser.com/a/1285272/365890
     setopt local_options no_notify no_monitor
     "$@" &
-  elif [[ -n ${BASH_VERSION:-} ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
+  elif [[ "${whichshell}" == "bash" ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
     { "$@" 2>&3 & } 3>&2 2>/dev/null
   else # Unknownness - just background it
     "$@" &

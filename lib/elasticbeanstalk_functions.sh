@@ -81,73 +81,109 @@ install_apt-fast() {
   if ! command_exists apt-fast; then
 
     if command_exists debconf-set-selections; then
-      run_as_root debconf-set-selections <<<'debconf debconf/frontend select Noninteractive'
+      run_as_root debconf-set-selections <<< 'debconf debconf/frontend select Noninteractive'
     fi
 
     apt_fast_dependencies
     # Remove the apt-fast script if its older than the current version
-
-    run_as_root downloadFile "https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast" "/usr/local/sbin/apt-fast"
+    run_as_root mkdir -p /usr/local/sbin
+    run_as_root downloadFile "https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast" "/usr/local/sbin/apt-fast" "true"
     if [[ ! -f /usr/local/sbin/apt-fast ]]; then
       error "Failed to download apt-fast"
       return 1
     fi
     run_as_root chmod +x /usr/local/sbin/apt-fast
     if [[ ! -f /etc/apt-fast.conf ]]; then
-      run_as_root downloadFile "https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast.conf" "/etc/apt-fast.conf"
+      run_as_root downloadFile "https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast.conf" "/etc/apt-fast.conf" "true"
     fi
   fi
 }
-latest_solution_stack_coretto11() {
-  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select( contains("running Corretto 11"))) | .[0]' 2>/dev/null || echo "corretto-11")"
-}
-latest_solution_stack_tomcat85() {
-  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select(contains("Tomcat 8.5 Corretto 11"))) | .[0]' 2>/dev/null || echo "tomcat-8.5-corretto-11")"
-}
-install_ebcli_ubuntu_dependencies() {
-  install_apt-fast || true
-  if ! command_exists python3; then
-    install_app python3
-  fi
-  if ! command_exists pip3; then
-    install_app python3-pip
-  fi
 
-  if ! command_exists eb; then
-    install_app build-essential zlib1g-dev libssl-dev libncurses-dev \
-      libffi-dev libsqlite3-dev libreadline-dev libbz2-dev git \
-      python3-venv
-  fi
-  # python3 -m pip install --user -U pipx
+latest_solution_stack_coretto11() {
+  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select( contains("running Corretto 11"))) | .[0]' 2> /dev/null || echo "corretto-11")"
+}
+
+latest_solution_stack_tomcat85() {
+  trim "$(aws elasticbeanstalk list-available-solution-stacks | jq -r '.SolutionStacks | map(select(contains("Tomcat 8.5 Corretto 11"))) | .[0]' 2> /dev/null || echo "tomcat-8.5-corretto-11")"
 }
 
 add_ebcli_bin_paths() {
   # Use add_to_path from system_functions
-  add_to_path "${HOME}/.local/bin"
-  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package"
-  add_to_path "${HOME}/.ebcli-virtual-env/executables"
-  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/executables"
+  save_in_shellrc="${GITHUB_ACTIONS+"yes"}"
+  add_to_path "${HOME}/.local/bin" "${save_in_shellrc:-}"
+  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package" "${save_in_shellrc:-}"
+  add_to_path "${HOME}/.ebcli-virtual-env/executables" "${save_in_shellrc:-}"
+  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/executables" "${save_in_shellrc:-}"
+}
+
+install_ebcli_ubuntu_dependencies() {
+  add_ebcli_bin_paths
+  MISSING_APPS=()
+
+  if ! command_exists python3; then
+    MISSING_APPS+=("python3")
+  fi
+  if ! command_exists pip3; then
+      MISSING_APPS+=("python3-pip")
+  fi
+  if [[ $(uname) == "Linux" ]] && command_exists apt; then
+    if ! ubuntu_package_installed "python3-venv"; then
+      MISSING_APPS+=("python3-venv")
+    fi
+    if ! ubuntu_package_installed git && ! command_exists git; then
+      MISSING_APPS+=("git")
+    fi
+    if ! ubuntu_package_installed build-essential; then
+      MISSING_APPS+=("build-essential")
+    fi
+    if ! ubuntu_package_installed libssl-dev; then
+      MISSING_APPS+=("libssl-dev")
+    fi
+    if ! ubuntu_package_installed libffi-dev; then
+      MISSING_APPS+=("libffi-dev")
+    fi
+    if ! ubuntu_package_installed zlib1g-dev; then
+      MISSING_APPS+=("zlib1g-dev")
+    fi
+    if ! ubuntu_package_installed libncurses-dev; then
+      MISSING_APPS+=("libncurses-dev")
+    fi
+    if ! ubuntu_package_installed libbz2-dev; then
+      MISSING_APPS+=("libbz2-dev")
+    fi
+    if ! ubuntu_package_installed libsqlite3-dev; then
+      MISSING_APPS+=("libsqlite3-dev")
+    fi
+    if ! ubuntu_package_installed libreadline-dev; then
+      MISSING_APPS+=("libreadline-dev")
+    fi
+  fi
+  if [[ "${#MISSING_APPS[@]}" -gt 0 ]]; then
+    { command_exists apt && install_apt-fast; } || true
+    install_app "${MISSING_APPS[@]}"
+  fi
+  if ! command_exists pipx; then
+    python3 -m pip install --user -U pipx
+    python3 -m pipx ensurepath
+  fi
+
 }
 
 install_eb_cli() {
-  info "Install EB CLI with python3 $(python3 --version)"
+  mkdir -p ~/.cache ~/.local
+  install_ebcli_ubuntu_dependencies
+  info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
 
-  if ! command_exists git; then
-    install_app git
-  fi
-
-  add_ebcli_bin_paths
   if [[ ! -x "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb || eb --version | grep -q -v 'EB CLI 3'; then
 
     if ! command_exists pipx; then
       debug "Install pipx:\n$(python3 -m pip install --user pipx)"
-    elif ! python3 -m pipx --version >/dev/null 2>&1; then
+    elif ! python3 -m pipx --version > /dev/null 2>&1; then
       debug "Upgrade pipx:\n$(python3 -m pip install --user -U pipx)"
     fi
 
-    add_ebcli_bin_paths
-    if python3 -m pipx ensurepath 2>/dev/null | grep -q -v "is already in PATH"; then
+    if python3 -m pipx ensurepath 2> /dev/null | grep -q -v "is already in PATH"; then
       if [[ -f ~/.bashrc ]]; then
         source ~/.bashrc
       elif [[ -f ~/.profile ]]; then
@@ -155,18 +191,13 @@ install_eb_cli() {
       fi
     fi
 
-    add_ebcli_bin_paths
-
     if ! command_exists virtualenv || virtualenv --version | grep -q -v "virtualenv 2"; then
-      debug "Install virtualenv:\n$(python3 -m pipx install --system-site-packages virtualenv 2>/dev/null || python3 -m pipx --system-site-packages -f upgrade virtualenv)"
-      add_ebcli_bin_paths
+      debug "Install virtualenv:\n$(python3 -m pipx install --system-site-packages virtualenv 2> /dev/null || python3 -m pipx --system-site-packages -f upgrade virtualenv)"
     fi
 
     if ! command_exists python; then
       run_as_root ln -sf /usr/bin/python3 /usr/bin/python
     fi
-
-    mkdir -p ~/.cache
 
     if [[ -z ${EB_INSTALLER_PATH:-} ]]; then
       set_env EB_INSTALLER_PATH "${HOME}/.cache/aws-elastic-beanstalk-cli-setup"
@@ -190,7 +221,6 @@ install_eb_cli() {
       mkdir -p "${EB_PACKAGE_PATH}"
     fi
 
-    add_ebcli_bin_paths
     if [[ ! -x "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb; then
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
         --quiet \
@@ -198,13 +228,19 @@ install_eb_cli() {
         --location "${EB_PACKAGE_PATH}"
     fi
 
-    add_ebcli_bin_paths
   fi
+}
+
+unzip_file() {
+  if ! command_exists unzip; then
+    install_app unzip > /dev/null 2>&1 || true
+  fi
+  unzip "$@"
 }
 
 eb_run() {
   if ! command_exists eb; then
-    install_eb_cli >/dev/null 2>&1
+    install_eb_cli > /dev/null 2>&1
   fi
   if command_exists eb; then
     eb "${@}"
@@ -220,7 +256,7 @@ install_aws_cli() {
   elif is_darwin; then
     mkdir -p "${HOME}/Downloads"
     curl -sSlL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "${HOME}/Downloads/AWSCLIV2.pkg"
-    cat <<EOF >/tmp/choices.xml
+    cat << EOF > /tmp/choices.xml
     <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -240,63 +276,109 @@ EOF
       -target CurrentUserHomeDirectory \
       -applyChoiceChangesXML /tmp/choices.xml
     rm -f "${HOME}/Downloads/AWSCLIV2.pkg"
-    if [[ ${SHELL} == "/bin/zsh" ]]; then
-      local shell_profile="${HOME}/.zshrc"
-    else
-      local shell_profile="${HOME}/.bash_profile"
-    fi
-    touch "${shell_profile}"
-    echo "[[ -d ${HOME}/aws-cli/ ]] && PATH=${HOME}/aws-cli/:${PATH}" >>"${shell_profile}"
-    source "${shell_profile}"
-
+    add_to_path "${HOME}/aws-cli/" "true"
   else
-    curl -sSlL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" >/dev/null 2>&1
-    (cd /tmp && unzip awscliv2.zip && sudo ./aws/install >/dev/null 2>&1)
+    downloadFile "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -p).zip" "/tmp/awscliv2.zip"
+    unzip_file -qq -u -o /tmp/awscliv2.zip -d /tmp && run_as_root /tmp/aws/install
   fi
 }
 
 aws_run() {
   if ! command_exists aws; then
-    install_aws_cli >/dev/null 2>&1 || { echo "Failed to install aws cli" && exit 1; }
+    if ! install_aws_cli > /tmp/install_aws_cli.log 2>&1; then
+      error "Failed to install aws cli" && info "$(cat /tmp/install_aws_cli.log)"
+      exit 1
+    fi
   fi
   aws "${@}"
+}
+golang_arch() {
+  if [[ $# -gt 0 ]]; then
+    local arch="$1"
+  else
+    local arch="$(uname -m)"
+  fi
+  case "${arch}" in
+    x86_64)
+      echo "amd64"
+      ;;
+    armv6l)
+      echo "armv6l"
+      ;;
+    armv7l)
+      echo "armv7"
+      ;;
+    aarch64)
+      echo "arm64"
+      ;;
+    i686 | i386)
+      echo "386"
+      ;;
+    *)
+      error "Unsupported architecture $(uname -m)"
+      exit 1
+      ;;
+  esac
+}
+golang_os() {
+  if [[ $# -gt 0 ]]; then
+    local os="$1"
+  else
+    local os="$(uname -s)"
+  fi
+  case "${os}" in
+    Linux | linux)
+      echo "linux"
+      ;;
+    Darwin | darwin)
+      echo "darwin"
+      ;;
+    FreeBSD | freebsd)
+      echo "freebsd"
+      ;;
+    *)
+      error "Unsupported OS $(uname -s)"
+      exit 1
+      ;;
+  esac
+}
+
+install_package_to_path() {
+  local current_file="${1}"
+  local install_path="${2}"
+  if [[ -f "${current_file}" ]]; then
+    local install_dir="$(dirname "${install_path}")"
+    mkdir -p "${install_dir}"
+    rm -f "${install_path}"
+    mv "${temp_file_location}" "${install_path}"
+    add_to_path "${install_dir}"
+    chmod +x "${install_path}"
+    info "Installed ${current_file} to ${install_path}"
+  else
+    fatal "Failed to install ${current_file} to ${install_path}"
+  fi
 }
 
 install_chamber_version() {
   if ! command_exists chamber; then
-    local chamber_url_base="https://github.com/segmentio/chamber/releases/download"
-    local chamber_url_version="${1:-v2.10.12}"
-    local chamber_url_platform
-    if [[ $(uname -p) == 'arm' ]]; then
-      chamber_url_arch="arm64"
-    else
-      chamber_url_arch="amd64"
-    fi
-
-    case "$(uname -s | tr '[:upper:]' '[:lower:]')" in
-    *darwin*) chamber_url_platform="darwin" ;;
-    *linux*) chamber_url_platform="linux" ;;
-    *) chamber_url_platform="linux" ;;
-    esac
-
     if command_exists brew; then
       brew install chamber && return 0
     fi
+    local url_base="https://github.com/segmentio/chamber/releases/download"
+    local url_version="${1:-v2.10.12}"
+    local url_platform="$(golang_os)"
+    local url_arch="$(golang_arch)"
+
     local temp_file_location=$(mktemp -u)
-    local chamber_url="${chamber_url_base}/${chamber_url_version}/chamber-${chamber_url_version}-${chamber_url_platform}-${chamber_url_arch}"
-    downloadFile "${chamber_url}" "${temp_file_location}"
-    if [[ -f ${temp_file_location} ]]; then
-      chmod +x "${temp_file_location}"
-      local runcmd=$(root_available)
-      if root_available; then
-        ${runcmd} cp -f "${temp_file_location}" /usr/local/bin/chamber
-      else
-        local install_path="${HOME}/.local/bin/chamber"
-        local install_dir="$(dirname "${install_path}")"
-        mkdir -p "${install_dir}"
-        cp -f "${temp_file_location}" "${install_path}"
-        add_to_path "${install_dir}"
-      fi
+    local url="${url_base}/${url_version}/chamber-${url_version}-${url_platform}-${url_arch}"
+    downloadFile "${url}" "${temp_file_location}"
+
+    if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+      local install_path="/usr/local/bin/chamber"
+      run_as_root install_package_to_path "${temp_file_location}" "${install_path}"
+    else
+      local install_path="${HOME}/.local/bin/chamber"
+      install_package_to_path "${temp_file_location}" "${install_path}"
     fi
   fi
 }
@@ -326,39 +408,45 @@ function install_chamber() {
   # is chamber already installed?
   if ! command_exists chamber; then
     debug_log "Installing Chamber"
-    install_chamber_version >/dev/null 2>&1
-    debug_log "Chamber now installed"
+    install_chamber_version > /dev/null 2>&1 && debug_log "Chamber now installed"
   else
     debug_log "Chamber installed already"
   fi
 }
 
 function install_golang() {
-  mkdir -p "${GOPATH}"
-  chmod 766 /etc/go
-  export GOPATH="${GOPATH:-/etc/go}"
-  add_to_path "${GOPATH}"
-  add_to_path "/usr/local/go/bin"
-  export GO_VERSION="${GO_VERSION:-go1.15.3.linux-amd64.tar.gz}"
   if ! command_exists go; then
-    debug_log "Installing GoLang"
-    curl -LsSO "https://dl.google.com/go/${GO_VERSION}"
-    tar -C /usr/local -xzf "${GO_VERSION}"
-    cat <<EOF >/etc/profile.d/go.sh
-export GOPATH=/etc/go
-export PATH=\$PATH:\$GOPATH/bin:/usr/local/go/bin
-EOF
-    chmod +x /etc/profile.d/go.sh
-    debug_log "Golang now installed"
-  else
-    debug_log "GoLang already Installed"
+    if command_exists brew; then
+      brew install go
+    else
+      local url_base="https://golang.org/dl"
+      local url_version="${GOLANG_VERSION:=1.19.3}"
+      local url_platform="$(golang_os)-$(golang_arch)"
+      local package_name="go${url_version}.${url_platform}.tar.gz"
+      local temp_file_location=$(mktemp -d || true)
+      local url="${url_base}/${package_name}"
+      local package_path="${temp_file_location:=/tmp}/${package_name}"
+      if [[ ! -f "${package_path}" ]]; then
+        downloadFile "${url}" "${package_path}" "true" || fatal "Failed to download golang"
+      fi
+      if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+        local install_path="/usr/local"
+        run_as_root bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
+      else
+        local install_path="${HOME}/.local"
+        bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"      fi
+      fi
+      rm -f "${package_path}"
+      add_to_path "${install_path}/go/bin" "true"
+      which go
+      squash_output go version || fatal "golang install failed"
+      add_to_path "$(go env GOPATH)" "true"
+    fi
   fi
-  # shellcheck disable=SC1091
-  source /etc/profile.d/go.sh
 }
 
 install_dependencies() {
-  install_apt-fast 2>/dev/null || true
+  install_apt-fast 2> /dev/null || true
   install_app zip unzip curl git jq wget
   install_golang
   install_chamber
@@ -368,13 +456,13 @@ install_dependencies() {
 
 safe_eb_env_name() {
   local var="${*}"
-  sed 's/^[- ]*//g;s/[+_. ]/-/g' <<<"${var}" | tr -s '-'
+  sed 's/^[- ]*//g;s/[+_. ]/-/g' <<< "${var}" | tr -s '-'
 }
 
 safe_eb_label_name() {
   local var="${*}"
   var="${var//[+]/-}"
-  sed 's/^[- ]*//g;s/[+]/-/g' <<<"${var}" | tr -s '-'
+  sed 's/^[- ]*//g;s/[+]/-/g' <<< "${var}" | tr -s '-'
 }
 
 cname_prefix_by_type() {
@@ -396,7 +484,7 @@ cname_available() (
     return 2
   fi
   local -r trimmed_arg="$(trim "${1}")"
-  if grep -q -i -E "^(active|passive)$" <<<"${trimmed_arg}"; then
+  if grep -q -i -E "^(active|passive)$" <<< "${trimmed_arg}"; then
     local -r cname_prefix="$(cname_prefix_by_type "${trimmed_arg}")"
   else
     local -r cname_prefix="${trimmed_arg}"
@@ -414,7 +502,7 @@ cname_available() (
 
 environment_name_by_cname() {
   local -r name_type="${1}"
-  if grep -i -q -v -E "(passive|active)" <<<"${name_type}"; then
+  if grep -i -q -v -E "(passive|active)" <<< "${name_type}"; then
     error "${0}(): Invalid name type provided: ${name_type}"
     return 2
   fi
@@ -665,7 +753,7 @@ retrieve_ebs_pending_logs() (
   set +e
   local -r env="${1:-${ENVIRONMENT_NAME}}"
   local -r infofile="${2:-/tmp/${env}.loginfo.json}"
-  aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env}" 1>"${infofile}" 2>/dev/null
+  aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env}" 1> "${infofile}" 2> /dev/null
   local -r r_value=$?
   if [[ ${r_value} -gt 0 ]]; then
     echo "${0}(): error"
@@ -720,7 +808,7 @@ pipe_errors_from_ebs_to_github_actions() {
         loginfo_file="/tmp/${env}.loginfo.json"
         if wait_for_ebs_logs "${env}" "${loginfo_file}"; then
           local -r url="$(jq -r '.Message' "${loginfo_file}")"
-          if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2>/dev/null; then
+          if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2> /dev/null; then
             mkdir -p "${log_output_path}"
             debug "UNZIP log files:\n$(unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz")"
             print_logs_from_zip "${log_output_path}"
@@ -732,7 +820,7 @@ pipe_errors_from_ebs_to_github_actions() {
             return 0
           fi
         else
-          if ! jq -r '.Message' "${loginfo_file}" >/dev/null 2>&1; then
+          if ! jq -r '.Message' "${loginfo_file}" > /dev/null 2>&1; then
             debug "${0}(): Environment ${env} not available to download logs: [${loginfo_file}]\n$(jq '.' "${loginfo_file}")"
             info "Retrieving logs from Elastic Beanstalk's env ${env}: Failure"
             return 0
@@ -760,7 +848,7 @@ pipe_errors_from_ebs_to_github_actions() {
 stop_current_eb_processes() (
   set -e -o pipefail
   local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if aws_run elasticbeanstalk describe-environments --environment-names "${env}" 2>/dev/null | jq -r '.Environments[0].AbortableOperationInProgress' 2>/dev/null | grep -q 'true'; then
+  if aws_run elasticbeanstalk describe-environments --environment-names "${env}" 2> /dev/null | jq -r '.Environments[0].AbortableOperationInProgress' 2> /dev/null | grep -q 'true'; then
     info "Abort environment update for ${env}: Starting"
     if aws_run elasticbeanstalk abort-environment-update --environment-name "${env}"; then
       wait_for_ready "${env}"
@@ -781,7 +869,7 @@ remove_passive() {
     info "${0}(): No passive environment found"
     return 0
   fi
-  if environment_state_ready "${env}" 2>/dev/null; then
+  if environment_state_ready "${env}" 2> /dev/null; then
     pipe_errors_from_ebs_to_github_actions "${env}"
   fi
   eb_run terminate --nohang --force "${env}"
@@ -843,7 +931,7 @@ stream_environment_events() {
   else
     debug "Streaming environment logs for ${env}"
   fi
-  while ! eb_run events "${env}" >/dev/null 2>&1; do
+  while ! eb_run events "${env}" > /dev/null 2>&1; do
     if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
       debug "Streaming environment logs for ${env} stopped. [${pid}] has exited early"
       return 1
@@ -852,7 +940,7 @@ stream_environment_events() {
   done
   eb_run events --follow "${env}" | tee -a "${event_path}" | while read -r line; do
 
-    if grep -q -i -e "(ERROR|Terminating)" <<<"${line}"; then
+    if grep -q -i -e "(ERROR|Terminating)" <<< "${line}"; then
       step_summary_title "Error creating ${env}"
       step_summary_append "\`${line}\`"
     else
