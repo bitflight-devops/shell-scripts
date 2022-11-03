@@ -53,8 +53,8 @@ fi
 
 check_if_tag_created() {
   if ! git describe --exact-match > /dev/null 2>&1; then
-  git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" > /dev/null 2>&1 || return 1
-  git describe --exact-match > /dev/null 2>&1 || return 1
+    git fetch --depth=1 origin "+refs/tags/*:refs/tags/*" > /dev/null 2>&1 || return 1
+    git describe --exact-match > /dev/null 2>&1 || return 1
   fi
 }
 
@@ -166,8 +166,15 @@ set_env() {
     fi
   fi
   if running_in_ci; then
-    touch "${GITHUB_ENV}"
-    echo "${key}"="${value}" >> "${GITHUB_ENV}"
+    if [[ -z "${ACT:-}" ]]; then
+      touch "${GITHUB_ENV}"
+      echo "${key}"="${value}" >> "${GITHUB_ENV}"
+    else
+      # ACT is used for testing GitHub Actions locally
+      echo "set-env name=${1}::${2}"
+      echo "::set-env name=${1}::${2}"
+    fi
+
   fi
   export "${key}"="${value}"
   debug "Environment Variable set: ${key}=${value}"
@@ -175,16 +182,30 @@ set_env() {
 }
 
 set_output() {
+  local key="$1"
+  local value="$2"
   if [[ $# -ne 2 ]]; then
-    error "${0}: You need to provide two arguments. Provided args ${*}"
-    return 1
+    if [[ $# -eq 1 ]] && grep -q -i -E "^(\w[-\w_\d]+)=(.*)"; then
+      # Single argument is a key=value pair
+      local key="${1%%=*}"
+      local value="${1#*=}"
+    else
+      error "${0}: You need to provide two arguments. Provided args ${*}"
+      return 1
+    fi
   fi
+
   if running_in_github_actions; then
-    touch "${GITHUB_OUTPUT}"
-    echo "${1}"="${2}" >> "${GITHUB_OUTPUT}"
-    debug "Output Variable set: ${1}=${2}"
+    if [[ -z "${ACT:-}" ]]; then
+      echo "${key}"="${value}" >> "${GITHUB_OUTPUT}"
+      debug "Output Variable set: ${key}=${value}"
+    else
+      # ACT is used for testing GitHub Actions locally
+      echo "set-output name=${key}::${value}"
+      echo "::set-output name=${key}::${value}"
+    fi
   else
-    debug "Not in CI, Output Variable not set: ${1}=${2}"
+    debug "Not in CI, Output Variable not set: ${key}=${value}"
   fi
 }
 
