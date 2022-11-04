@@ -888,8 +888,8 @@ remove_passive() {
 }
 
 version_available() {
-  local -r version_label="${1}"
-  create_application_version
+  local -r version_label="${1?'version_label is required'}"
+  # create_application_version
   aws_run elasticbeanstalk describe-application-versions \
     --application-name "$(current_app_name)" \
     --version-labels "${version_label}" \
@@ -901,7 +901,10 @@ create_application_version() {
   local version_label="${1:-}"
   local version_description="${2:-}"
   local app_name="$(current_app_name)"
-
+  if [[ "${#version_label}" -gt 100 ]]; then
+    error "Version label cannot be longer than 100 characters"
+    return 1
+  fi
   if ! version_available "${version_label}"; then
     notice "Creating application version ${version_label}"
     eb_run appversion -a "${app_name}" \
