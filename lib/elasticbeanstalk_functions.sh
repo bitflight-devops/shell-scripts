@@ -559,7 +559,7 @@ cname_available() (
 )
 
 environment_name_by_cname() {
-  local -r name_type="${1}"
+  local -r name_type="${1?'cname prefix of type active or passive required'}"
   if grep -i -q -v -E "(passive|active)" <<< "${name_type}"; then
     error "${0}(): Invalid name type provided: ${name_type}"
     return 2
@@ -584,7 +584,7 @@ cname_by_environment_name() {
     fi
     aws_run elasticbeanstalk describe-environments \
       "${DEARGS[@]}" \
-      --query "Environments[?EnvironmentName==\`${env}\` && Status!=\`Terminated\`].[CNAME]" | head -n 1 || true
+      --query "Environments[?EnvironmentName==\`${env_name}\` && Status!=\`Terminated\`].[CNAME]" | head -n 1 || true
   else
     error "${0}(): Environment name not provided"
     return 2
@@ -762,7 +762,7 @@ wait_for_passive_cname() {
 retrieve_ebs_pending_logs() (
   set +e
   local -r env_name="${1:-$(current_environment_name)}"
-  local -r infofile="${2:-/tmp/${env}.loginfo.json}"
+  local -r infofile="${2:-/tmp/${env_name}.loginfo.json}"
   aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env_name}" 1> "${infofile}" 2> /dev/null
   local -r r_value=$?
   if [[ ${r_value} -gt 0 ]]; then
@@ -785,7 +785,7 @@ wait_for_ebs_logs() {
 
   while env_available=$(retrieve_ebs_pending_logs "${env_name}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ ${env_available} -gt 0 ]]; then
-      debug "${0}(): Waited for ${env} logs for $(($(date +%s) - start_time)) seconds"
+      debug "${0}(): Waited for ${env_name} logs for $(($(date +%s) - start_time)) seconds"
       return 0
     fi
     sleep "${interval}"
@@ -846,7 +846,7 @@ pipe_errors_from_ebs_to_github_actions() {
       return 0
     fi
   else
-    debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env}")"
+    debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env_name}")"
     info "Elastic Beanstalk's env ${env_name} status is [$(environment_state "${env_name}")] which means logs cannot be requested"
   fi
 
@@ -867,11 +867,8 @@ stop_current_eb_processes() (
 )
 
 remove_passive() {
-  if [[ -n ${2:-} ]]; then
-    local -r env_name="${2:-}"
-  else
-    local -r env_name="$(environment_name_by_cname passive)"
-  fi
+  local -r waitforcomplete="${1:-false}"
+  local -r env_name="${2:-$(environment_name_by_cname passive)}"
   if [[ -z ${env_name:-} ]]; then
     info "${0}(): No passive environment found"
     return 0
@@ -881,7 +878,7 @@ remove_passive() {
   fi
   eb_run terminate --nohang --force "${env_name}"
   notice "Passive Environment [${env_name}] termination signal sent - waiting for CNAME $(passive_cname_prefix) to be released"
-  if [[ ${1} == "hang" ]]; then
+  if [[ ${waitforcomplete} == "hang" ]] || [[ ${waitforcomplete} == "true" ]]; then
     wait_for_passive_cname "${env_name}" && notice "Passive Environment [${env_name}] has released the CNAME $(passive_cname_prefix)"
   fi
 }
