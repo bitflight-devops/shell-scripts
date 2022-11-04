@@ -470,7 +470,7 @@ essential_variable() {
       fi
       ((caller_stack_count++))
       if [[ ${caller_stack_count} -gt 1 ]]; then
-        caller_stack_messages+=(", called by ${func}")
+        caller_stack_messages+=("called by ${func}")
       else
         caller_stack_messages+=("in ${func}")
       fi
@@ -478,7 +478,8 @@ essential_variable() {
     if [[ -n "${BASH_SOURCE:-}" ]]; then
       caller_stack_messages+=("in script ${BASH_SOURCE[1]}")
     fi
-    fatal "The variable ${variable_name} was needed ${caller_stack_messages[*]}"
+    printf -v backtrace '%s, ' "${caller_stack_messages[@]}"
+    fatal "The variable ${variable_name} was needed ${backtrace%, }"
   fi
 }
 # Elastic Beanstalk Functions
