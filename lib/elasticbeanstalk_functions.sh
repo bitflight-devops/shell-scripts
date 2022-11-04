@@ -459,13 +459,28 @@ install_dependencies() {
 
 safe_eb_env_name() {
   local var="${*}"
-  sed 's/^[- ]*//g;s/[+_. ]/-/g' <<< "${var}" | tr -s '-'
+  local current_ts="$(date +%s || true)" # fallback to seconds since epoch
+  local md5_hash=$(md5sum<<<"${var}" || echo "${RANDOM:-${current_ts}}")
+  local label="$(sed 's/^[- ]*//g;s/[+_. ]/-/g' <<< "${var}" | tr -s '-')"
+  if [[ ${#label} -gt 30 ]]; then
+    label="${label:0:30}"
+    label="${label}-${md5_hash:0:10}"
+  fi
+  echo "${label}"
 }
 
 safe_eb_label_name() {
   local var="${*}"
   var="${var//[+]/-}"
-  sed 's/^[- ]*//g;s/[+]/-/g' <<< "${var}" | tr -s '-'
+  local current_ts="$(date +%s || true)" # fallback to seconds since epoch
+  local md5_hash="$(md5sum<<<"${var}" || echo "${RANDOM:-${current_ts}}")"
+  local label="$(sed 's/^[- ]*//g;s/[+]/-/g' <<< "${var}" | tr -s '-')"
+  if [[ ${#label} -gt 80 ]]; then
+    label="${label:0:80}"
+    label="${label}-${md5_hash:0:18}"
+  fi
+  echo "${label}"
+
 }
 
 cname_prefix_by_type() {
