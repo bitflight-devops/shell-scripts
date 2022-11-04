@@ -537,7 +537,7 @@ passive_cname_prefix() {
 
 cname_available() (
   set +o pipefail
-  if [[ -z ${1:-} ]]; then
+  if [[ $# -eq 0 ]]; then
     error "${0}(): missing cname prefix as arg"
     return 2
   fi
@@ -565,7 +565,7 @@ environment_name_by_cname() {
     return 2
   fi
   DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
-  if [[ -n ${APPLICATION_NAME:-} ]]; then
+  if [[ -n "${APPLICATION_NAME:-}" ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
   local -r cname_prefix="$(cname_prefix_by_type "${name_type}")"
@@ -747,15 +747,13 @@ wait_for_environment_cname_release() {
 }
 
 wait_for_passive_cname() {
-  if [[ -z ${1:-} ]]; then
-    local -r env_name="$(environment_name_by_cname passive)"
-    if [[ -z ${env_name:-} ]]; then
-      info "${0}(): No passive environment found"
-      return 1
-    fi
-  else
-    local -r env_name="${1}"
+  local env_name="${1:-$(environment_name_by_cname passive)}"
+
+  if [[ -z ${env_name:-} ]]; then
+    warning "${0}: No passive environment found"
+    return 1
   fi
+
   wait_for_environment_cname_release "${env_name}"
 }
 
@@ -976,25 +974,26 @@ create_environment() {
   local -r env_name="${1:-$(current_environment_name)}"
   local -r cname_p="${2:-${CNAME_PREFIX}}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-25}"
+  local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
 
   notice "Creating environment ${env_name} within application ${APPLICATION_NAME}"
-  if [[ -z ${VERSION_LABEL:-} ]] && [[ -n "${ASSET_PATH+x}" || -n "${ZIPFILE+x}" ]]; then
+  if [[ -z ${version_label} ]] && [[ -n "${ASSET_PATH+x}" || -n "${ZIPFILE+x}" ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
       "${env_name}" &
     PID="$!"
-  elif version_available "${VERSION_LABEL}"; then
+  elif version_available "${version_label}"; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
-      --version "${VERSION_LABEL}" \
+      --version "${version_label}" \
       "${env_name}" &
     PID="$!"
   else
-    fatal "The version label to be deployed ${VERSION_LABEL} is unavailable"
+    fatal "The version label to be deployed ${version_label} is unavailable"
   fi
 
   # Stream the logs in the background while we wait
@@ -1007,24 +1006,25 @@ create_environment() {
 deploy_asset() {
   local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-20}"
-  debug "Deploying asset to environment ${env_name} with version ${VERSION_LABEL}"
-  if [[ -z ${VERSION_LABEL:-} ]]; then
-    error "The env variable VERSION_LABEL is required"
+  local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
+  debug "Deploying asset to environment ${env_name} with version ${version_label}"
+  if [[ -z ${version_label:-} ]]; then
+    error "The env variable VERSION_LABEL or VERSION_ID is required"
     return 1
-  elif version_available "${VERSION_LABEL}"; then
+  elif version_available "${version_label}"; then
     eb_run deploy \
-      --version "${VERSION_LABEL}" \
+      --version "${version_label}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   elif [[ -f ${ZIPFILE} ]]; then
     eb_run deploy \
-      --label "${VERSION_LABEL}" \
+      --label "${version_label}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   else
-    error "The version label to be deployed ${VERSION_LABEL} is unavailable, and there is no built zipfile to deploy"
+    error "The version label to be deployed ${version_label} is unavailable, and there is no built zipfile to deploy"
     return 1
   fi
 }
