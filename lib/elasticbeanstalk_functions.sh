@@ -343,7 +343,6 @@ golang_os() {
   esac
 }
 
-
 add_user() {
   if [[ $(id -un) != 'root' ]]; then
     error "you must run add_user as root"
@@ -407,7 +406,7 @@ install_chamber_version() {
 
     if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
       local install_path="/usr/local/bin/chamber"
-     $(root_available) install_package_to_path "${temp_file_location}" "${install_path}"
+      $(root_available) install_package_to_path "${temp_file_location}" "${install_path}"
     else
       local install_path="${HOME}/.local/bin/chamber"
       install_package_to_path "${temp_file_location}" "${install_path}"
@@ -455,12 +454,51 @@ install_dependencies() {
   install_chamber
 }
 
+essential_variable() {
+  local variable_name="${1:-}"
+  shift
+  local skip_list="${*:-}"
+  if ! test -v "${variable_name}" || [[ -z "${!variable_name}" ]]; then
+    declare -a caller_stack_messages
+    local caller_stack_count=0
+    for func in "${FUNCNAME[@]}"; do
+      if [[ "${func}" == "${FUNCNAME[0]}" ]]; then
+        continue
+      fi
+      if [[ -n "${skip_list}" ]] && [[ "${skip_list}" == *"${func}"* ]]; then
+        continue
+      fi
+      ((caller_stack_count++))
+      if [[ ${caller_stack_count} -gt 1 ]]; then
+        caller_stack_messages+=(", called by ${func}")
+      else
+        caller_stack_messages+=("in ${func}")
+      fi
+    done
+    if [[ -n "${BASH_SOURCE:-}" ]]; then
+      caller_stack_messages+=("in script ${BASH_SOURCE[1]}")
+    fi
+    fatal "The variable ${variable_name} was needed ${caller_stack_messages[*]}"
+  fi
+}
 # Elastic Beanstalk Functions
+
+current_environment_name() {
+  ## Get the current environment name
+  essential_variable "ENVIRONMENT_NAME" # Validate the variable exists
+  echo "${ENVIRONMENT_NAME}"
+}
+
+current_app_name() {
+  ## Get the current application name
+  essential_variable "APPLICATION_NAME" # Validate the variable exists
+  echo "${APPLICATION_NAME}"
+}
 
 safe_eb_env_name() {
   local var="${*}"
   local current_ts="$(date +%s || true)" # fallback to seconds since epoch
-  local md5_hash=$(md5sum<<<"${var}" || echo "${RANDOM:-${current_ts}}")
+  local md5_hash=$(md5sum <<< "${var}" || echo "${RANDOM:-${current_ts}}")
   local label="$(sed 's/^[- ]*//g;s/[+_. ]/-/g' <<< "${var}" | tr -s '-')"
   if [[ ${#label} -gt 30 ]]; then
     label="${label:0:30}"
@@ -473,7 +511,7 @@ safe_eb_label_name() {
   local var="${*}"
   var="${var//[+]/-}"
   local current_ts="$(date +%s || true)" # fallback to seconds since epoch
-  local md5_hash="$(md5sum<<<"${var}" || echo "${RANDOM:-${current_ts}}")"
+  local md5_hash="$(md5sum <<< "${var}" || echo "${RANDOM:-${current_ts}}")"
   local label="$(sed 's/^[- ]*//g;s/[+]/-/g' <<< "${var}" | tr -s '-')"
   if [[ ${#label} -gt 80 ]]; then
     label="${label:0:80}"
@@ -484,7 +522,8 @@ safe_eb_label_name() {
 }
 
 cname_prefix_by_type() {
-  printf '%s' "${APPLICATION_CNAME_PREFIX:-${APPLICATION_NAME}}-${1}${APPLICATION_CNAME_SUFFIX:-}"
+
+  printf '%s' "${APPLICATION_CNAME_PREFIX:-$(current_app_name)}-${1}${APPLICATION_CNAME_SUFFIX:-}"
 }
 
 active_cname_prefix() {
@@ -536,8 +575,8 @@ environment_name_by_cname() {
 }
 
 cname_by_environment_name() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
+  local -r env_name="${1:-$(current_environment_name)}"
+  if [[ -n ${env_name+x} ]]; then
     DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
     if [[ -n ${APPLICATION_NAME:-} ]]; then
       DEARGS+=("--application-name" "${APPLICATION_NAME}")
@@ -552,25 +591,15 @@ cname_by_environment_name() {
 }
 
 cname_prefix_by_environment_name() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    cname_by_environment_name "${env}" | cut -d. -f1
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
-
+  local -r env_name="${1:-$(current_environment_name)}"
+  cname_by_environment_name "${env_name}" | cut -d. -f1
 }
 
 environment_state() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   DEARGS=("--no-paginate" "--output" "text" "--include-deleted")
-  if [[ -n ${env:-} ]]; then
-    DEARGS+=("--environment-names" "${env}")
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  DEARGS+=("--environment-names" "${env_name}")
+
   if [[ -n ${APPLICATION_NAME:-} ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
@@ -580,81 +609,53 @@ environment_state() {
 }
 
 environment_exists() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    environment_state "${env}" | grep -i -E "(Ready|Launching|Updating|Terminating)"
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  local -r env_name="${1:-$(current_environment_name)}"
+  environment_state "${env_name}" | grep -i -E "(Ready|Launching|Updating|Terminating)"
 }
 
 environment_state_ready() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    environment_state "${env}" | grep -i -e "Ready"
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  local -r env_name="${1:-$(current_environment_name)}"
+  environment_state "${env_name}" | grep -i -e "Ready"
 }
 
 environment_state_waitable() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    environment_state "${env}" | grep -i -E "(Ready|Launching|Updating)"
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  local -r env_name="${1:-$(current_environment_name)}"
+  environment_state "${env_name}" | grep -i -E "(Ready|Launching|Updating)"
 }
 
 environment_state_terminating() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    environment_state "${env}" | grep -i "Terminating"
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  local -r env_name="${1:-$(current_environment_name)}"
+  environment_state "${env_name}" | grep -i "Terminating"
 }
 
 environment_state_terminated() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if [[ -n ${env:-} ]]; then
-    environment_state "${env}" | grep -i "Terminated"
-  else
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
+  local -r env_name="${1:-$(current_environment_name)}"
+    environment_state "${env_name}" | grep -i "Terminated"
 }
 
 export DEFAULT_WAIT_FOR_READY_TIMEOUT=120
 export DEFAULT_WAIT_FOR_READY_RETRY_INTERVAL=5
 wait_for_ready() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${2:-${DEFAULT_WAIT_FOR_READY_TIMEOUT}}"
   local -r interval="${3:-${DEFAULT_WAIT_FOR_READY_RETRY_INTERVAL}}"
   local start_time="$(date +%s)"
   local end_time=$((start_time + timeout))
-  if [[ -z ${env:-} ]]; then
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
-  while STATE=$(environment_state_waitable "${env}") && [[ $(date +%s) -lt ${end_time} ]]; do
+
+  while STATE=$(environment_state_waitable "${env_name}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ -z ${STATE:-} ]]; then
-      error "${0}(): FAIL: Environment ${env} status is Terminating or Terminated"
+      error "${0}(): FAIL: Environment ${env_name} status is Terminating or Terminated"
       return 1
     fi
 
     if [[ ${STATE} == "Ready" ]]; then
-      info "${0}(): Environment ${env} status became Ready in $(($(date +%s) - start_time)) seconds"
+      info "${0}(): Environment ${env_name} status became Ready in $(($(date +%s) - start_time)) seconds"
       return 0
     fi
     sleep "${interval}"
   done
 
-  error "Environment ${env} status not ready after ${timeout} seconds"
+  error "Environment ${env_name} status not ready after ${timeout} seconds"
   return 1
 
 }
@@ -663,38 +664,35 @@ export DEFAULT_WAIT_FOR_TERMINATED_READY_GRACE_TIMEOUT=15
 export DEFAULT_WAIT_FOR_TERMINATED_TIMEOUT=120
 export DEFAULT_WAIT_FOR_TERMINATED_RETRY_INTERVAL=5
 wait_for_terminated() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${2:-${DEFAULT_WAIT_FOR_TERMINATED_TIMEOUT}}"
   local -r interval="${3:-${DEFAULT_WAIT_FOR_TERMINATED_RETRY_INTERVAL}}"
   local -r grace_timeout="${4:-${DEFAULT_WAIT_FOR_TERMINATED_READY_GRACE_TIMEOUT}}"
   local start_time="$(date +%s)"
   local grace_end_time=$((start_time + grace_timeout))
   local end_time=$((start_time + timeout))
-  if [[ -z ${env:-} ]]; then
-    error '${0}(): Environment name not provided'
-    return 2
-  fi
-  while STATE=$(environment_state_waitable "${env}") && [[ $(date +%s) -lt ${grace_end_time} ]]; do
+
+  while STATE=$(environment_state_waitable "${env_name}") && [[ $(date +%s) -lt ${grace_end_time} ]]; do
     if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
   done
-  if environment_state_waitable "${env}"; then
-    error "${0}(): Environment ${env} status is still 'Ready' after ${grace_timeout} seconds! Did the terminate command get sent?"
+  if environment_state_waitable "${env_name}"; then
+    error "${0}(): Environment ${env_name} status is still 'Ready' after ${grace_timeout} seconds! Did the terminate command get sent?"
     return 3
   fi
-  while STATE=$(environment_state_terminating "${env}") && [[ $(date +%s) -lt ${end_time} ]]; do
+  while STATE=$(environment_state_terminating "${env_name}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ -z ${STATE:-} ]]; then
       break
     fi
     sleep "${interval}"
   done
-  if environment_state_terminated "${env}"; then
-    info "${0}(): Environment ${env} status became Terminated in $(($(date +%s) - start_time)) seconds"
+  if environment_state_terminated "${env_name}"; then
+    info "${0}(): Environment ${env_name} status became Terminated in $(($(date +%s) - start_time)) seconds"
     return 0
   fi
-  error "${0}(): Environment ${env} status [$(environment_state "${env}")] not terminated after ${timeout} seconds "
+  error "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")] not terminated after ${timeout} seconds "
   return 1
 }
 
@@ -702,7 +700,7 @@ export DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_READY_GRACE_TIMEOUT=15
 export DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_TIMEOUT=120
 export DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_RETRY_INTERVAL=5
 wait_for_environment_cname_release() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${2:-${DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_TIMEOUT}}"
   local -r interval="${3:-${DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_RETRY_INTERVAL}}"
   local -r grace_timeout="${4:-${DEFAULT_WAIT_FOR_ENVIRONMENT_CNAME_RELEASE_READY_GRACE_TIMEOUT}}"
@@ -711,12 +709,7 @@ wait_for_environment_cname_release() {
   local grace_end_time=$((start_time + grace_timeout))
   local end_time=$((start_time + timeout))
 
-  if [[ -z ${env:-} ]]; then
-    error '${0}(): Environment name not provided'
-    return 2
-  fi
-
-  local -r current_cname_prefix=$(cname_prefix_by_environment_name "${env}")
+  local -r current_cname_prefix=$(cname_prefix_by_environment_name "${env_name}")
 
   if cname_available "${current_cname_prefix}"; then
     debug "${0}(): cname prefix ${current_cname_prefix} is available"
@@ -726,7 +719,7 @@ wait_for_environment_cname_release() {
   fi
 
   cname_prefix_by_type "passive"
-  while STATE=$(environment_state_waitable "${env}") && [[ $(date +%s) -lt ${grace_end_time} ]]; do
+  while STATE=$(environment_state_waitable "${env_name}") && [[ $(date +%s) -lt ${grace_end_time} ]]; do
     if cname_available "${current_cname_prefix}"; then
       return 0
     fi
@@ -735,7 +728,7 @@ wait_for_environment_cname_release() {
     fi
     sleep "${interval}"
   done
-  while STATE=$(environment_state_terminating "${env}") && [[ $(date +%s) -lt ${end_time} ]]; do
+  while STATE=$(environment_state_terminating "${env_name}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if cname_available "${current_cname_prefix}"; then
       return 0
     fi
@@ -744,34 +737,34 @@ wait_for_environment_cname_release() {
     fi
     sleep "${interval}"
   done
-  if environment_state_terminated "${env}" && cname_available "${current_cname_prefix}"; then
-    info "${0}(): Environment ${env} status Terminated: cname prefix ${current_cname_prefix} released after $(($(date +%s) - start_time)) seconds"
+  if environment_state_terminated "${env_name}" && cname_available "${current_cname_prefix}"; then
+    info "${0}(): Environment ${env_name} status Terminated: cname prefix ${current_cname_prefix} released after $(($(date +%s) - start_time)) seconds"
     return 0
   fi
-  error "${0}(): Environment ${env} status [$(environment_state "${env}")]: cname prefix ${current_cname_prefix} not released after ${timeout} seconds"
+  error "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")]: cname prefix ${current_cname_prefix} not released after ${timeout} seconds"
   return 1
 }
 
 wait_for_passive_cname() {
   if [[ -z ${1:-} ]]; then
-    local -r env="$(environment_name_by_cname passive)"
-    if [[ -z ${env:-} ]]; then
+    local -r env_name="$(environment_name_by_cname passive)"
+    if [[ -z ${env_name:-} ]]; then
       info "${0}(): No passive environment found"
       return 1
     fi
   else
-    local -r env="${1}"
+    local -r env_name="${1}"
   fi
-  wait_for_environment_cname_release "${env}"
+  wait_for_environment_cname_release "${env_name}"
 }
 
 # withBackoff
 ## Returns 0 for the data not existing and 1 when the data was successfully retrieved
 retrieve_ebs_pending_logs() (
   set +e
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r infofile="${2:-/tmp/${env}.loginfo.json}"
-  aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env}" 1> "${infofile}" 2> /dev/null
+  aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env_name}" 1> "${infofile}" 2> /dev/null
   local -r r_value=$?
   if [[ ${r_value} -gt 0 ]]; then
     echo "${0}(): error"
@@ -783,18 +776,15 @@ retrieve_ebs_pending_logs() (
 export DEFAULT_WAIT_FOR_EBS_TIMEOUT=15
 export DEFAULT_WAIT_FOR_EBS_RETRY_INTERVAL=3
 wait_for_ebs_logs() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  local -r loginfo_file="${2:-/tmp/${env}.loginfo.json}"
+  local -r env_name="${1:-$(current_environment_name)}"
+  local -r loginfo_file="${2:-/tmp/${env_name}.loginfo.json}"
   local -r timeout="${3:-${DEFAULT_WAIT_FOR_EBS_TIMEOUT}}"
   local -r interval="${4:-${DEFAULT_WAIT_FOR_EBS_RETRY_INTERVAL}}"
   local start_time="$(date +%s)"
   local end_time=$((start_time + timeout))
   local env_available
-  if [[ -z ${env:-} ]]; then
-    error "${0}(): Environment name not provided"
-    return 2
-  fi
-  while env_available=$(retrieve_ebs_pending_logs "${env}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
+
+  while env_available=$(retrieve_ebs_pending_logs "${env_name}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ ${env_available} -gt 0 ]]; then
       debug "${0}(): Waited for ${env} logs for $(($(date +%s) - start_time)) seconds"
       return 0
@@ -802,7 +792,7 @@ wait_for_ebs_logs() {
     sleep "${interval}"
   done
 
-  error "Environment ${env} eb logs not available after waiting ${timeout} seconds"
+  error "Environment ${env_name} eb logs not available after waiting ${timeout} seconds"
   return 1
 
 }
@@ -814,126 +804,132 @@ check_if_url_exists() {
 
 pipe_errors_from_ebs_to_github_actions() {
 
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  local -r log_zipfile="${env}.zip"
-  local -r log_output_path=".elasticbeanstalk/logs/${env}/"
-  if wait_for_ready "${env}" "10" "3"; then
+  local -r env_name="${1:-$(current_environment_name)}"
+  local -r log_zipfile="${env_name}.zip"
+  local -r log_output_path=".elasticbeanstalk/logs/${env_name}/"
+  if wait_for_ready "${env_name}" "10" "3"; then
     if [[ ! -f ${log_zipfile} ]]; then
-      info "Requesting logs from Elastic Beanstalk's env ${env}: Starting"
-      if aws_run elasticbeanstalk request-environment-info --info-type bundle --environment-name "${env}"; then
-        info "Requesting logs from Elastic Beanstalk's env ${env}: Success"
-        info "Retrieving logs from Elastic Beanstalk's env ${env}: Starting"
-        loginfo_file="/tmp/${env}.loginfo.json"
-        if wait_for_ebs_logs "${env}" "${loginfo_file}"; then
+      info "Requesting logs from Elastic Beanstalk's env ${env_name}: Starting"
+      if aws_run elasticbeanstalk request-environment-info --info-type bundle --environment-name "${env_name}"; then
+        info "Requesting logs from Elastic Beanstalk's env ${env_name}: Success"
+        info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Starting"
+        loginfo_file="/tmp/${env_name}.loginfo.json"
+        if wait_for_ebs_logs "${env_name}" "${loginfo_file}"; then
           local -r url="$(jq -r '.Message' "${loginfo_file}")"
           if curl --fail -sSlL -o "${log_zipfile}" "${url}" 2> /dev/null; then
             mkdir -p "${log_output_path}"
             debug "UNZIP log files:\n$(unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz")"
             print_logs_from_zip "${log_output_path}"
-            info "Retrieving logs from Elastic Beanstalk's env ${env}: Success"
+            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Success"
             return 0
           else
             debug "${0}(): Cannot download ${url} - possibly doesn't exist.\n$(cat "${loginfo_file}")"
-            info "Retrieving logs from Elastic Beanstalk's env ${env}: Failure"
+            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
             return 0
           fi
         else
           if ! jq -r '.Message' "${loginfo_file}" > /dev/null 2>&1; then
-            debug "${0}(): Environment ${env} not available to download logs: [${loginfo_file}]\n$(jq '.' "${loginfo_file}")"
-            info "Retrieving logs from Elastic Beanstalk's env ${env}: Failure"
+            debug "${0}(): Environment ${env_name} not available to download logs: [${loginfo_file}]\n$(jq '.' "${loginfo_file}")"
+            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
             return 0
           fi
         fi
       else
-        info "Requesting logs from Elastic Beanstalk's env ${env}: Failure"
+        info "Requesting logs from Elastic Beanstalk's env ${env_name}: Failure"
       fi
     else
-      info "Printing logs from Elastic Beanstalk's env ${env}: Starting"
+      info "Printing logs from Elastic Beanstalk's env ${env_name}: Starting"
       if print_logs_from_zip "${log_output_path}"; then
-        info "Printing logs from Elastic Beanstalk's env ${env}: Success"
+        info "Printing logs from Elastic Beanstalk's env ${env_name}: Success"
       else
-        info "Printing logs from Elastic Beanstalk's env ${env}: Failure"
+        info "Printing logs from Elastic Beanstalk's env ${env_name}: Failure"
       fi
       return 0
     fi
   else
     debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env}")"
-    info "Elastic Beanstalk's env ${env} status is [$(environment_state "${env}")] which means logs cannot be requested"
+    info "Elastic Beanstalk's env ${env_name} status is [$(environment_state "${env_name}")] which means logs cannot be requested"
   fi
 
 }
 
 stop_current_eb_processes() (
   set -e -o pipefail
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
-  if aws_run elasticbeanstalk describe-environments --environment-names "${env}" 2> /dev/null | jq -r '.Environments[0].AbortableOperationInProgress' 2> /dev/null | grep -q 'true'; then
-    info "Abort environment update for ${env}: Starting"
-    if aws_run elasticbeanstalk abort-environment-update --environment-name "${env}"; then
-      wait_for_ready "${env}"
-      info "Abort environment update for ${env}: Completed"
+  local -r env_name="${1:-$(current_environment_name)}"
+  if aws_run elasticbeanstalk describe-environments --environment-names "${env_name}" 2> /dev/null | jq -r '.Environments[0].AbortableOperationInProgress' 2> /dev/null | grep -q 'true'; then
+    info "Abort environment update for ${env_name}: Starting"
+    if aws_run elasticbeanstalk abort-environment-update --environment-name "${env_name}"; then
+      wait_for_ready "${env_name}"
+      info "Abort environment update for ${env_name}: Completed"
     else
-      error "Abort environment update for ${env}: Failed"
+      error "Abort environment update for ${env_name}: Failed"
     fi
   fi
 )
 
 remove_passive() {
   if [[ -n ${2:-} ]]; then
-    local -r env="${2:-}"
+    local -r env_name="${2:-}"
   else
-    local -r env="$(environment_name_by_cname passive)"
+    local -r env_name="$(environment_name_by_cname passive)"
   fi
-  if [[ -z ${env:-} ]]; then
+  if [[ -z ${env_name:-} ]]; then
     info "${0}(): No passive environment found"
     return 0
   fi
-  if environment_state_ready "${env}" 2> /dev/null; then
-    pipe_errors_from_ebs_to_github_actions "${env}"
+  if environment_state_ready "${env_name}" 2> /dev/null; then
+    pipe_errors_from_ebs_to_github_actions "${env_name}"
   fi
-  eb_run terminate --nohang --force "${env}"
-  notice "Passive Environment [${env}] termination signal sent - waiting for CNAME $(passive_cname_prefix) to be released"
+  eb_run terminate --nohang --force "${env_name}"
+  notice "Passive Environment [${env_name}] termination signal sent - waiting for CNAME $(passive_cname_prefix) to be released"
   if [[ ${1} == "hang" ]]; then
-    wait_for_passive_cname "${env}" && notice "Passive Environment [${env}] has released the CNAME $(passive_cname_prefix)"
+    wait_for_passive_cname "${env_name}" && notice "Passive Environment [${env_name}] has released the CNAME $(passive_cname_prefix)"
   fi
 }
 
 version_available() {
+  local -r version_label="${1}"
+  create_application_version
   aws_run elasticbeanstalk describe-application-versions \
-    --application-name "${APPLICATION_NAME}" \
-    --version-labels "${1}" \
+    --application-name "$(current_app_name)" \
+    --version-labels "${version_label}" \
     --query "ApplicationVersions[0].VersionLabel" \
-    --output text | grep -q "${1}"
+    --output text | grep -q "${version_label}"
 }
 
 create_application_version() {
-  APPLICATION_VERSION_LABEL="${1}"
-  DESCRIPTION="${2}"
+  local version_label="${1:-}"
+  local version_description="${2:-}"
+  local app_name="$(current_app_name)"
 
-  if ! version_available "${APPLICATION_VERSION_LABEL}"; then
-    notice "Creating application version ${APPLICATION_VERSION_LABEL}"
-    eb_run appversion -a "${APPLICATION_NAME}" \
-      --label "${APPLICATION_VERSION_LABEL}" \
+  if ! version_available "${version_label}"; then
+    notice "Creating application version ${version_label}"
+    eb_run appversion -a "${app_name}" \
+      --label "${version_label}" \
       --create \
       --staged \
-      -m "${DESCRIPTION:-${APPLICATION_VERSION_LABEL}}"
+      -m "${version_description:-${version_label}}"
   else
-    notice "Application version ${APPLICATION_VERSION_LABEL} already available"
+    notice "Application version ${version_label} already available"
   fi
 
 }
 
 count_environments() {
+  local app_name="$(current_app_name)"
+
   aws_run elasticbeanstalk describe-environments \
-    --application "${APPLICATION_NAME}" \
+    --application "${app_name}" \
     --no-include-deleted \
     --output json \
     --query 'Environments[?Status!=`Terminated`]' | jq -r 'length'
 }
 
 environments() {
+local -r env_name="${1:-$(current_environment_name)}"
   if [[ -n ${INSTANCEID:-} ]]; then
-    debug "Environment logs from ${INSTANCEID} for ${ENVIRONMENT_NAME}"
-    eb_run logs --stream --instance "${INSTANCEID}" "${ENVIRONMENT_NAME}"
+    debug "Environment logs from ${INSTANCEID} for ${env_name}"
+    eb_run logs --stream --instance "${INSTANCEID}" "${env_name}"
   fi
 }
 
@@ -942,30 +938,30 @@ environments() {
 #   $2: environment creation PID
 stream_environment_events() {
   local -r event_path="$(mktemp)"
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r pid="${2:-}"
   if [[ -n ${pid:-} ]]; then
-    debug "Streaming environment logs from PID ${pid} for ${env}"
+    debug "Streaming environment logs from PID ${pid} for ${env_name}"
   else
-    debug "Streaming environment logs for ${env}"
+    debug "Streaming environment logs for ${env_name}"
   fi
-  while ! eb_run events "${env}" > /dev/null 2>&1; do
+  while ! eb_run events "${env_name}" > /dev/null 2>&1; do
     if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
-      debug "Streaming environment logs for ${env} stopped. [${pid}] has exited early"
+      debug "Streaming environment logs for ${env_name} stopped. [${pid}] has exited early"
       return 1
     fi
     sleep 1
   done
-  eb_run events --follow "${env}" | tee -a "${event_path}" | while read -r line; do
+  eb_run events --follow "${env_name}" | tee -a "${event_path}" | while read -r line; do
 
     if grep -q -i -e "(ERROR|Terminating)" <<< "${line}"; then
-      step_summary_title "Error creating ${env}"
+      step_summary_title "Error creating ${env_name}"
       step_summary_append "\`${line}\`"
     else
       info "${line}"
     fi
     if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
-      notice "Environment ${env} creation process [${pid}] has completed"
+      notice "Environment ${env_name} creation process [${pid}] has completed"
       break
     fi
   done
@@ -973,17 +969,17 @@ stream_environment_events() {
 }
 
 create_environment() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r cname_p="${2:-${CNAME_PREFIX}}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-25}"
 
-  notice "Creating environment ${env} within application ${APPLICATION_NAME}"
+  notice "Creating environment ${env_name} within application ${APPLICATION_NAME}"
   if [[ -z ${DEPLOY_VERSION:-} ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
-      "${env}" &
+      "${env_name}" &
     PID="$!"
   elif version_available "${DEPLOY_VERSION}"; then
     eb_run create \
@@ -991,23 +987,23 @@ create_environment() {
       --cname "${cname_p}" \
       --timeout "${timeout}" \
       --version "${DEPLOY_VERSION}" \
-      "${env}" &
+      "${env_name}" &
     PID="$!"
   else
     fatal "The version label to be deployed ${DEPLOY_VERSION} is unavailable"
   fi
 
   # Stream the logs in the background while we wait
-  stream_environment_events "${env}" &
+  stream_environment_events "${env_name}" &
 
   wait "${PID}"
 
 }
 
 deploy_asset() {
-  local -r env="${1:-${ENVIRONMENT_NAME}}"
+  local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-20}"
-  debug "Deploying asset to environment ${env} with version ${DEPLOY_VERSION}"
+  debug "Deploying asset to environment ${env_name} with version ${DEPLOY_VERSION}"
   if [[ -z ${DEPLOY_VERSION:-} ]]; then
     error "The env variable DEPLOY_VERSION is required"
     return 1
@@ -1016,13 +1012,13 @@ deploy_asset() {
       --version "${DEPLOY_VERSION}" \
       --staged \
       --timeout "${timeout}" \
-      "${env}"
+      "${env_name}"
   elif [[ -f ${ZIPFILE} ]]; then
     eb_run deploy \
       --label "${DEPLOY_VERSION}" \
       --staged \
       --timeout "${timeout}" \
-      "${env}"
+      "${env_name}"
   else
     error "The version label to be deployed ${DEPLOY_VERSION} is unavailable, and there is no built zipfile to deploy"
     return 1
@@ -1044,11 +1040,12 @@ eb_init() {
 }
 
 eb_load_config() {
-  debug "eb_load_config: Load Config from file to EB: ${ENVIRONMENT_CFG}"
-  if [[ -z ${ENVIRONMENT_CFG:-} ]]; then
-    error "eb_load_config: requires an ENVIRONMENT_CFG environment variable to exist"
+  local -r env_config_name="${1:-${ENVIRONMENT_CFG:-}}"
+  debug "eb_load_config: Load Config from file to EB: ${env_config_name}"
+  if [[ -z ${env_config_name:-} ]]; then
+    error "eb_load_config: requires an env_config_name environment variable to exist"
     return 1
   fi
-  eb_run config put "${ENVIRONMENT_CFG}"
+  eb_run config put "${env_config_name}"
 
 }
