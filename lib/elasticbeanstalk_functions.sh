@@ -978,23 +978,23 @@ create_environment() {
   local -r timeout="${TIMEOUT_IN_MINUTES:-25}"
 
   notice "Creating environment ${env_name} within application ${APPLICATION_NAME}"
-  if [[ -z ${DEPLOY_VERSION:-} ]]; then
+  if [[ -z ${VERSION_LABEL:-} ]] && [[ -n "${ASSET_PATH+x}" || -n "${ZIPFILE+x}" ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
       "${env_name}" &
     PID="$!"
-  elif version_available "${DEPLOY_VERSION}"; then
+  elif version_available "${VERSION_LABEL}"; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
-      --version "${DEPLOY_VERSION}" \
+      --version "${VERSION_LABEL}" \
       "${env_name}" &
     PID="$!"
   else
-    fatal "The version label to be deployed ${DEPLOY_VERSION} is unavailable"
+    fatal "The version label to be deployed ${VERSION_LABEL} is unavailable"
   fi
 
   # Stream the logs in the background while we wait
@@ -1007,24 +1007,24 @@ create_environment() {
 deploy_asset() {
   local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-20}"
-  debug "Deploying asset to environment ${env_name} with version ${DEPLOY_VERSION}"
-  if [[ -z ${DEPLOY_VERSION:-} ]]; then
-    error "The env variable DEPLOY_VERSION is required"
+  debug "Deploying asset to environment ${env_name} with version ${VERSION_LABEL}"
+  if [[ -z ${VERSION_LABEL:-} ]]; then
+    error "The env variable VERSION_LABEL is required"
     return 1
-  elif version_available "${DEPLOY_VERSION}"; then
+  elif version_available "${VERSION_LABEL}"; then
     eb_run deploy \
-      --version "${DEPLOY_VERSION}" \
+      --version "${VERSION_LABEL}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   elif [[ -f ${ZIPFILE} ]]; then
     eb_run deploy \
-      --label "${DEPLOY_VERSION}" \
+      --label "${VERSION_LABEL}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   else
-    error "The version label to be deployed ${DEPLOY_VERSION} is unavailable, and there is no built zipfile to deploy"
+    error "The version label to be deployed ${VERSION_LABEL} is unavailable, and there is no built zipfile to deploy"
     return 1
   fi
 }
