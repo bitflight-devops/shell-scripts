@@ -468,7 +468,8 @@ print_single_log_file() {
         export GITHUB_FILE_PROCESSED='true'
       fi
 
-      export GITHUB_LOG_TITLE="${VERSION_LABEL:-${GITHUB_ACTION:-${short_filename:-}}}"
+      local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
+      export GITHUB_LOG_TITLE="${version_label:-${GITHUB_ACTION:-${short_filename:-}}}"
 
       pipe_errors_to_github_workflow "${GITHUB_LOG_FILE}" && touch "${GITHUB_LOG_FILE}.processed"
       unset GITHUB_FILE_PROCESSED
