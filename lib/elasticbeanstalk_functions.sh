@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -32,7 +32,7 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  if command_exists zsh && [[ ${whichshell} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -158,7 +158,7 @@ install_ebcli_ubuntu_dependencies() {
       MISSING_APPS+=("libreadline-dev")
     fi
   fi
-  if [[ "${#MISSING_APPS[@]}" -gt 0 ]]; then
+  if [[ ${#MISSING_APPS[@]} -gt 0   ]]; then
     { command_exists apt && install_apt-fast; } || true
     install_app "${MISSING_APPS[@]}"
   fi
@@ -377,7 +377,7 @@ function install_chamber() {
 function install_package_to_path() {
   local current_file="${1}"
   local install_path="${2}"
-  if [[ -f "${current_file}" ]]; then
+  if [[ -f ${current_file}   ]]; then
     local install_dir="$(dirname "${install_path}")"
     mkdir -p "${install_dir}"
     rm -f "${install_path}"
@@ -404,7 +404,7 @@ install_chamber_version() {
     local url="${url_base}/${url_version}/chamber-${url_version}-${url_platform}-${url_arch}"
     downloadFile "${url}" "${temp_file_location}"
 
-    if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+    if root_available && [[ ${PREFER_USERSPACE:-} != "true"   ]]; then
       local install_path="/usr/local/bin/chamber"
       $(root_available) install_package_to_path "${temp_file_location}" "${install_path}"
     else
@@ -426,11 +426,11 @@ function install_golang() {
       local temp_file_location=$(mktemp -d || true)
       local url="${url_base}/${package_name}"
       local package_path="${temp_file_location:=/tmp}/${package_name}"
-      if [[ ! -f "${package_path}" ]]; then
+      if [[ ! -f ${package_path}   ]]; then
         downloadFile "${url}" "${package_path}" "true" || fatal "Failed to download golang"
       fi
 
-      if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+      if root_available && [[ ${PREFER_USERSPACE:-} != "true"   ]]; then
         local install_path="/usr/local"
         $(root_available) bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
       else
@@ -458,14 +458,14 @@ essential_variable() {
   local variable_name="${1:-}"
   shift
   local skip_list="${*:-}"
-  if ! test -v "${variable_name}" || [[ -z "${!variable_name}" ]]; then
+  if ! test -v "${variable_name}" || [[ -z ${!variable_name}   ]]; then
     declare -a caller_stack_messages
     local caller_stack_count=0
     for func in "${FUNCNAME[@]}"; do
-      if [[ "${func}" == "${FUNCNAME[0]}" ]]; then
+      if [[ ${func} == "${FUNCNAME[0]}"   ]]; then
         continue
       fi
-      if [[ -n "${skip_list}" ]] && [[ "${skip_list}" == *"${func}"* ]]; then
+      if [[ -n ${skip_list}   ]] && [[ ${skip_list} == *"${func}"*   ]]; then
         continue
       fi
       ((caller_stack_count++))
@@ -475,7 +475,7 @@ essential_variable() {
         caller_stack_messages+=("in ${func}")
       fi
     done
-    if [[ -n "${BASH_SOURCE:-}" ]]; then
+    if [[ -n ${BASH_SOURCE:-}   ]]; then
       caller_stack_messages+=("in script ${BASH_SOURCE[1]}")
     fi
     printf -v backtrace '%s, ' "${caller_stack_messages[@]}"
@@ -565,7 +565,7 @@ environment_name_by_cname() {
     return 2
   fi
   DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
-  if [[ -n "${APPLICATION_NAME:-}" ]]; then
+  if [[ -n ${APPLICATION_NAME:-}   ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
   local -r cname_prefix="$(cname_prefix_by_type "${name_type}")"
@@ -897,7 +897,7 @@ create_application_version() {
   local version_label="${1:-}"
   local version_description="${2:-}"
   local app_name="$(current_app_name)"
-  if [[ "${#version_label}" -gt 100 ]]; then
+  if [[ ${#version_label} -gt 100   ]]; then
     error "Version label cannot be longer than 100 characters"
     return 1
   fi
@@ -925,7 +925,7 @@ count_environments() {
 }
 
 environments() {
-local -r env_name="${1:-$(current_environment_name)}"
+  local -r env_name="${1:-$(current_environment_name)}"
   if [[ -n ${INSTANCEID:-} ]]; then
     debug "Environment logs from ${INSTANCEID} for ${env_name}"
     eb_run logs --stream --instance "${INSTANCEID}" "${env_name}"
@@ -974,7 +974,7 @@ create_environment() {
   local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
 
   notice "Creating environment ${env_name} within application ${APPLICATION_NAME}"
-  if [[ -z ${version_label} ]] && [[ -n "${ASSET_PATH+x}" || -n "${ZIPFILE+x}" ]]; then
+  if [[ -z ${version_label} ]] && [[ -n ${ASSET_PATH+x} || -n ${ZIPFILE+x}     ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \

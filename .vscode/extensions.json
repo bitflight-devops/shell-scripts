@@ -1,3 +1,6 @@
 {
-  "recommendations": ["mads-hartmann.bash-ide-vscode"]
+  "recommendations": [
+    "mads-hartmann.bash-ide-vscode",
+    "jeff-hykin.better-shellscript-syntax"
+  ]
 }

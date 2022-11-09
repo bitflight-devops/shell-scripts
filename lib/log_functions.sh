@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -32,7 +32,7 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  if command_exists zsh && [[ ${whichshell} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
