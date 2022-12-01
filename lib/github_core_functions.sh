@@ -168,7 +168,7 @@ set_env() {
   if running_in_ci; then
     if [[ -z "${ACT:-}" ]]; then
       touch "${GITHUB_ENV}"
-      echo "${key}"="${value}" >> "${GITHUB_ENV}"
+      multiline_variable "${GITHUB_ENV}" "${key}" "${value}"
     else
       # ACT is used for testing GitHub Actions locally
       echo "set-env name=${1}::${2}"
@@ -197,7 +197,7 @@ set_output() {
 
   if running_in_github_actions; then
     if [[ -z "${ACT:-}" ]]; then
-      echo "${key}"="${value}" >> "${GITHUB_OUTPUT}"
+      multiline_variable "${GITHUB_OUTPUT}" "${key}" "${value}"
       debug "Output Variable set: ${key}=${value}"
     else
       # ACT is used for testing GitHub Actions locally
@@ -216,7 +216,7 @@ set_state() {
   fi
   if running_in_github_actions; then
     touch "${GITHUB_STATE}"
-    echo "${1}"="${2}" >> "${GITHUB_STATE}"
+    multiline_variable "${GITHUB_STATE}" "${1}" "${2}"
     debug "State Variable set: ${1}=${2}"
   else
     debug "Not in CI, State Variable not set: ${1}=${2}"
@@ -269,7 +269,16 @@ escape_github_command_property() {
   local -r data="${1}"
   printf '%s' "${data}" | perl -ne '$_ =~ s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g;s/:/%3A/g;s/,/%2C/g;print;'
 }
-
+multiline_variable() {
+  local -r variable_file="${1}"
+  local -r variable_name="${2}"
+  if [[ $# -eq 3 ]]; then
+    local -r variable_value="${3}"
+    printf "%s=EOF\n%s\nEOF\n" "${variable_name}" "${variable_value:-}" >> "${variable_file}"
+  else
+    error "You need to provide a variable name and value. Args: ${*}"
+  fi
+}
 get_last_github_author_email() {
   if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
     execute jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
