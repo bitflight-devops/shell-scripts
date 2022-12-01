@@ -29,8 +29,8 @@ runs:
       run: |
         export SHELL_SCRIPTS_QUIET=1
         export NONINTERACTIVE=1
-        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --silent > ./bash_env.sh
-        export "BASH_ENV=${SCRIPTS_LIB_DIR}/bash_env.sh"
+        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --silent > "${BFD_REPOSITORY}/bash_env.sh"
+        export "BASH_ENV=${BFD_REPOSITORY}/bash_env.sh"
         chmod +x "${BASH_ENV}"
         source "${BASH_ENV}"
         echo "BASH_ENV=${BASH_ENV}" >> "${GITHUB_ENV}"
