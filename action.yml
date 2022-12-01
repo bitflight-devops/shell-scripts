@@ -24,7 +24,7 @@ runs:
       id: version
       shell: bash
       run: |
-        version=$(git -C "${{ github.action_path }}" describe --all)
+        version=$(git -C "${{ github.action_path }}" describe --all 2>/dev/null || true)
         current_version_loaded='false'
         if [[ -z ${BFD_SHELL_SCRIPTS_VERSION:-} ]]; then
           echo "::debug ::BFD_SHELL_SCRIPTS_VERSION is not set, using current checkout"
@@ -54,7 +54,7 @@ runs:
         # [[ -z ${BFD_REPOSITORY} ]] && NONINTERACTIVE=1 bash -c 'source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")'
         # [[ -z ${BFD_REPOSITORY} ]] || eval "$(${SHELL} -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
         # NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
-        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --silent > ${SOURCE_FILE_PATH}
+        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" > ${SOURCE_FILE_PATH}
         chmod +x "${SOURCE_FILE_PATH}"
         set_env BOOTSTRAP "${SOURCE_FILE_PATH}"
         set_env SHELL_SCRIPTS_QUIET "1"
