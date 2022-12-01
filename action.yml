@@ -29,16 +29,16 @@ runs:
       run: |
         export SHELL_SCRIPTS_QUIET=1
         export NONINTERACTIVE=1
-        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --silent > "${BFD_REPOSITORY}/bash_env.sh"
-        export "BASH_ENV=${BFD_REPOSITORY}/bash_env.sh"
+        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" --silent >"${BFD_REPOSITORY}/bash_env.sh"
+        export BASH_ENV="${BFD_REPOSITORY}/bash_env.sh"
         chmod +x "${BASH_ENV}"
         source "${BASH_ENV}"
         echo "BASH_ENV=${BASH_ENV}" >> "${GITHUB_ENV}"
-        debug BFD_REPOSITORY=${BFD_REPOSITORY}"
-        debug SCRIPTS_LIB_DIR=${SCRIPTS_LIB_DIR}"
-        debug BOOTSTRAP=${BOOTSTRAP}"
-        debug SHELL_SCRIPTS_QUIET=${SHELL_SCRIPTS_QUIET}"
-        debug NONINTERACTIVE=${NONINTERACTIVE}"
-        debug BASH_ENV=${BASH_ENV}"
-        debug BFD_SHELL_SCRIPTS_VERSION=${BFD_SHELL_SCRIPTS_VERSION}"
+        debug "BFD_REPOSITORY=${BFD_REPOSITORY}"
+        debug "SCRIPTS_LIB_DIR=${SCRIPTS_LIB_DIR}"
+        debug "BOOTSTRAP=${BOOTSTRAP}"
+        debug "SHELL_SCRIPTS_QUIET=${SHELL_SCRIPTS_QUIET}"
+        debug "NONINTERACTIVE=${NONINTERACTIVE}"
+        debug "BASH_ENV=${BASH_ENV}"
+        debug "BFD_SHELL_SCRIPTS_VERSION=${BFD_SHELL_SCRIPTS_VERSION}"
 
