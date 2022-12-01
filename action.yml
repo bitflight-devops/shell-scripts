@@ -52,7 +52,7 @@ runs:
       working-directory: ${{ github.action_path }}
       run: |
         # [[ -z ${BFD_REPOSITORY} ]] && NONINTERACTIVE=1 bash -c 'source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")'
-        # [[ -z ${BFD_REPOSITORY} ]] || eval "$(${SHELL} -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
+        [[ -z ${SCRIPTS_LIB_DIR:-} ]] || eval "$(${SHELL} -- "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
         # NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
         bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" > ${SOURCE_FILE_PATH}
         chmod +x "${SOURCE_FILE_PATH}"
