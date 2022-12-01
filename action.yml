@@ -42,15 +42,10 @@ runs:
       id: bash_functions
       if: steps.version.outputs.current_version_loaded == 'false'
       shell: bash
-      env:
-        SOURCE_FILE_PATH: ${{ github.action_path }}/bash_env.sh
       working-directory: ${{ github.action_path }}
       run: |
-        bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" > ${SOURCE_FILE_PATH}
-        source "${SOURCE_FILE_PATH}"
-        chmod +x "${SOURCE_FILE_PATH}"
-        cat "${SOURCE_FILE_PATH}"
-        set_env BOOTSTRAP "${SOURCE_FILE_PATH}"
+        source "${SCRIPTS_LIB_DIR}/bootstrap.sh"
+        set_env BOOTSTRAP "${SCRIPTS_LIB_DIR}/bootstrap.sh"
         set_env SHELL_SCRIPTS_QUIET "1"
         set_env NONINTERACTIVE "1"
         set_env "BASH_ENV" "${BOOTSTRAP}"
@@ -63,6 +58,4 @@ runs:
           echo "::debug ::NONINTERACTIVE=${NONINTERACTIVE}"
           echo "::debug ::BASH_ENV=${BASH_ENV}"
           echo "::debug ::BFD_SHELL_SCRIPTS_VERSION=${BFD_SHELL_SCRIPTS_VERSION}"
-          echo "::debug ::loading these function source files:"
-          cat "${BOOTSTRAP}"
         fi
