@@ -2,13 +2,6 @@ name:  Job
 description: >
   Inject BitFlight's shell-scripts as bash functions
   into the Github Action's Job environment, via the BASH_ENV
-inputs:
-  created_source_file_path:
-    description: |
-      The file which the functions will be dumped in to,
-      and which is loaded as the BASH_ENV
-    required: false
-    default: '/home/runner/work/common_bash_functions.${{github.action_ref}}.sh'
 outputs:
   loaded:
     value: ${{ steps.bash_functions.outputs.loaded }}
@@ -28,6 +21,7 @@ runs:
         current_version_loaded='false'
         if [[ -z ${BFD_SHELL_SCRIPTS_VERSION:-} ]]; then
           echo "::debug ::BFD_SHELL_SCRIPTS_VERSION is not set, using current checkout"
+          BFD_SHELL_SCRIPTS_VERSION="${version}"
           echo "BFD_SHELL_SCRIPTS_VERSION=${version}" >> "${GITHUB_ENV}"
         elif [[ "${BFD_SHELL_SCRIPTS_VERSION}" != "${version}" ]]; then
           echo "::debug ::BFD_SHELL_SCRIPTS_VERSION is already set to ${BFD_SHELL_SCRIPTS_VERSION}"
@@ -42,17 +36,16 @@ runs:
         echo "BFD_REPOSITORY=${BFD_REPOSITORY}" >>"${GITHUB_ENV}"
         SCRIPTS_LIB_DIR="${BFD_REPOSITORY}/lib"
         echo "SCRIPTS_LIB_DIR=${SCRIPTS_LIB_DIR}" >>"${GITHUB_ENV}"
+        echo "Shell Scripts Version: ${BFD_SHELL_SCRIPTS_VERSION}"
 
     - name: Publish Bash Functions To Job Steps
       id: bash_functions
       if: steps.version.outputs.current_version_loaded == 'false'
       shell: bash
       env:
-        SOURCE_FILE_PATH: ${{ inputs.created_source_file_path }}
+        SOURCE_FILE_PATH: ${{ github.action_path }}/bash_env.sh
       working-directory: ${{ github.action_path }}
       run: |
-        # [[ -z ${BFD_REPOSITORY} ]] && NONINTERACTIVE=1 bash -c 'source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")'
-        # NONINTERACTIVE=1 SHELL_SCRIPTS_QUIET=1 source "lib/bootstrap.sh"
         bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh" > ${SOURCE_FILE_PATH}
         source "${SOURCE_FILE_PATH}"
         chmod +x "${SOURCE_FILE_PATH}"
