@@ -24,7 +24,6 @@ runs:
 
     - name: Publish Bash Functions To Job Steps
       id: bash_functions
-      if: steps.version.outputs.current_version_loaded == 'false'
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
