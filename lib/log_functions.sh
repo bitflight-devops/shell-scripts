@@ -302,7 +302,7 @@ github_log() {
   local -r logtype="$(get_log_type "${1}")"
   shift
 
-  if [[ $(type -t escape_github_command_data) == 'function' ]] && [[ -n ${logtype} ]]; then
+  if [[ $(type escape_github_command_data) == *'function'* ]] && [[ -n ${logtype} ]]; then
     local -r msg="$(escape_github_command_data "$(trim "${*}")")"
   else
     local -r msg="${*}"
@@ -314,7 +314,7 @@ github_log() {
       LOG_STRING=("::${logtype} ")
       shift
       FILE="$(trim "${GITHUB_LOG_FILE:-${BASH_SOURCE[0]}}")"
-      if [[ $(type -t escape_github_command_property) == 'function' ]] && [[ -n ${logtype} ]]; then
+      if [[ $(type escape_github_command_property) == *'function'* ]] && [[ -n ${logtype} ]]; then
         [[ ${#FILE} -gt 0 ]] && LOG_ARGS+=("file=$(escape_github_command_property "${FILE}")")
         [[ -n ${GITHUB_LOG_TITLE:-} ]] && LOG_ARGS+=("title=$(escape_github_command_property "${GITHUB_LOG_TITLE}")")
       else

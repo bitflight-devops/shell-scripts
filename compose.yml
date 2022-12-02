@@ -1,0 +1,10 @@
+services:
+  runner:
+    image: myoung34/github-runner:latest
+    container_name: runner
+    ports:
+      - "22:8022"
+    env_file: .env.secrets
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/_work

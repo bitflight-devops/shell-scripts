@@ -166,6 +166,7 @@ set_env() {
     fi
   fi
   if running_in_ci; then
+    : "${GITHUB_ENV:="./env.environment.local.github"}"
     if [[ -z "${ACT:-}" ]]; then
       touch "${GITHUB_ENV}"
       multiline_variable "${GITHUB_ENV}" "${key}" "${value}"
@@ -196,7 +197,9 @@ set_output() {
   fi
 
   if running_in_github_actions; then
+    : "${GITHUB_OUTPUT:="./env.output.local.github"}"
     if [[ -z "${ACT:-}" ]]; then
+      touch "${GITHUB_OUTPUT}"
       multiline_variable "${GITHUB_OUTPUT}" "${key}" "${value}"
       debug "Output Variable set: ${key}=${value}"
     else
@@ -215,6 +218,7 @@ set_state() {
     return 1
   fi
   if running_in_github_actions; then
+    : "${GITHUB_STATE:="./env.state.local.github"}"
     touch "${GITHUB_STATE}"
     multiline_variable "${GITHUB_STATE}" "${1}" "${2}"
     debug "State Variable set: ${1}=${2}"
@@ -273,8 +277,9 @@ multiline_variable() {
   local -r variable_file="${1}"
   local -r variable_name="${2}"
   if [[ $# -eq 3 ]]; then
+    local -r delimiter="$(openssl rand -hex 8)"
     local -r variable_value="${3}"
-    printf "%s=EOF\n%s\nEOF\n" "${variable_name}" "${variable_value:-}" >> "${variable_file}"
+    printf "%s<<%s\n%s\n%s\n" "${variable_name}" "${delimiter}" "${variable_value:-}" "${delimiter}" >> "${variable_file}"
   else
     error "You need to provide a variable name and value. Args: ${*}"
   fi

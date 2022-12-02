@@ -23,6 +23,7 @@ current_eb.json
 # Project
 
 .env
+.env.*
 git.properties
 .m2
 .vscode
