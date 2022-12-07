@@ -286,12 +286,12 @@ multiline_variable() {
 }
 get_last_github_author_email() {
   if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
-    execute jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
+    jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
   fi
 }
 get_last_github_author_name() {
   if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
-    execute jq -r '.pull_request // .check_suite // .workflow_run // .issue // .sender // .commit // .repository // . | .head_commit // .commit // . | .author.name // .pusher.name // .login // .user.login // .owner.login // ""' "${GITHUB_EVENT_PATH:-}"
+    jq -r '.pull_request // .check_suite // .workflow_run // .issue // .sender // .commit // .repository // . | .head_commit // .commit // . | .author.name // .pusher.name // .login // .user.login // .owner.login // ""' "${GITHUB_EVENT_PATH:-}"
   fi
 }
 
