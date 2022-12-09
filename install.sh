@@ -520,8 +520,6 @@ download_shell_scripts() {
   fi
 }
 
-
-
 unpack() {
   archive=$1
   bin_dir=$2
@@ -673,12 +671,17 @@ progress_bar() {
   done
 }
 
-export DEPENDENCIES=(
+DEPENDENCIES=(
   git
   jq
-  wget
   perl
 )
+
+if ! command_exists wget && ! command_exists curl; then
+  DEPENDENCIES+=(
+    curl
+  )
+fi
 
 missing_dependencies() {
   REQUIRED_DEPENDENCIES=()
