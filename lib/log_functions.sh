@@ -169,6 +169,7 @@ get_log_type() {
       "success"
       "failure"
       "step"
+      "question"
       "pass"
       "fail"
       "skip"
@@ -201,6 +202,7 @@ get_log_color() {
   LOG_COLOR_debug="${GREY}"
   LOG_COLOR_starting="${COLOR_BOLD_CYAN}"
   LOG_COLOR_step="${COLOR_BRIGHT_CYAN}"
+  LOG_COLOR_question="${tty_underline}${COLOR_BOLD_MAGENTA}"
   LOG_COLOR_pass="${COLOR_GREEN}"
   LOG_COLOR_fail="${COLOR_RED}"
   LOG_COLOR_skipped="${COLOR_YELLOW}"
@@ -247,6 +249,10 @@ indent_style() {
     step)
       style=" "
       final_style="${STEP_ICON:-}"
+      ;;
+    question)
+      style=" "
+      final_style="${QUESTION_ICON:-}"
       ;;
     failure)
       style=" "
@@ -467,19 +473,24 @@ success() {
 
 starting() {
   local -r message="${*}"
-  log_output "0" "STARTING" "COLOR_YELLOW" "${START_ICON} ${COLOR_YELLOW}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "STARTING" "COLOR_YELLOW" "${START_ICON} ${message}${COLOR_RESET}" 2>&1
 
 }
 
 finished() {
   local -r message="${*}"
-  log_output "0" "FINISHED" "COLOR_YELLOW" "${DONE_ICON} ${COLOR_YELLOW}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "FINISHED" "COLOR_YELLOW" "${DONE_ICON} ${message}${COLOR_RESET}" 2>&1
 }
 
 step() {
   local -r message="${*}"
-  log_output "0" "STEP   " "COLOR_CYAN" "${STEP_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "STEP   " "COLOR_CYAN" "${STEP_ICON} ${message}${COLOR_RESET}" 2>&1
 }
+
+step_question() {
+    local -r message="${*}"
+    log_output "0" "QUESTION" "COLOR_CYAN" "${STEP_ICON} ${message}${COLOR_RESET}" 2>&1
+  }
 
 step_passed() {
   local -r message="${*}"

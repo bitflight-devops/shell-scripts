@@ -119,6 +119,7 @@ MAINTENANCE_ICON=${MAINTENANCE_ICON:-${TOOLS_ICON}}
 PROBLEM_ICON=${PROBLEM_ICON:-${UMBRELLA_ICON}}
 NOTICE_ICON=${NOTICE_ICON:-${LIGHTNING_ICON}}
 RESULTS_ICON=${RESULTS_ICON:-${PENCIL_ICON}}
+QUESTION_ICON=${QUESTION_ICON:-${HAND_PEN_ICON}}
 
 # Taken from lib/github_core_functions.sh
 escape_github_command_data() {
@@ -143,6 +144,7 @@ get_log_type() {
       "success"
       "failure"
       "step"
+      "question"
       "pass"
       "fail"
       "skip"
@@ -175,6 +177,7 @@ get_log_color() {
   LOG_COLOR_debug="${COLOR_GREY}"
   LOG_COLOR_starting="${COLOR_BOLD_CYAN}"
   LOG_COLOR_step="${COLOR_BRIGHT_CYAN}"
+  LOG_COLOR_question="${tty_underline}${COLOR_BOLD_MAGENTA}"
   LOG_COLOR_pass="${COLOR_GREEN}"
   LOG_COLOR_fail="${COLOR_RED}"
   LOG_COLOR_skipped="${COLOR_YELLOW}"
@@ -232,6 +235,10 @@ indent_style() {
     step)
       style=" "
       final_style="${STEP_ICON:-}"
+      ;;
+    question)
+      style=" "
+      final_style="${QUESTION_ICON:-}"
       ;;
     failure)
       style=" "
@@ -356,10 +363,10 @@ if ! command_exists step; then
     simple_log step "${message}" 2>&1
   }
 fi
-if ! command_exists start_step; then
-  start_step() {
+if ! command_exists step_question; then
+  step_question() {
     local -r message="${*}"
-    simple_log step "${message}" 2>&1
+    simple_log question "${message}" 2>&1
   }
 fi
 if ! command_exists step_passed; then
