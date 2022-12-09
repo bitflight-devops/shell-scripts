@@ -17,7 +17,7 @@ GREEN="$(this_tput setaf 2 2> /dev/null || printf '')"
 YELLOW="$(this_tput setaf 3 2> /dev/null || printf '')"
 BLUE="$(this_tput setaf 4 2> /dev/null || printf '')"
 MAGENTA="$(this_tput setaf 5 2> /dev/null || printf '')"
-NO_COLOR="$(this_tput sgr0 2> /dev/null || printf '')"
+COLOR_RESET="$(this_tput sgr0 2> /dev/null || printf '')"
 
 # string formatters
 if [[ -t 1 ]]; then
@@ -182,7 +182,7 @@ get_log_color() {
     local -r logtype="${arg}"
   fi
   if [[ -z ${logtype} ]]; then
-    printf '%s' "${NO_COLOR}"
+    printf '%s' "${COLOR_RESET}"
   else
     eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
   fi
@@ -303,7 +303,7 @@ simple_log() {
     if [[ ${logcolor} != "::" ]]; then
       local indent_width=11
       local indent="$(indent_style "${logtype}" "${indent_width}")"
-      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
+      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${COLOR_RESET}"
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
       msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"

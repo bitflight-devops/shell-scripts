@@ -130,7 +130,7 @@ execute() {
 }
 
 ohai() {
-  run_quietly printf "${BLUE}==>${BOLD} %s${NO_COLOR}\n" "$(shell_join "$@")"
+  run_quietly printf "${BLUE}==>${BOLD} %s${COLOR_RESET}\n" "$(shell_join "$@")"
 }
 
 # Fail fast with a concise message when not using bash
@@ -354,42 +354,42 @@ create_script_directory() {
   local fix_ownership='false'
   if [[ -d ${path} ]]; then
     if ! test_writeable "${path}"; then
-      info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
+      info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
     else
-      info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
       return 0
     fi
   else
 
-    info "Attempting to create ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info "Attempting to create ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     if ! execute "${MKDIR[@]}" "${path}"; then
       if [[ ${user} != 'root' ]]; then
         if ! run_as_root "${MKDIR[@]}" "${path}"; then
           abort "Failed to create ${COLOR_YELLOW}${path}${RED} as root."
         else
           fix_ownership='true'
-          info "Created ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}root${NO_COLOR}."
+          info "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}root${COLOR_RESET}."
         fi
       else
         abort "Failed to create ${COLOR_YELLOW}${path}${RED}."
       fi
     else
-      info "Created ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     fi
   fi
 
   if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
-    info "Setting ownership on ${COLOR_YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${COLOR_YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    info "Setting permissions on ${COLOR_YELLOW}${path}${NO_COLOR} to ${permissions}"
-    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${COLOR_YELLOW}${path}${NO_COLOR} to ${permissions}"
+    info "Setting ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
+    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
+    info "Setting permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
+    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
   fi
 
-  info "Verifying that ${COLOR_YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+  info "Verifying that ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   if ! test_writeable "${path}"; then
     abort "The directory ${COLOR_YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
   else
-    info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   fi
 
 }
@@ -512,7 +512,7 @@ download_shell_scripts() {
         rm -rf "${bfd_cache}"
         abort_msg=(
           "Unable to download shell-scripts from\n"
-          "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
+          "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${COLOR_RESET}"
         )
         abort "${abort_msg[*]}"
       fi
@@ -737,9 +737,9 @@ install_dependencies() {
     fi
   fi
   if [[ -n ${NO_PACKAGE_MANAGER:-} ]]; then
-    abort "No package manager found. Please install ${COLOR_YELLOW}${dependencies[*]}${NO_COLOR} manually."
+    abort "No package manager found. Please install ${COLOR_YELLOW}${dependencies[*]}${COLOR_RESET} manually."
   fi
-  success "Installed ${COLOR_YELLOW}${dependencies[*]}${NO_COLOR}."
+  success "Installed ${COLOR_YELLOW}${dependencies[*]}${COLOR_RESET}."
 }
 
 installer_dependencies() {
@@ -755,7 +755,7 @@ installer_dependencies() {
     # permission to install the dependencies.
 
     local message="This script requires the following dependencies:\n"
-    for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${NO_COLOR}\n"; done
+    for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${COLOR_RESET}\n"; done
     if root_available; then
       notice "${message}\nThese dependencies can be installed for you as root.\n"
       step "Do you want to install them now? [Y/n] "
@@ -774,11 +774,11 @@ installer_dependencies() {
   fi
 
   if [[ ${INSTALL_DEPS:-} == 'true' ]]; then
-    info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${NO_COLOR}"
+    info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${COLOR_RESET}"
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
   elif [[ ${#REQUIRED_DEPENDENCIES[@]} -gt 0 ]]; then
     ohai "Skipping dependency installation…"
-    abort "Please install ${COLOR_YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
+    abort "Please install ${COLOR_YELLOW}${REQUIRED_DEPENDENCIES[*]}${COLOR_RESET} manually."
   fi
 
 }
