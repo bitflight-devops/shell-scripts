@@ -3,15 +3,15 @@
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 : "${COLOR_AND_EMOJI_VARIABLES_LOADED:=1}"
 this_tput="$(command_exists tput && echo 'tput' || printf '')"
-BOLD="$(this_tput bold 2>/dev/null || printf '')"
-GREY="$(this_tput setaf 0 2>/dev/null || printf '')"
-UNDERLINE="$(this_tput smul 2>/dev/null || printf '')"
-RED="$(this_tput setaf 1 2>/dev/null || printf '')"
-GREEN="$(this_tput setaf 2 2>/dev/null || printf '')"
-YELLOW="$(this_tput setaf 3 2>/dev/null || printf '')"
-BLUE="$(this_tput setaf 4 2>/dev/null || printf '')"
-MAGENTA="$(this_tput setaf 5 2>/dev/null || printf '')"
-NO_COLOR="$(this_tput sgr0 2>/dev/null || printf '')"
+BOLD="$(this_tput bold 2> /dev/null || printf '')"
+GREY="$(this_tput setaf 0 2> /dev/null || printf '')"
+UNDERLINE="$(this_tput smul 2> /dev/null || printf '')"
+RED="$(this_tput setaf 1 2> /dev/null || printf '')"
+GREEN="$(this_tput setaf 2 2> /dev/null || printf '')"
+YELLOW="$(this_tput setaf 3 2> /dev/null || printf '')"
+BLUE="$(this_tput setaf 4 2> /dev/null || printf '')"
+MAGENTA="$(this_tput setaf 5 2> /dev/null || printf '')"
+NO_COLOR="$(this_tput sgr0 2> /dev/null || printf '')"
 
 # string formatters
 if [[ -t 1 ]]; then
@@ -26,7 +26,7 @@ tty_red="$(tty_mkbold 31)"
 tty_bold="$(tty_mkbold 39)"
 tty_reset="$(tty_escape 0)"
 
-if test -t 1 && command_exists tput && [[ $(this_tput colors 2>/dev/null || printf '0') -gt 0 ]]; then
+# if test -t 1 && command_exists tput && [[ $(this_tput colors 2> /dev/null || printf '0') -gt 0 ]]; then
   COLOR_BRIGHT_BLACK=$'\e[0;90m'
   COLOR_BRIGHT_RED=$'\e[0;91m'
   COLOR_BRIGHT_GREEN=$'\e[0;92m'
@@ -54,10 +54,17 @@ if test -t 1 && command_exists tput && [[ $(this_tput colors 2>/dev/null || prin
   COLOR_BOLD_WHITE=$'\e[1;37m'
   COLOR_BOLD=$'\e[1m'
   COLOR_BOLD_YELLOW=$'\e[1;33m'
+  COLOR_BG_BLACK=$'\e[1;40m'
+  COLOR_BG_RED=$'\e[1;41m'
+  COLOR_BG_GREEN=$'\e[1;42m'
+  COLOR_BG_YELLOW=$'\e[1;43m'
+  COLOR_BG_BLUE=$'\e[1;44m'
+  COLOR_BG_MAGENTA=$'\e[1;45m'
+  COLOR_BG_CYAN=$'\e[1;46m'
+  COLOR_BG_WHITE=$'\e[1;47m'
   COLOR_RESET=$'\e[0m'
-  CLEAR_SCREEN="$(tput rc 2>/dev/null || printf '')"
-fi
-
+  CLEAR_SCREEN="$(this_tput rc 2> /dev/null || printf '')"
+# fi
 
 #BASIC_ICONS
 INFORMATION_ICON=$'\342\204\271'      # ℹ Information
@@ -106,7 +113,3 @@ MAINTENANCE_ICON=${MAINTENANCE_ICON:-${TOOLS_ICON}}
 PROBLEM_ICON=${PROBLEM_ICON:-${UMBRELLA_ICON}}
 NOTICE_ICON=${NOTICE_ICON:-${LIGHTNING_ICON}}
 RESULTS_ICON=${RESULTS_ICON:-${PENCIL_ICON}}
-
-
-
-

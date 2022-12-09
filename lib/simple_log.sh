@@ -62,6 +62,14 @@ tty_reset="$(tty_escape 0)"
   COLOR_BOLD_YELLOW=$'\e[1;33m'
   COLOR_RESET=$'\e[0m'
   CLEAR_SCREEN="$(this_tput rc 2> /dev/null || printf '')"
+  COLOR_BG_BLACK=$'\e[1;40m'
+COLOR_BG_RED=$'\e[1;41m'
+COLOR_BG_GREEN=$'\e[1;42m'
+COLOR_BG_YELLOW=$'\e[1;43m'
+COLOR_BG_BLUE=$'\e[1;44m'
+COLOR_BG_MAGENTA=$'\e[1;45m'
+COLOR_BG_CYAN=$'\e[1;46m'
+COLOR_BG_WHITE=$'\e[1;47m'
 # fi
 
 #BASIC_ICONS
