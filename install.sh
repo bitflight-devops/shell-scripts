@@ -354,42 +354,42 @@ create_script_directory() {
   local fix_ownership='false'
   if [[ -d ${path} ]]; then
     if ! test_writeable "${path}"; then
-      info "The directory ${YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
+      info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
     else
-      info "The directory ${YELLOW}${path}${NO_COLOR}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
       return 0
     fi
   else
 
-    info "Attempting to create ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info "Attempting to create ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
     if ! execute "${MKDIR[@]}" "${path}"; then
       if [[ ${user} != 'root' ]]; then
         if ! run_as_root "${MKDIR[@]}" "${path}"; then
-          abort "Failed to create ${YELLOW}${path}${RED} as root."
+          abort "Failed to create ${COLOR_YELLOW}${path}${RED} as root."
         else
           fix_ownership='true'
-          info "Created ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}root${NO_COLOR}."
+          info "Created ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}root${NO_COLOR}."
         fi
       else
-        abort "Failed to create ${YELLOW}${path}${RED}."
+        abort "Failed to create ${COLOR_YELLOW}${path}${RED}."
       fi
     else
-      info "Created ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info "Created ${COLOR_YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
     fi
   fi
 
   if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
-    info "Setting ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    info "Setting permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
-    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
+    info "Setting ownership on ${COLOR_YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
+    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${COLOR_YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
+    info "Setting permissions on ${COLOR_YELLOW}${path}${NO_COLOR} to ${permissions}"
+    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${COLOR_YELLOW}${path}${NO_COLOR} to ${permissions}"
   fi
 
-  info "Verifying that ${YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+  info "Verifying that ${COLOR_YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
   if ! test_writeable "${path}"; then
-    abort "The directory ${YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
+    abort "The directory ${COLOR_YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
   else
-    info "The directory ${YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info "The directory ${COLOR_YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
   fi
 
 }
@@ -734,9 +734,9 @@ install_dependencies() {
     fi
   fi
   if [[ -n ${NO_PACKAGE_MANAGER:-} ]]; then
-    abort "No package manager found. Please install ${YELLOW}${dependencies[*]}${NO_COLOR} manually."
+    abort "No package manager found. Please install ${COLOR_YELLOW}${dependencies[*]}${NO_COLOR} manually."
   fi
-  success "Installed ${YELLOW}${dependencies[*]}${NO_COLOR}."
+  success "Installed ${COLOR_YELLOW}${dependencies[*]}${NO_COLOR}."
 }
 
 installer_dependencies() {
@@ -775,7 +775,7 @@ installer_dependencies() {
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
   elif [[ ${#REQUIRED_DEPENDENCIES[@]} -gt 0 ]]; then
     ohai "Skipping dependency installation…"
-    abort "Please install ${YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
+    abort "Please install ${COLOR_YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
   fi
 
 }

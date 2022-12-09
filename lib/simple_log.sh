@@ -32,7 +32,7 @@ tty_red="$(tty_mkbold 31)"
 tty_bold="$(tty_mkbold 39)"
 tty_reset="$(tty_escape 0)"
 
-if test -t 1 && command_exists tput && [[ $(this_tput colors 2>/dev/null || printf '0') -gt 0 ]]; then
+# if test -t 1 && [[ $(this_tput colors 2>/dev/null || printf '0') -gt 0 ]]; then
   COLOR_BRIGHT_BLACK=$'\e[0;90m'
   COLOR_BRIGHT_RED=$'\e[0;91m'
   COLOR_BRIGHT_GREEN=$'\e[0;92m'
@@ -61,8 +61,8 @@ if test -t 1 && command_exists tput && [[ $(this_tput colors 2>/dev/null || prin
   COLOR_BOLD=$'\e[1m'
   COLOR_BOLD_YELLOW=$'\e[1;33m'
   COLOR_RESET=$'\e[0m'
-  CLEAR_SCREEN="$(tput rc 2>/dev/null || printf '')"
-fi
+  CLEAR_SCREEN="$(this_tput rc 2>/dev/null || printf '')"
+# fi
 
 #BASIC_ICONS
 INFORMATION_ICON=$'\342\204\271'      # ℹ Information
