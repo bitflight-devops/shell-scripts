@@ -152,7 +152,6 @@ running_in_ci() {
   [[ -n ${CI:-} ]]
 }
 
-# Duplicate of function in lib/log_functions.sh
 get_log_type() {
   set +x
   LOG_TYPES=(
@@ -161,12 +160,18 @@ get_log_type() {
     "notice"
     "debug"
   )
-  if [[ -z ${GITHUB_ACTIONS-} ]]; then
+  if [[ -z ${GITHUB_ACTIONS:-} ]]; then
     LOG_TYPES+=(
       "info"
       "success"
       "failure"
       "step"
+      "pass"
+      "fail"
+      "skip"
+      "starting"
+      "finished"
+      "result"
     )
   fi
   local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
@@ -176,7 +181,7 @@ get_log_type() {
     echo ""
   fi
 }
-
+# shellcheck disable=SC2034
 get_log_color() {
   if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     printf '%s' "::"
@@ -191,12 +196,22 @@ get_log_color() {
   LOG_COLOR_warning="${YELLOW}"
   LOG_COLOR_notice="${MAGENTA}"
   LOG_COLOR_debug="${GREY}"
-  LOG_COLOR_step="${COLOR_BOLD_CYAN}"
-  LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
+  LOG_COLOR_starting="${COLOR_BOLD_CYAN}"
+  LOG_COLOR_step="${COLOR_BRIGHT_CYAN}"
+  LOG_COLOR_pass="${COLOR_GREEN}"
+  LOG_COLOR_fail="${COLOR_RED}"
+  LOG_COLOR_skipped="${COLOR_YELLOW}"
+  LOG_COLOR_failure="${COLOR_BOLD_RED}"
   LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
+  LOG_COLOR_finished="${COLOR_BOLD_CYAN}"
+  LOG_COLOR_result="${COLOR_BOLD_WHITE}"
   local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-  local -r logtype="$(get_log_type "${arg}")"
 
+  if [[ ! ${arg} =~ (success|failure|step|result|finished|starting) ]]; then
+    local -r logtype="$(get_log_type "${arg}")"
+  else
+    local -r logtype="${arg}"
+  fi
   if [[ -z ${logtype} ]]; then
     printf '%s' "${NO_COLOR}"
   else
@@ -212,27 +227,52 @@ indent_style() {
   case "${logtype}" in
     notice)
       style=" "
-      final_style="${STARTING_STAR}"
+      final_style="${NOTICE_ICON:-}"
+      ;;
+    starting)
+      style=" "
+      final_style="${STARTING_ICON:-}"
+      ;;
+    finished)
+      style=" "
+      final_style="${FINISHED_ICON:-}"
+      ;;
+    result)
+      style=" "
+      final_style="${RESULT_ICON:-}"
       ;;
     step)
       style=" "
-      final_style="${STEP_STAR}"
+      final_style="${STEP_ICON:-}"
       ;;
     failure)
       style=" "
-      final_style="${CROSS_MARK}"
+      final_style="${FAILURE_ICON:-}"
       ;;
     success)
       style=" "
-      final_style="${CHECK_MARK_BUTTON}"
+      final_style="${SUCCESS_ICON:-}"
+      ;;
+    pass)
+      style=" "
+      final_style="${PASS_ICON:-}"
+      ;;
+    fail)
+      style=" "
+      final_style="${FAIL_ICON:-}"
+      ;;
+    skipped)
+      style=" "
+      final_style="${SKIP_ICON:-}"
       ;;
     info)
       style=" "
-      final_style="${INFO_ICON} "
+      final_style="${INFO_ICON:-}"
+      # logtype=''
       ;;
     debug)
       style="-"
-      final_style="${DEBUG_ICON:-} "
+      final_style="${DEBUG_ICON:-}"
       ;;
     *)
       style=""
@@ -243,29 +283,6 @@ indent_style() {
   printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
   printf -- "${style}%.0s" $(seq "${indent_length}")
   printf '%s' "${final_style}"
-}
-
-simple_log() {
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
-  local -r logtype="$(get_log_type "${1}")"
-  local -r logcolor="$(get_log_color "${logtype}")"
-  if [[ -z ${logtype} ]]; then
-    plain_log "${fulllogtype}" "${*}"
-  else
-    shift
-    if [[ ${logcolor} != "::" ]]; then
-      local indent_width=11
-      local indent="$(indent_style "${logtype}" "${indent_width}")"
-      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
-      # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
-      printf -v space "%*s" "$((indent_width + 2))" ''
-      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
-    else
-      printf -v log_prefix '::%s ::' "${logtype}"
-      local -r msg="$(escape_github_command_data "${*}")"
-    fi
-    printf '%s%s\n' "${log_prefix}" "${msg}"
-  fi
 }
 
 plain_log() {
@@ -302,7 +319,7 @@ github_log() {
   local -r logtype="$(get_log_type "${1}")"
   shift
 
-  if [[ $(type escape_github_command_data) == *'function'* ]] && [[ -n ${logtype} ]]; then
+  if [[ $(type escape_github_command_data) == *function* ]] && [[ -n ${logtype} ]]; then
     local -r msg="$(escape_github_command_data "$(trim "${*}")")"
   else
     local -r msg="${*}"
@@ -417,7 +434,7 @@ fatal() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
-  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | to_stderr
+  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ${FATAL_ICON:-} ${*}" | to_stderr
   exit "${return_code}"
 }
 
@@ -432,17 +449,55 @@ warn() {
 warning() { warn "${@}"; }
 
 failure() {
-  local -r message="${*}"
   if [[ $1 =~ ^[\d]+$ ]] && [[ $1 -gt 0 ]]; then
     local -r return_code="$1"
     shift
   fi
-  log_output "${return_code}" "FAILURE" "COLOR_BRIGHT_RED" "${CROSS_MARK} ${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
+  local -r message="${*}"
+  log_output "${return_code}" "FAILURE" "COLOR_BRIGHT_RED" "${FAILURE_ICON} ${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
 }
 
 success() {
   local -r message="${*}"
-  log_output "0" "SUCCESS" "COLOR_BRIGHT_YELLOW" "${CHECK_MARK_BUTTON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "SUCCESS" "COLOR_BRIGHT_YELLOW" "${SUCCESS_ICON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
+}
+
+starting() {
+  local -r message="${*}"
+  log_output "0" "STARTING" "COLOR_YELLOW" "${START_ICON} ${COLOR_YELLOW}${message}${COLOR_RESET}" 2>&1
+
+}
+
+finished() {
+  local -r message="${*}"
+  log_output "0" "FINISHED" "COLOR_YELLOW" "${DONE_ICON} ${COLOR_YELLOW}${message}${COLOR_RESET}" 2>&1
+}
+
+step() {
+  local -r message="${*}"
+  log_output "0" "STEP   " "COLOR_CYAN" "${STEP_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+}
+
+step_passed() {
+  local -r message="${*}"
+  log_output "0" "PASS   " "COLOR_BOLD_GREEN" "${PASS_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+}
+
+step_failed() {
+  local -r message="${*}"
+    log_output "0" "FAIL   " "COLOR_BOLD_RED" "${FAIL_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+}
+
+step_skipped() {
+  local -r message="${*}"
+    log_output "0" "SKIPPED " "COLOR_BOLD_CYAN" "${SKIP_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+
+}
+
+result() {
+  local -r message="${*}"
+    log_output "0" "RESULT  " "COLOR_BOLD_CYAN" "${RESULT_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+
 }
 
 pipe_errors_to_github_workflow() {
