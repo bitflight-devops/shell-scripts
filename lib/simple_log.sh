@@ -9,15 +9,15 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 this_tput="$(command_exists tput && echo 'tput' || printf '')"
-BOLD="$(this_tput bold 2>/dev/null || printf '')"
-GREY="$(this_tput setaf 0 2>/dev/null || printf '')"
-UNDERLINE="$(this_tput smul 2>/dev/null || printf '')"
-RED="$(this_tput setaf 1 2>/dev/null || printf '')"
-GREEN="$(this_tput setaf 2 2>/dev/null || printf '')"
-YELLOW="$(this_tput setaf 3 2>/dev/null || printf '')"
-BLUE="$(this_tput setaf 4 2>/dev/null || printf '')"
-MAGENTA="$(this_tput setaf 5 2>/dev/null || printf '')"
-NO_COLOR="$(this_tput sgr0 2>/dev/null || printf '')"
+BOLD="$(this_tput bold 2> /dev/null || printf '')"
+GREY="$(this_tput setaf 0 2> /dev/null || printf '')"
+UNDERLINE="$(this_tput smul 2> /dev/null || printf '')"
+RED="$(this_tput setaf 1 2> /dev/null || printf '')"
+GREEN="$(this_tput setaf 2 2> /dev/null || printf '')"
+YELLOW="$(this_tput setaf 3 2> /dev/null || printf '')"
+BLUE="$(this_tput setaf 4 2> /dev/null || printf '')"
+MAGENTA="$(this_tput setaf 5 2> /dev/null || printf '')"
+NO_COLOR="$(this_tput sgr0 2> /dev/null || printf '')"
 
 # string formatters
 if [[ -t 1 ]]; then
@@ -61,7 +61,7 @@ tty_reset="$(tty_escape 0)"
   COLOR_BOLD=$'\e[1m'
   COLOR_BOLD_YELLOW=$'\e[1;33m'
   COLOR_RESET=$'\e[0m'
-  CLEAR_SCREEN="$(this_tput rc 2>/dev/null || printf '')"
+  CLEAR_SCREEN="$(this_tput rc 2> /dev/null || printf '')"
 # fi
 
 #BASIC_ICONS
@@ -111,7 +111,6 @@ MAINTENANCE_ICON=${MAINTENANCE_ICON:-${TOOLS_ICON}}
 PROBLEM_ICON=${PROBLEM_ICON:-${UMBRELLA_ICON}}
 NOTICE_ICON=${NOTICE_ICON:-${LIGHTNING_ICON}}
 RESULTS_ICON=${RESULTS_ICON:-${PENCIL_ICON}}
-
 
 # Taken from lib/github_core_functions.sh
 escape_github_command_data() {
@@ -165,7 +164,7 @@ get_log_color() {
   LOG_COLOR_info="${COLOR_GREEN}"
   LOG_COLOR_warning="${COLOR_YELLOW}"
   LOG_COLOR_notice="${COLOR_MAGENTA}"
-  LOG_COLOR_debug="${GREY}"
+  LOG_COLOR_debug="${COLOR_GREY}"
   LOG_COLOR_starting="${COLOR_BOLD_CYAN}"
   LOG_COLOR_step="${COLOR_BRIGHT_CYAN}"
   LOG_COLOR_pass="${COLOR_GREEN}"
@@ -345,6 +344,12 @@ if ! command_exists finished; then
 fi
 if ! command_exists step; then
   step() {
+    local -r message="${*}"
+    simple_log step "${message}" 2>&1
+  }
+fi
+if ! command_exists start_step; then
+  start_step() {
     local -r message="${*}"
     simple_log step "${message}" 2>&1
   }
