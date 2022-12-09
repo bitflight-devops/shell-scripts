@@ -755,7 +755,7 @@ installer_dependencies() {
     for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${NO_COLOR}\n"; done
     if root_available; then
       notice "${message}\nThese dependencies can be installed for you as root.\n"
-      start_step "Do you want to install them now? [Y/n] "
+      step "Do you want to install them now? [Y/n] "
       if is_zsh; then
         read -k 1 -r -q answer
       else
