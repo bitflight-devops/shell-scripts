@@ -17,57 +17,6 @@
 # https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh
 
 set -eu
-BOLD="$(tput bold 2> /dev/null || printf '')"
-GREY="$(tput setaf 0 2> /dev/null || printf '')"
-UNDERLINE="$(tput smul 2> /dev/null || printf '')"
-RED="$(tput setaf 1 2> /dev/null || printf '')"
-GREEN="$(tput setaf 2 2> /dev/null || printf '')"
-YELLOW="$(tput setaf 3 2> /dev/null || printf '')"
-BLUE="$(tput setaf 4 2> /dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2> /dev/null || printf '')"
-NO_COLOR="$(tput sgr0 2> /dev/null || printf '')"
-
-COLOR_BOLD_BLACK=$'\e[1;30m'
-COLOR_BOLD_RED=$'\e[1;31m'
-COLOR_BOLD_GREEN=$'\e[1;32m'
-COLOR_BOLD_YELLOW=$'\e[1;33m'
-COLOR_BOLD_BLUE=$'\e[1;34m'
-COLOR_BOLD_MAGENTA=$'\e[1;35m'
-COLOR_BOLD_CYAN=$'\e[1;36m'
-COLOR_BOLD_WHITE=$'\e[1;37m'
-COLOR_BOLD=$'\e[1m'
-COLOR_BOLD_YELLOW=$'\e[1;33m'
-COLOR_RESET=$'\e[0m'
-CLEAR_SCREEN="$(tput rc 2> /dev/null || printf '')"
-
-COLOR_BRIGHT_BLACK=$'\e[0;90m'
-COLOR_BRIGHT_RED=$'\e[0;91m'
-COLOR_BRIGHT_GREEN=$'\e[0;92m'
-COLOR_BRIGHT_YELLOW=$'\e[0;93m'
-COLOR_BRIGHT_BLUE=$'\e[0;94m'
-COLOR_BRIGHT_MAGENTA=$'\e[0;95m'
-COLOR_BRIGHT_CYAN=$'\e[0;96m'
-COLOR_BRIGHT_WHITE=$'\e[0;97m'
-
-COLOR_BG_BLACK=$'\e[1;40m'
-COLOR_BG_RED=$'\e[1;41m'
-COLOR_BG_GREEN=$'\e[1;42m'
-COLOR_BG_YELLOW=$'\e[1;43m'
-COLOR_BG_BLUE=$'\e[1;44m'
-COLOR_BG_MAGENTA=$'\e[1;45m'
-COLOR_BG_CYAN=$'\e[1;46m'
-COLOR_BG_WHITE=$'\e[1;47m'
-COLOR_RESET=$'\e[0m'
-
-INFO_ICON=$'ℹ️'
-DEBUG_ICON=$'🛠️'
-STARTING_STAR=$'⭐'
-STEP_STAR=$'✨'
-HOURGLASS_IN_PROGRESS=$'⏳' # ⏳ hourglass not done
-HOURGLASS_DONE=$'⌛'        # ⌛ hourglass done
-CHECK_MARK_BUTTON=$'✅'     # ✅ check mark button
-CROSS_MARK=$'❌'            # ❌ cross mark
-
 # BFD == BitFlight Devops
 SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
@@ -77,11 +26,14 @@ if [[ -n "${SUDO_USER:-}" ]]; then
 else
   MAIN_USER="$(id -un 2> /dev/null || true)"
 fi
-
 command_exists() { command -v "$@" > /dev/null 2>&1; }
+is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
+downloader_installed() {
+  command_exists curl || command_exists wget || command_exists fetch
+}
 # by using a HEREDOC, we are disabling shellcheck and shfmt
 set +e
-read -r -d '' LOOKUP_SHELL_FUNCTION <<'EOF'
+read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
 		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
@@ -134,9 +86,6 @@ run_quietly() {
   fi
 }
 
-command_exists() { command -v "$@" > /dev/null 2>&1; }
-is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
-
 shell_join() {
   local arg
   printf "%s" "$1"
@@ -155,155 +104,25 @@ escape_github_command_data() {
   local -r data="${1}"
   printf '%s' "${data}" | perl -ne '$_ =~ s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g;print;'
 }
-
-# Duplicate of function in lib/log_functions.sh
-get_log_type() {
-  set +x
-  LOG_TYPES=(
-    "error"
-    "info"
-    "warning"
-    "notice"
-    "debug"
-  )
-  if [[ -z ${GITHUB_ACTIONS:-} ]]; then
-    LOG_TYPES+=(
-      "success"
-      "failure"
-      "step"
-    )
-  fi
-  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-  if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
-    printf '%s' "${logtype}"
+if ! downloader_installed; then
+  abort "curl, wget, or fetch is required to download files."
+fi
+download() {
+  file="$1"
+  url="$2"
+  if command_exists curl; then
+    curl --fail --silent --location --output "${file}" "${url}"
+  elif command_exists wget; then
+    wget --quiet --output-document="${file}" "${url}"
+  elif command_exists fetch; then
+    fetch --quiet --output="${file}" "${url}"
   else
-    echo ""
+    error "No HTTP download program (curl, wget, fetch) found, exiting…"
+    return 1
   fi
 }
 
-function failure() {
-  local -r message="${*}"
-  simple_log failure "${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
-}
-
-function success() {
-  local -r message="${*}"
-  simple_log success "${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
-}
-
-function start_step() {
-  local -r message="${*}"
-  simple_log step "${COLOR_BRIGHT_WHITE}${message}${COLOR_RESET}" 2>&1
-}
-
-get_log_color() {
-  if [[ -n ${GITHUB_ACTIONS:-} ]]; then
-    printf '%s' "::"
-    return
-  elif [[ -n ${CI:-} ]]; then
-    printf '%s' "##"
-    return
-  fi
-
-  LOG_COLOR_error="${RED}"
-  LOG_COLOR_info="${GREEN}"
-  LOG_COLOR_warning="${YELLOW}"
-  LOG_COLOR_notice="${MAGENTA}"
-  LOG_COLOR_debug="${GREY}"
-  LOG_COLOR_step="${COLOR_BOLD_CYAN}"
-  LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
-  LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
-  local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-
-  if [[ ! ${arg} =~ (success|failure|step) ]]; then
-    local -r logtype="$(get_log_type "${arg}")"
-  else
-    local -r logtype="${arg}"
-  fi
-  if [[ -z ${logtype} ]]; then
-    printf '%s' "${NO_COLOR}"
-  else
-    eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
-  fi
-}
-
-stripcolor() {
-  # shellcheck disable=SC2001
-  sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" <<< "${*}"
-}
-
-indent_style() {
-  local logtype="${1}"
-  local -r width="${2}"
-
-  local final_style=''
-  case "${logtype}" in
-    notice)
-      style=" "
-      final_style="${STARTING_STAR}"
-      ;;
-    step)
-      style=" "
-      final_style="${STEP_STAR}"
-      ;;
-    failure)
-      style=" "
-      final_style="${CROSS_MARK}"
-      ;;
-    success)
-      style=" "
-      final_style="${CHECK_MARK_BUTTON}"
-      ;;
-    info)
-      style=" "
-      final_style="${INFO_ICON} "
-      # logtype=''
-      ;;
-    debug)
-      style=" "
-      final_style="${DEBUG_ICON:-} "
-      ;;
-    *)
-      style=""
-      final_style="-->"
-      ;;
-  esac
-  local -r indent_length="$((width - ${#logtype}))"
-  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
-  printf -- "${style}%.0s" $(seq "${indent_length}")
-  printf '%s' "${final_style}"
-}
-
-simple_log() {
-  in_quiet_mode && return 0
-  local -r logtype="$(get_log_type "${1}")"
-  local -r logcolor="$(get_log_color "${logtype}")"
-  local msg
-  if [[ -z ${logtype} ]]; then
-    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
-    printf '%s%s\n' "${NO_COLOR}" "${msg}"
-  else
-    shift
-    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
-    if [[ ${logcolor} != "::" ]]; then
-      local indent_width=11
-      local indent="$(indent_style "${logtype}" "${indent_width}")"
-      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
-      # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
-      printf -v space "%*s" "$((indent_width + 2))" ''
-      msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
-    else
-      printf -v log_prefix '::%s ::' "${logtype}"
-      local -r msg="$(escape_github_command_data "${*}")"
-    fi
-    printf '%s%s\n' "${log_prefix}" "${msg}"
-  fi
-}
-
-abort() {
-  simple_log "error" "$@" >&2
-  exit 1
-}
+NONINTERACTIVE=1 source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/lib/simple_log.sh")
 
 execute() {
   if ! run_quietly "$@"; then
@@ -311,24 +130,10 @@ execute() {
   fi
 }
 
-error() { simple_log error "$@"; }
-warn() { simple_log warning "$@"; }
-warning() { simple_log warning "$@"; }
-notice() { simple_log notice "$@"; }
-info() { simple_log info "$@"; }
-chomp() { printf "%s" "${1/"$'\n'"/}"; }
-debug() {
-  if [[ -n ${DEBUG:-} ]]; then
-    simple_log debug "$@"
-  fi
-}
 ohai() {
   run_quietly printf "${BLUE}==>${BOLD} %s${NO_COLOR}\n" "$(shell_join "$@")"
 }
 
-downloader_installed() {
-  command_exists curl || command_exists wget || command_exists fetch
-}
 # Fail fast with a concise message when not using bash
 # Single brackets are needed here for POSIX compatibility
 # shellcheck disable=SC2292
@@ -716,20 +521,7 @@ download_shell_scripts() {
   fi
 }
 
-download() {
-  file="$1"
-  url="$2"
-  if command_exists curl; then
-    curl --fail --silent --location --output "${file}" "${url}"
-  elif command_exists wget; then
-    wget --quiet --output-document="${file}" "${url}"
-  elif command_exists fetch; then
-    fetch --quiet --output="${file}" "${url}"
-  else
-    error "No HTTP download program (curl, wget, fetch) found, exiting…"
-    return 1
-  fi
-}
+
 
 unpack() {
   archive=$1
@@ -1132,7 +924,7 @@ install() {
   { execute download_shell_scripts && success "Installed shell-scripts"; } || failure "Failed to install shell-scripts"
   next_steps
 
-  success "${STARTING_STAR} Install completed"
+  success "${START_ICON} Install completed"
   unset INTERACTIVE
   unset NONINTERACTIVE
   set +eu
