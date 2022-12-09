@@ -37,7 +37,7 @@ fi
 # https://z.digitalclouds.dev/community/zsh_plugin_standard#standard-plugins-hash
 typeset -gA Plugins
 Plugins[BFD_REPOSITORY]="${_shell_scripts_plugin_basedir}"
-export BFD_REPOSITORY SCRIPTS_LIB_DIR
+
 autoload -Uz shell-scripts_plugin_load shell-scripts_plugin_unload
 shell-scripts_plugin_load
 

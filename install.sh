@@ -43,11 +43,10 @@ read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 EOF
-set -e
 eval "${LOOKUP_SHELL_FUNCTION}"
 # shellcheck enable=all
 lookup_shell
-
+set -e
 is_zsh() {
   [[ "${whichshell:-}" == "zsh" ]]
 }

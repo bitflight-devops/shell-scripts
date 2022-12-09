@@ -23,8 +23,8 @@ if [[ -z ${SCRIPTS_LIB_DIR:-} ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
 fi
-export SCRIPTS_LIB_DIR
-export BFD_REPOSITORY="${BFD_REPOSITORY:-${SCRIPTS_LIB_DIR%/lib}}"
+
+: "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
 # Check if the SCRIPTS_LIB_DIR is actually in the lib repository folder
 if is_scripts_lib_dir "${SCRIPTS_LIB_DIR}"; then
   SCRIPTS_LIB_DIR_FOUND=1
