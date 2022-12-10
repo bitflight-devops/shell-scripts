@@ -887,8 +887,7 @@ remove_passive() {
 }
 
 version_available() {
-  local -r version_label="${1?'version_label is required'}"
-  # create_application_version
+  local -r version_label="${1}"
   aws_run elasticbeanstalk describe-application-versions \
     --application-name "$(current_app_name)" \
     --version-labels "${version_label}" \
