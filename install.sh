@@ -121,7 +121,7 @@ download() {
   fi
 }
 
-source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/feat/eb_validation_test/lib/simple_log.sh")
+source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/feat/eb_validation_test/simple_log.sh")
 
 execute() {
   if ! run_quietly "$@"; then
@@ -844,7 +844,7 @@ set_env_var() {
 
 next_steps() {
 
-  ohai "Next steps:"
+  result "Next steps:"
   RC_CONTENT="source \"${BFD_REPOSITORY}/.shellscriptsrc\""
 
   local shell_profile="$(shell_rc_file)"
@@ -854,7 +854,7 @@ next_steps() {
       "To use the installed functions add this to your scripts:\n"
       "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
     )
-    notice "${notice_msg[*]}"
+    step "${notice_msg[*]}"
     if [[ -f ${shell_profile} ]] && grep -m 1 -q -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
       matches="$(awk '/.*(BFD_REPOSITORY|shellscripts).*/ {print "On line "NR" --> "$0};' "${shell_profile}")"
       info_msg=(
@@ -864,14 +864,14 @@ next_steps() {
         "Matches:\n"
         "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${matches}${COLOR_RESET}"
       )
-      info "${debug_msg[*]}"
+      step "${debug_msg[*]}"
     else
-      start_step_msg=(
+      step_question_msg=(
         "Do you want to add this to\n"
         "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] "
         "${COLOR_RESET}"
       )
-      start_step "${start_step_msg[*]}"
+      step_question "${step_question_msg[*]}"
       add_to_shell="$(bash -c 'read -r -n 1 -t 30 prompt; echo "${prompt:-}"')"
       printf "\n"
       if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
@@ -917,16 +917,16 @@ if ! command_exists git && ! downloader_installed; then
 fi
 
 install() {
-  notice "Installing ${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
-  start_step "Validating git user name and email..."
-  { execute configure_git && success "Validated git user name and email"; } || failure "Failed to configure git"
-  start_step "Creating install directory..."
-  { execute create_directories && success "Created install directory"; } || failure "Failed to create directories"
-  start_step "Installing shell-scripts..."
-  { execute download_shell_scripts && success "Installed shell-scripts"; } || failure "Failed to install shell-scripts"
+  starting "Installing ${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
+  step "Validating git user name and email..."
+  { execute configure_git && step_passed "Validated git user name and email"; } || step_failed "Failed to configure git"
+  step "Creating install directory..."
+  { execute create_directories && step_passed "Created install directory"; } || step_failed "Failed to create directories"
+  step "Installing shell-scripts..."
+  { execute download_shell_scripts && step_passed "Installed shell-scripts"; } || step_failed "Failed to install shell-scripts"
   next_steps
 
-  success "${START_ICON} Install completed"
+  finished "${START_ICON} Install completed"
   unset INTERACTIVE
   unset NONINTERACTIVE
   set +eu
