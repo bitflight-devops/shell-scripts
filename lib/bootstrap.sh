@@ -14,10 +14,13 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	SCRIPTS_LIB_DIR="${0:a:h}"
 	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
+	if [[ -f "${SCRIPTS_LIB_DIR:-}/lib/.scripts.lib.md" ]]; then
+		SCRIPTS_LIB_DIR="${SCRIPTS_LIB_DIR:-}/lib"
+	fi
 	EOF
-  set -e
+
   # by using a HEREDOC, we are disabling shellcheck and shfmt
-set +e
+
 read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
