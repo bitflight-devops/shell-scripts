@@ -32,9 +32,9 @@ run_as_root() {
   local sd="$(root_available)"
   local -r rv="$?"
   if [[ ${rv} -eq 0 ]] && [[ ${sd} == '' ]]; then
-     "${@}"
+    "${@}"
   elif [[ ${rv} -eq 0 ]] && [[ ${sd} == 'sudo' ]]; then
-     sudo "${@}"
+    sudo "${@}"
   else
     printf 'This command needs the ability to run other commands as root.\nWe are unable to find "sudo" available to make this happen.\n\n'
     exit 1
