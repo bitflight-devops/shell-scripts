@@ -415,8 +415,8 @@ fi
 if ! command_exists info_log; then
   info_log() { simple_log info "$@"; }
 fi
-if ! command_exists debug; then
-  debug() {
+if ! command_exists debug_log; then
+  debug_log() {
     if [[ -n ${DEBUG:-} ]]; then
       simple_log debug "$@"
     fi

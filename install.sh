@@ -181,36 +181,36 @@ if [[ -n ${INTERACTIVE-} && -n ${NONINTERACTIVE-} ]]; then
   abort 'Both `$INTERACTIVE` and `$NONINTERACTIVE` are set. Please unset at least one variable and try again.'
 fi
 
-debug "checking which mode to use"
+debug_log "checking which mode to use"
 # Check if script is run non-interactively (e.g. CI)
 # If it is run non-interactively we should not prompt for passwords.
 # Always use single-quoted strings with `exp` expressions
 # shellcheck disable=SC2016
 if [[ -z ${NONINTERACTIVE-} ]]; then
   if [[ -n ${CI-} ]]; then
-    debug 'Running in non-interactive mode because `$CI` is set.'
+    debug_log 'Running in non-interactive mode because `$CI` is set.'
     NONINTERACTIVE=1
     unset INTERACTIVE
   elif [[ ! -t 0 ]] && [[ ${sourced} -eq 1 ]]; then
     if [[ -z ${INTERACTIVE-} ]]; then
-      debug 'Running in non-interactive mode because `stdin` is not a TTY.'
+      debug_log 'Running in non-interactive mode because `stdin` is not a TTY.'
       NONINTERACTIVE=1
       unset INTERACTIVE
     else
-      debug 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
+      debug_log 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
     fi
   else
-    debug 'Running in interactive mode.'
+    debug_log 'Running in interactive mode.'
     INTERACTIVE=1
     unset NONINTERACTIVE || true
   fi
 else
-  debug 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
+  debug_log 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
 fi
 
 # USER isn't always set so provide a fall back for the installer and subprocesses.
 if [[ -z ${USER:-} ]]; then
-  debug "No USER variable, creating one"
+  debug_log "No USER variable, creating one"
   USER="$(chomp "$(id -un)")"
   export USER
 fi
@@ -631,11 +631,11 @@ add_to_path() {
   if [[ -z ${PATH} ]]; then
     export PATH="${1}"
     running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
-    debug "Path created: ${1}"
+    debug_log "Path created: ${1}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
     running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
-    debug "Path added: ${1}"
+    debug_log "Path added: ${1}"
   fi
   # fi
 }
