@@ -125,7 +125,10 @@ branch_r=${branch_r##refs/heads/}
 branch_r=${branch_r##*/merge/}
 branch=${branch_r##merge/}
 source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/${branch:-main}/simple_log.sh")
-
+if ! command_exists debug_log; then
+  echo "simple_log.sh failed to load."
+  exit 1
+fi
 execute() {
   if ! run_quietly "$@"; then
     abort "$(printf "Failed during: %s" "$(shell_join "$@")")"
