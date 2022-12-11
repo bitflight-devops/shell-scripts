@@ -1,9 +1,13 @@
 name: Test
 on:
   push:
+    branches:
+      - "main"
     paths-ignore:
       - "**.md"
   pull_request:
+    branches:
+      - "main"
     paths-ignore:
       - "**.md"
 
@@ -26,7 +30,7 @@ jobs:
           submodules: true
       - name: Run ShUnit tests
         run: |
-          tests/run.sh
+          source test.sh
 
   installer-test:
     strategy:
@@ -35,10 +39,8 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
       - name: Run ShUnit tests
         run: |
+          set -x
           NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/install.sh")
-          eval $(bash -- "$BFD_REPOSITORY/lib/bootstrap.sh")
+          eval $(bash -- "${BFD_REPOSITORY}/lib/bootstrap.sh")
