@@ -25,7 +25,7 @@ FAILED_FUNC="$(declare -f failed)"
 ## download_docker_to(): downloads docker dmg to specified path
 download_docker_to() {
   local dmg_file="$1"
-  if [[ ! -f "${dmg_file}" ]]; then
+  if [[ ! -f ${dmg_file}   ]]; then
     echo "Downloading Docker installer..."
     if [[ $(uname -p) == 'arm' ]]; then
       echo "Downloading Docker.dmg for M1 Chip"
@@ -56,11 +56,11 @@ INSTALL_FUNC="$(declare -f install_docker_as_1_from_2)"
 
 ## cleanup_files(): removes the temp files created
 cleanup_files() {
-  if [[ -f "${DOCKER_DMG_PATH}" ]]; then
+  if [[ -f ${DOCKER_DMG_PATH}   ]]; then
     echo "Removing ${DOCKER_DMG_PATH}"
     rm -f "${DOCKER_DMG_PATH}"
   fi
-  if [[ -f "${INSTALL_SCRIPT_PATH}" ]]; then
+  if [[ -f ${INSTALL_SCRIPT_PATH}   ]]; then
     echo "Removing ${INSTALL_SCRIPT_PATH}"
     rm -f "${INSTALL_SCRIPT_PATH}"
   fi

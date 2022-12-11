@@ -2,13 +2,13 @@
 # shellcheck disable=SC2248,SC2292
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")"  > /dev/null 2>&1 && pwd)"
 ZSH_AVAILABLE=0
-if ! command -v zsh >/dev/null 2>&1; then
+if ! command -v zsh > /dev/null 2>&1; then
   echo "zsh is not installed, installing it now."
   curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add - || true
   # wget -qO - https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add -
-  apt-get update -qq -y && apt-get install -qq -y zsh >/dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
+  apt-get update -qq -y && apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
 else
-ZSH_AVAILABLE=1
+  ZSH_AVAILABLE=1
 fi
 
 ## tests/bootstrap-bash-test.sh
@@ -19,7 +19,7 @@ getSourceFilesViaSource() {
   source "${DIR}/../lib/bootstrap.sh"
 }
 outputViaSource() {
-  cat <<EOF
+  cat << EOF
 # INFO: Loading libraries...
 [ INFO] bootstrap_exec:  ★ Libraries loaded
          -> color_and_emoji_variables
@@ -65,7 +65,7 @@ testGenerateOutputViaSource() {
 
   # This test will pass because the grepped output count matches.
   lineCount=$(grep -o "\-> " "${stdoutF}" | wc -l | tr -d ' ')
-  assertEquals 'sourceed files should be 12' 12 "${lineCount}" || showOutput
+  assertEquals 'sourced files should be 12' 12 "${lineCount}" || showOutput
 
   return 0
 }
@@ -135,18 +135,18 @@ testGenerateOutputViaExecution_IndividualLibrary() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
   declare -a AVAILABLE_LIBRARIES=(
-  "color_and_emoji_variables"
-  "elasticbeanstalk_functions"
-  "general_utility_functions"
-  "github_core_functions"
-  "log_functions"
-  "osx_utility_functions"
-  "remote_utility_functions"
-  "string_functions"
-  "system_functions"
-  "trace_functions"
-  "yaml_functions"
-  "java_functions"
+    "color_and_emoji_variables"
+    "elasticbeanstalk_functions"
+    "general_utility_functions"
+    "github_core_functions"
+    "log_functions"
+    "osx_utility_functions"
+    "remote_utility_functions"
+    "string_functions"
+    "system_functions"
+    "trace_functions"
+    "yaml_functions"
+    "java_functions"
   )
   for useshell in bash zsh; do
     for library in "${AVAILABLE_LIBRARIES[@]}"; do

@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -43,7 +43,6 @@ EOF
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-
 
 # End Lookup Current Script Directory
 ##########################################################

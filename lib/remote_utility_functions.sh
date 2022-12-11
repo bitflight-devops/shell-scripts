@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh

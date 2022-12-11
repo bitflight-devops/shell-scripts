@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -123,7 +123,7 @@ save_env_var() {
   local -r var_name="$1"
   local -r var_value="${2}" # "$(printf '%q' "${2}")"
   local -r shell_rc="$(shell_rc_file)"
-  if [[ -f "${shell_rc}" ]]; then
+  if [[ -f ${shell_rc}   ]]; then
     if grep -q "${var_name}" "${shell_rc}"; then
       sed_inplace "s|${var_name}=.*|${var_name}=${var_value}|" "${shell_rc}"
     else
@@ -150,10 +150,10 @@ append_path_var() {
     # In GITHUB Actions, we can't write to the shell_rc_file
       local -r file="${GITHUB_PATH}"
       echo "${2}" >> "${file}"
-  elif [[ "${save_var}" == "true" ]]; then
+  elif [[ ${save_var} == "true"   ]]; then
     local -r file="$(shell_rc_file)"
 
-    if [[ -f "${file}" ]]; then
+    if [[ -f ${file}   ]]; then
       if grep -q "${new_path}" "${file}"; then
         # Path already exists in file
         return
@@ -193,7 +193,7 @@ set_env_var() {
     "${TOUCH[@]:-touch}" "${file}" || return 1
   fi
   #  /[.*+?^${}()|[\]\\]/g, '\\$&'
-  if [[ "${name}" == "PATH" ]]; then
+  if [[ ${name} == "PATH"   ]]; then
     # we adding a new path variable, so just add a new line
     eval "export $(append_path_var "true" "${value}")"
     return
@@ -328,7 +328,7 @@ install_python3_suite() {
   if ! squash_output pip_package_installed wheel; then
       MISSING_APPS+=("python3-wheel")
   fi
-  if [[ "${#MISSING_APPS[@]}" -ne 0 ]]; then
+  if [[ ${#MISSING_APPS[@]} -ne 0   ]]; then
     { command_exists apt && squash_output install_apt-fast; } || true
     install_app "${MISSING_APPS[@]}" || true
   fi
@@ -419,7 +419,7 @@ install_if_missing() {
     elif [[ -n ${alternate_install_script_url-} ]]; then
       installer_file=$(mktemp -q -u -t installerXXXX)
       curl -fsSLl -o "${installer_file}" "${alternate_install_script_url}"
-      if [[ "${#install_flags}" -gt 0 ]]; then
+      if [[ ${#install_flags} -gt 0   ]]; then
         chmod +x "${installer_file}" \
                                      && NONINTERACTIVE=1 "${installer_file}" "${install_flags[@]}"
       else

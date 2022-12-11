@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -64,7 +64,7 @@ lowercase() {
 }
 
 iscolorcode() {
-    grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<< "$1"
+  [[ $(perl -ne 'print "1" if($_ =~ /[[:cntrl:]]\[\d{1,3}(?:[;]\d{1,3})*[mGK]/)' <<< "$1") == 1 ]]
 }
 
 colorcode() {
@@ -111,8 +111,10 @@ empty() {
     echo 'false' && return 1
   fi
 }
-
-# Alias for empty
+squash_output() {
+  "$@" > /dev/null 2>&1
+}
+# Alias for empty, but doesn't print true/false
 isEmptyString() {
   squash_output empty "${*}"
 }
@@ -121,16 +123,8 @@ trim_dash() {
   sed 's/^[- ]*//g;s/[- ]*$//g' <<< "${*}"
 }
 
-uppercase() {
-  tr '[:lower:]' '[:upper:]' <<< "${*}"
-}
-
-lowercase() {
-  tr '[:upper:]' '[:lower:]' <<< "${*}"
-}
-
 squash_spaces() {
-  tr -s '[:space:]' ' ' <<< "${*}"
+  tr -s '[:blank:]' ' ' <<< "${*}"
 }
 
 # Remove Starting # from the string

@@ -1,6 +1,6 @@
 #!/bin/sh
 mkdir -p ~/.hammerspoon
-cat <<EOF >~/.hammerspoon/init.lua
+cat << EOF > ~/.hammerspoon/init.lua
 #!/usr/bin/env lua
 function printf(s,...)  print(s:format(...)) end
 wather = hs.caffeinate.watcher.new(function(eventType)

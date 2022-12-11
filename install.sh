@@ -21,7 +21,7 @@ set -eu
 SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
-if [[ -n "${SUDO_USER:-}" ]]; then
+if [[ -n ${SUDO_USER:-}   ]]; then
   MAIN_USER="${SUDO_USER}"
 else
   MAIN_USER="$(id -un 2> /dev/null || true)"
@@ -48,7 +48,7 @@ eval "${LOOKUP_SHELL_FUNCTION}"
 lookup_shell
 set -e
 is_zsh() {
-  [[ "${whichshell:-}" == "zsh" ]]
+  [[ ${whichshell:-} == "zsh"   ]]
 }
 
 sourced=0
@@ -143,10 +143,10 @@ ohai() {
 if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
   BFD_PREFIX="${HOME%./}"
 fi
-if [[ -n "${BFD_REPOSITORY:-}" ]]; then
-  if [[ -n "${BFD_CLEAN_INSTALL:-}" ]]; then
+if [[ -n ${BFD_REPOSITORY:-}   ]]; then
+  if [[ -n ${BFD_CLEAN_INSTALL:-}   ]]; then
     # Try to safely remove the existing installation
-    if [[ "${BFD_REPOSITORY}" == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}" ]]; then
+    if [[ ${BFD_REPOSITORY} == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}"   ]]; then
       rm -rf "${BFD_REPOSITORY}"
     fi
     timeNowSecondsEpoch=$(date +%s)
@@ -222,7 +222,7 @@ if [[ ${OS} == "Linux" ]]; then
 elif [[ ${OS} != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
-if [[ -n "${BFD_EXISTING_INSTALLATION:-}" ]]; then
+if [[ -n ${BFD_EXISTING_INSTALLATION:-}   ]]; then
   BFD_REPOSITORY="${BFD_EXISTING_INSTALLATION}"
 else
   BFD_PREFIX_DEFAULT="${HOME}/.local/${SHELL_SCRIPTS_OWNER}"
@@ -481,7 +481,7 @@ download_shell_scripts() {
     SHELL_SCRIPTS_REF="main"
   fi
   if command_exists git; then
-    (
+    ( 
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
@@ -503,7 +503,7 @@ download_shell_scripts() {
       info "Pulling latest shell scripts - completed."
     )
   else
-    (
+    ( 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then

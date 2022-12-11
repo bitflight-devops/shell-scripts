@@ -31,56 +31,56 @@ type item struct {
 }
 
 var (
-  itemYes = item{
-  title:       "Yes",
-  description: "Approve the process",
-}
-  itemNo = item{
-  title:       "No",
-  description: "Reject the process",
-}
+	itemYes = item{
+		title:       "Yes",
+		description: "Approve the process",
+	}
+	itemNo = item{
+		title:       "No",
+		description: "Reject the process",
+	}
 )
+
 func (i item) Title() string       { return i.title }
 func (i item) Description() string { return i.description }
 func (i item) FilterValue() string { return i.title }
 
 type listKeyMap struct {
-	approveProcess    key.Binding
-	rejectProcess   key.Binding
+	approveProcess key.Binding
+	rejectProcess  key.Binding
 }
 
 func newListKeyMap() *listKeyMap {
 	return &listKeyMap{
-    approveProcess: key.NewBinding(
-      key.WithKeys("y"),
-      key.WithHelp("y", itemYes.description),
-    ),
-    rejectProcess: key.NewBinding(
-      key.WithKeys("n"),
-      key.WithHelp("n", itemNo.description),
-    ),
+		approveProcess: key.NewBinding(
+			key.WithKeys("y"),
+			key.WithHelp("y", itemYes.description),
+		),
+		rejectProcess: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", itemNo.description),
+		),
 	}
 }
 
 type model struct {
-	list          list.Model
-	keys          *listKeyMap
-	delegateKeys  *delegateKeyMap
+	list         list.Model
+	keys         *listKeyMap
+	delegateKeys *delegateKeyMap
 }
 
 func newModel(question string) model {
 	var (
-		delegateKeys  = newDelegateKeyMap()
-		listKeys      = newListKeyMap()
+		delegateKeys = newDelegateKeyMap()
+		listKeys     = newListKeyMap()
 	)
 
 	// Make initial list of items
 	const numItems = 2
 	items := make([]list.Item, numItems)
 
-  items[0] = itemYes
-  items[1] = itemNo
-
+	items[0] = itemYes
+	items[1] = itemNo
 
 	// Setup list
 	delegate := newItemDelegate(delegateKeys)
@@ -95,9 +95,9 @@ func newModel(question string) model {
 	}
 
 	return model{
-		list:          questionList,
-		keys:          listKeys,
-		delegateKeys:  delegateKeys,
+		list:         questionList,
+		keys:         listKeys,
+		delegateKeys: delegateKeys,
 	}
 }
 
@@ -120,7 +120,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
-    case key.Matches(msg, m.keys.rejectProcess):
+		case key.Matches(msg, m.keys.rejectProcess):
 			m.delegateKeys.remove.SetEnabled(true)
 			return m, nil
 
@@ -143,14 +143,14 @@ func (m model) View() string {
 }
 
 func main() {
-  argLength := len(os.Args[1:])
-  question := "Are you sure you want to continue?"
-  if argLength != 0 {
-  question = os.Args[1]
-  }
-  for i, a := range os.Args[1:] {
-    fmt.Printf("Arg %d is %s\n", i+1, a)
-}
+	argLength := len(os.Args[1:])
+	question := "Are you sure you want to continue?"
+	if argLength != 0 {
+		question = os.Args[1]
+	}
+	for i, a := range os.Args[1:] {
+		fmt.Printf("Arg %d is %s\n", i+1, a)
+	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	p := tea.NewProgram(newModel(question))
 	if _, err := p.StartReturningModel(); err != nil {

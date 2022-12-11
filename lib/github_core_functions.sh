@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -169,7 +169,7 @@ set_env() {
   fi
   if running_in_ci; then
     : "${GITHUB_ENV:="./env.environment.local.github"}"
-    if [[ -z "${ACT:-}" ]]; then
+    if [[ -z ${ACT:-}   ]]; then
       touch "${GITHUB_ENV}"
       multiline_variable "${GITHUB_ENV}" "${key}" "${value}"
     else
@@ -200,7 +200,7 @@ set_output() {
 
   if running_in_github_actions; then
     : "${GITHUB_OUTPUT:="./env.output.local.github"}"
-    if [[ -z "${ACT:-}" ]]; then
+    if [[ -z ${ACT:-}   ]]; then
       touch "${GITHUB_OUTPUT}"
       multiline_variable "${GITHUB_OUTPUT}" "${key}" "${value}"
       debug "Output Variable set: ${key}=${value}"

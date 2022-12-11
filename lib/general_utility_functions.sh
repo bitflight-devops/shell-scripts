@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -57,11 +57,11 @@ export BOOLEAN_TRUE="(true|on|yes|1)"
 export BOOLEAN_FALSE="(false|off|no|0)"
 
 isTrue() {
-  grep -q -i -E "${BOOLEAN_TRUE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_TRUE}" <<< "${1}"
 }
 
 isFalse() {
-  grep -q -i -E "${BOOLEAN_FALSE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_FALSE}" <<< "${1}"
 }
 
 squash_output() {
@@ -116,11 +116,11 @@ isBoolean() {
 
 # Run the command given by "$@" in the background
 silent_background() {
-  if [[ "${whichshell}" == "zsh" ]]; then # zsh:  https://superuser.com/a/1285272/365890
+  if [[ ${whichshell} == "zsh"   ]]; then # zsh:  https://superuser.com/a/1285272/365890
     setopt local_options no_notify no_monitor
     "$@" &
-  elif [[ "${whichshell}" == "bash" ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
-    { "$@" 2>&3 & } 3>&2 2>/dev/null
+  elif [[ ${whichshell} == "bash"   ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
+    { "$@" 2>&3 & } 3>&2 2> /dev/null
   else # Unknownness - just background it
     "$@" &
   fi

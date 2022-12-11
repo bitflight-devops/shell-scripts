@@ -1,4 +1,4 @@
-name:  Job
+name: Job
 description: >
   Inject BitFlight's shell-scripts as bash functions
   into the Github Action's Job environment, via the BASH_ENV
@@ -41,4 +41,3 @@ runs:
         debug "NONINTERACTIVE=${NONINTERACTIVE}"
         debug "BASH_ENV=${BASH_ENV}"
         debug "BFD_SHELL_SCRIPTS_VERSION=${BFD_SHELL_SCRIPTS_VERSION}"
-

@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -490,7 +490,7 @@ step() {
 step_question() {
     local -r message="${*}"
     log_output "0" "QUESTION" "COLOR_CYAN" "${STEP_ICON} ${message}${COLOR_RESET}" 2>&1
-  }
+}
 
 step_passed() {
   local -r message="${*}"

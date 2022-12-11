@@ -33,7 +33,7 @@ EOF
   lookup_shell
   set -e
   is_zsh() {
-    [[ "${whichshell:-}" == "zsh" ]]
+    [[ ${whichshell:-} == "zsh"   ]]
   }
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
@@ -52,7 +52,7 @@ fi
 xtrace() {
   # Print the line as if xtrace was turned on, using sed to filter out
   # the extra colon character and the following "set +x" line.
-  (
+  ( 
     set -x
     # Colon is a no-op in bash, so nothing will execute.
     "$@"

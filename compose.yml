@@ -3,7 +3,7 @@ services:
     image: myoung34/github-runner:latest
     container_name: runner
     ports:
-      - "22:8022"
+      - '22:8022'
     env_file: .env.secrets
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -12,10 +12,10 @@ services:
     image: myoung34/github-runner:latest
     container_name: runner-test
     ports:
-      - "22:8022"
+      - '22:8022'
     env_file: .env.secrets
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./:/_work
     working_dir: /_work
-    entrypoint: ["/bin/bash", "-c", ". tests/run.sh"]
+    entrypoint: ['/bin/bash', '-c', '. tests/run.sh']
