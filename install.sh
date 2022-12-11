@@ -120,8 +120,11 @@ download() {
     return 1
   fi
 }
-
-source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/feat/eb_validation_test/simple_log.sh")
+branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF:-}}
+branch_r=${branch_r##refs/heads/}
+branch_r=${branch_r##*/merge/}
+branch=${branch_r##merge/}
+source <(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/${branch:-main}/simple_log.sh")
 
 execute() {
   if ! run_quietly "$@"; then
