@@ -50,4 +50,10 @@ jobs:
           source ~/.bashrc
           echo "SCRIPTS_LIB_DIR: ${SCRIPTS_LIB_DIR:-}"
           echo "BFD_REPOSITORY: ${BFD_REPOSITORY:-}"
-          eval $(bash -- "${SCRIPTS_LIB_DIR}/bootstrap.sh") || exit 1
+          if [[ -f "${BFD_REPOSITORY}/lib/bootstrap.sh" ]]; then
+            echo "BFD_REPOSITORY/lib/bootstrap.sh exists"
+          else
+            echo "BFD_REPOSITORY/lib/bootstrap.sh does not exist"
+            exit 1
+          fi
+          eval $(bash -- "${BFD_REPOSITORY}/lib/bootstrap.sh") || exit 1
