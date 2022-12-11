@@ -310,6 +310,8 @@ simple_log() {
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
   local msg
+  local space
+  local log_prefix
   if [[ -z ${logtype} ]]; then
     plain_log "${fulllogtype}" "${*}"
   else
@@ -321,10 +323,10 @@ simple_log() {
       printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${COLOR_RESET}"
       # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
       printf -v space "%*s" "$((indent_width + 2))" ''
-      msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
+      msg="$(awk -v space="${space:-}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
     else
       printf -v log_prefix '::%s ::' "${logtype}"
-      msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
+      msg="$(awk -v space="${space:-}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
       if [[ $(type escape_github_command_data) == *function* ]]; then
         msg="$(escape_github_command_data "${msg}")"
       fi

@@ -388,7 +388,7 @@ log_output() {
   shift
   local msg="${*}"
   local -r logtype="$(get_log_type "${labelUppercase}")"
-
+  local space
   if caller 1 > /dev/null 2>&1; then
     local function_name="$(caller 1 | awk '{print $2}')"
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
@@ -398,7 +398,7 @@ log_output() {
   else
     indent_width=7
     printf -v space "%*s" "$((indent_width))" ''
-    local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
+    local msg="$(awk -v space="${space:-}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
     printf "%s[%s%5s%s] %s%s\n" "${COLOR_RESET:-}" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}: }" "${msg}"
   fi
   if ! running_in_github_actions; then
