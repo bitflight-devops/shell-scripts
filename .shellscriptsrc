@@ -12,8 +12,8 @@ set +e
 read -r -d '' LOOKUP_SHELL_FUNCTION <<-'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
 		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
 		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac

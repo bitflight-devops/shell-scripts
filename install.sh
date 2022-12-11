@@ -354,42 +354,42 @@ create_script_directory() {
   local fix_ownership='false'
   if [[ -d ${path} ]]; then
     if ! test_writeable "${path}"; then
-      info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
+      info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
     else
-      info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
+      info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
       return 0
     fi
   else
 
-    info "Attempting to create ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
+    info_log "Attempting to create ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     if ! execute "${MKDIR[@]}" "${path}"; then
       if [[ ${user} != 'root' ]]; then
         if ! run_as_root "${MKDIR[@]}" "${path}"; then
           abort "Failed to create ${COLOR_YELLOW}${path}${RED} as root."
         else
           fix_ownership='true'
-          info "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}root${COLOR_RESET}."
+          info_log "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}root${COLOR_RESET}."
         fi
       else
         abort "Failed to create ${COLOR_YELLOW}${path}${RED}."
       fi
     else
-      info "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
+      info_log "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     fi
   fi
 
   if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
-    info "Setting ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
+    info_log "Setting ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
     run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
-    info "Setting permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
+    info_log "Setting permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
     run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
   fi
 
-  info "Verifying that ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
+  info_log "Verifying that ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   if ! test_writeable "${path}"; then
     abort "The directory ${COLOR_YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
   else
-    info "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
+    info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   fi
 
 }
@@ -401,7 +401,7 @@ create_directories() {
 # require_sudo() {
 
 #   local -r user="$(id -un 2>/dev/null || true)"
-#   info "Running install as ${user}"
+#   info_log "Running install as ${user}"
 #   local -r SUDO_CMD="$(root_available)"
 #   ROOT_IS_AVAILABLE=$?
 #   REQUIRE_SUDO=0
@@ -484,7 +484,7 @@ download_shell_scripts() {
     ( 
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
-      info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
+      info_log "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
       # we do it in four steps to avoid merge errors when reinstalling
       execute "git" "init" "-q"
       # "git remote add" will fail if the remote is defined in the global config
@@ -498,9 +498,9 @@ download_shell_scripts() {
       execute "git" "fetch" "--force" "--tags" "origin" > /dev/null 2>&1
       execute "git" "remote" "set-head" "origin" "--auto" > /dev/null
       execute "git" "reset" "--hard" "origin/${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
-      info "Pulling latest shell scripts - starting..."
+      info_log "Pulling latest shell scripts - starting..."
       execute "git" "pull" "--quiet" "--force" "origin" "${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
-      info "Pulling latest shell scripts - completed."
+      info_log "Pulling latest shell scripts - completed."
     )
   else
     ( 
@@ -539,8 +539,8 @@ unpack() {
     *)
       error "Unknown package extension."
       printf "\n"
-      info "This almost certainly results from a bug in this script--please file a"
-      info "bug report at https://github.com/starship/starship/issues"
+      info_log "This almost certainly results from a bug in this script--please file a"
+      info_log "bug report at https://github.com/starship/starship/issues"
       return 1
       ;;
   esac
@@ -645,7 +645,7 @@ check_bin_dir() {
 
   if [[ ! -d ${bin_dir} ]]; then
     error "Installation location ${bin_dir} does not appear to be a directory"
-    info "Make sure the location exists and is a directory, then try again."
+    info_log "Make sure the location exists and is a directory, then try again."
     exit 1
   fi
 
@@ -774,7 +774,7 @@ installer_dependencies() {
   fi
 
   if [[ ${INSTALL_DEPS:-} == 'true' ]]; then
-    info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${COLOR_RESET}"
+    info_log "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${COLOR_RESET}"
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
   elif [[ ${#REQUIRED_DEPENDENCIES[@]} -gt 0 ]]; then
     ohai "Skipping dependency installation…"
@@ -857,7 +857,7 @@ next_steps() {
     step "${notice_msg[*]}"
     if [[ -f ${shell_profile} ]] && grep -m 1 -q -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
       matches="$(awk '/.*(BFD_REPOSITORY|shellscripts).*/ {print "On line "NR" --> "$0};' "${shell_profile}")"
-      info_msg=(
+      info_log_msg=(
         "Environment variable\n"
         "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
         "is possibly already set in ${shell_profile}.\n"
@@ -875,33 +875,33 @@ next_steps() {
       add_to_shell="$(bash -c 'read -r -n 1 -t 30 prompt; echo "${prompt:-}"')"
       printf "\n"
       if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
-        info_msg=("Adding script source:\n"
+        info_log_msg=("Adding script source:\n"
           "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
           "${RC_CONTENT}"
           "${COLOR_RESET}\n"
           "to ${shell_profile}"
         )
-        info "${info_msg[*]}"
+        info_log "${info_log_msg[*]}"
         tee -a "${shell_profile}" <<< "${RC_CONTENT}" && return 0
       fi
     fi
-    info_msg=(
+    info_log_msg=(
       "Run this command in the shell to load the scripts now:\n"
       "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
       "Or reload the shell:\n"
       "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
       "exec ${whichshell}${COLOR_RESET}"
     )
-    info "${info_msg[*]}"
+    info_log "${info_log_msg[*]}"
   fi
 
   if [[ -n ${NONINTERACTIVE:-} ]]; then
 
-      info_msg=(
+      info_log_msg=(
         "Adding environment variable\n"
         "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
     )
-      info "${info_msg[*]}"
+      info_log "${info_log_msg[*]}"
       if grep -m 1 -q -v -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
         tee -a "${shell_profile}" <<< "${RC_CONTENT}"
     fi

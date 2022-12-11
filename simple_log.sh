@@ -412,8 +412,8 @@ fi
 if ! command_exists notice; then
   notice() { simple_log notice "$@"; }
 fi
-if ! command_exists info; then
-  info() { simple_log info "$@"; }
+if ! command_exists info_log; then
+  info_log() { simple_log info "$@"; }
 fi
 if ! command_exists debug; then
   debug() {
