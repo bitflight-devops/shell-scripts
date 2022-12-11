@@ -40,5 +40,5 @@ jobs:
           submodules: true
       - name: Run ShUnit tests
         run: |
-          NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/install.sh")
+          NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/install.sh")
           eval $(bash -- "$BFD_REPOSITORY/lib/bootstrap.sh")
