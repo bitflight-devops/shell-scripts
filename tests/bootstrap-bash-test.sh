@@ -6,7 +6,7 @@ ZSH_AVAILABLE=0
 root_available() {
   local -r user="$(id -un 2> /dev/null || true)"
   if [[ ${user} != 'root' ]]; then
-    if command_exists sudo; then
+    if command -v sudo > /dev/null 2>&1; then
       if [[ $(SUDO_ASKPASS="${BIN_FALSE[*]}" sudo -A sh -c 'whoami;whoami' 2>&1 | wc -l) -eq 2 ]]; then
         echo "sudo"
         return 0
@@ -43,8 +43,7 @@ run_as_root() {
 
 if ! command -v zsh > /dev/null 2>&1; then
   echo "zsh is not installed, installing it now."
-  curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add - || true
-  # wget -qO - https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add -
+  curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | run_as_root apt-key add - > /dev/null 2>&1 || true
   run_as_root apt-get update -qq -y && run_as_root apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
 else
   ZSH_AVAILABLE=1
