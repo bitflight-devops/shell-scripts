@@ -2,11 +2,50 @@
 # shellcheck disable=SC2248,SC2292
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")"  > /dev/null 2>&1 && pwd)"
 ZSH_AVAILABLE=0
+
+root_available() {
+  local -r user="$(id -un 2> /dev/null || true)"
+  if [[ ${user} != 'root' ]]; then
+    if command_exists sudo; then
+      if [[ $(SUDO_ASKPASS="${BIN_FALSE[*]}" sudo -A sh -c 'whoami;whoami' 2>&1 | wc -l) -eq 2 ]]; then
+        echo "sudo"
+        return 0
+      elif groups "${user}" | grep -q '(^|\b)(sudo|wheel)(\b|$)' && [[ -n ${INTERACTIVE:-} ]]; then
+        echo "sudo"
+        return 0
+      else
+        echo ""
+        return 1
+      fi
+    else
+      # not root, and don't have sudo
+      echo ""
+      return 1
+    fi
+  else
+    echo ""
+    return 0
+  fi
+}
+
+run_as_root() {
+  local sd="$(root_available)"
+  local -r rv="$?"
+  if [[ ${rv} -eq 0 ]] && [[ ${sd} == '' ]]; then
+     "${@}"
+  elif [[ ${rv} -eq 0 ]] && [[ ${sd} == 'sudo' ]]; then
+     sudo "${@}"
+  else
+    printf 'This command needs the ability to run other commands as root.\nWe are unable to find "sudo" available to make this happen.\n\n'
+    exit 1
+  fi
+}
+
 if ! command -v zsh > /dev/null 2>&1; then
   echo "zsh is not installed, installing it now."
   curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add - || true
   # wget -qO - https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add -
-  apt-get update -qq -y && apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
+  run_as_root apt-get update -qq -y && run_as_root apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
 else
   ZSH_AVAILABLE=1
 fi

@@ -39,8 +39,9 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.runs-on }}
     steps:
-      - name: Run ShUnit tests
+      - name: Test running Remote Installer Script
         run: |
           set -x
           NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/install.sh")
+          source ~/.bashrc
           eval $(bash -- "${BFD_REPOSITORY}/lib/bootstrap.sh")
