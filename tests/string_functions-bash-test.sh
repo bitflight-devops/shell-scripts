@@ -1,6 +1,10 @@
 #!/bin/bash
 DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
-export SCRIPTS_LIB_DIR="$(realpath "${DIR}/../lib")"
+export SCRIPTS_LIB_DIR="$(readlink -f -- "${DIR}/../lib")"
+[[ -d ${SCRIPTS_LIB_DIR}   ]] || {
+                                   echo "ERROR: ${SCRIPTS_LIB_DIR} does not exist"
+                                                                                    exit 1
+}
 export BFD_REPOSITORY="${SCRIPTS_LIB_DIR%/lib}"
 
 # Test Constants

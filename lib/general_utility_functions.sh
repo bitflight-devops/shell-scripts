@@ -125,3 +125,9 @@ silent_background() {
     "$@" &
   fi
 }
+
+if ! command_exists realpath; then
+  realpath() {
+    readlink -f -- "$@"
+  }
+fi

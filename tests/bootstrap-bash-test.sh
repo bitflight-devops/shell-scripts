@@ -43,8 +43,12 @@ run_as_root() {
 
 if ! command -v zsh > /dev/null 2>&1; then
   echo "zsh is not installed, installing it now."
-  curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | run_as_root apt-key add - > /dev/null 2>&1 || true
-  run_as_root apt-get update -qq -y && run_as_root apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
+  if uname -a | grep -q 'Darwin'; then
+    brew install zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
+  else
+    curl -s -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | run_as_root apt-key add - > /dev/null 2>&1 || true
+    run_as_root apt-get update -qq -y && run_as_root apt-get install -qq -y zsh > /dev/null 2>&1 && zsh --version && ZSH_AVAILABLE=1
+  fi
 else
   ZSH_AVAILABLE=1
 fi
