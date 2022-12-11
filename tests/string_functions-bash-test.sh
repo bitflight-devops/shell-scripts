@@ -10,7 +10,7 @@ export BFD_REPOSITORY="${SCRIPTS_LIB_DIR%/lib}"
 # Test Constants
 COLOR_BG_BLUE=$'\e[1;44m'
 COLOR_BG_MAGENTA=$'\e[1;45m'
-export COLOR_GREEN=$'\e[0;32m'
+COLOR_GREEN=$'\e[0;32m'
 COLOR_YELLOW=$'\e[0;33m'
 COLOR_RESET=$'\e[0m'
 

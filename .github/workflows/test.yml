@@ -43,8 +43,9 @@ jobs:
         run: |
           set -x
           branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
-          branch=${branch_r#refs/heads/}
-          branch=${branch_r#*/merge/}
+          branch_r=${branch_r##refs/heads/}
+          branch_r=${branch_r##*/merge/}
+          branch=${branch_r##merge/}
           NONINTERACTIVE=1 source <(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/${branch}/install.sh")
           source ~/.bashrc
           eval $(bash -- "${BFD_REPOSITORY}/lib/bootstrap.sh")
