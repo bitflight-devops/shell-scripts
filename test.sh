@@ -7,8 +7,8 @@ fi
 
 if [[ ${GITHUB_ACTIONS+x} == x ]]; then
   info_log "Running tests in GitHub Actions"
-  . tests/run.sh "$@" | grep -v 'ASSERT:'
+  . tests/run.sh "$@" | grep -v 'ASSERT:' || exit 1
 else
   info_log "Running tests locally in docker-compose"
-  docker compose run -it test "$@" | grep -v 'ASSERT:'
+  docker compose run -it test "$@" | grep -v 'ASSERT:' || exit 1
 fi

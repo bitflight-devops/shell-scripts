@@ -42,11 +42,11 @@ jobs:
       - name: Test running Remote Installer Script
         run: |
           set -x
-          branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}
+          branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF}}
           branch_r=${branch_r##refs/heads/}
           branch_r=${branch_r##*/merge/}
           branch=${branch_r##merge/}
-          NONINTERACTIVE=1 eval "$(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}/${branch}/install.sh")"
+          NONINTERACTIVE=1 eval "$(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${branch}/install.sh")"
           source ~/.bashrc
           echo "SCRIPTS_LIB_DIR: ${SCRIPTS_LIB_DIR:-}"
           echo "BFD_REPOSITORY: ${BFD_REPOSITORY:-}"
