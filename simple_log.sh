@@ -132,7 +132,6 @@ get_log_type() {
   set +x
   LOG_TYPES=(
     "error"
-    "info"
     "warning"
     "notice"
     "debug"
@@ -143,6 +142,7 @@ get_log_type() {
       "failure"
       "step"
       "question"
+      "info"
       "pass"
       "fail"
       "skip"
