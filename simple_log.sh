@@ -145,7 +145,7 @@ get_log_type() {
       "info"
       "pass"
       "fail"
-      "skip"
+      "skipped"
       "starting"
       "finished"
       "result"
@@ -185,7 +185,7 @@ get_log_color() {
   LOG_COLOR_result="${COLOR_BOLD_WHITE}"
   local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
 
-  if [[ ! ${arg} =~ (success|failure|step|result|finished|starting) ]]; then
+  if [[ ! ${arg} =~ (success|failure|step|pass|fail|skipped|info|result|finished|starting) ]]; then
     local -r logtype="$(get_log_type "${arg}")"
   else
     local -r logtype="${arg}"
@@ -210,7 +210,7 @@ execute() {
 
 indent_style() {
   local logtype="${1}"
-  local -r width="${2}"
+  local -r width="${2:-8}"
 
   local final_style=''
   case "${logtype}" in
@@ -299,7 +299,7 @@ plain_log() {
   local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<< "${fulllogtype}")"
   local -r msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
 
-  printf "[%7s] %s\n" "${logtypeUppercase}" "${msg}"
+  printf "[%-8s] %s\n" "${logtypeUppercase}" "${msg}"
 }
 
 simple_log() {
