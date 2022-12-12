@@ -84,11 +84,11 @@ getSourceFilesViaExecution() {
   ${useshell} -- "${DIR}/../lib/bootstrap.sh" "$@"
 }
 
-test::BootstrapScriptIsReadable() {
+test__BootstrapScriptIsReadable() {
   assertTrue '' "[ -r \"${DIR}/../lib/bootstrap.sh\" ]"
 }
 
-test::getSourceFilesViaSource() {
+test__getSourceFilesViaSource() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
   ( getSourceFilesViaSource > "${stdoutF}" 2> "${stderrF}")
@@ -111,7 +111,7 @@ test::getSourceFilesViaSource() {
   return 0
 }
 
-test::getSourceFilesViaExecution() {
+test__getSourceFilesViaExecution() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
 
@@ -172,7 +172,7 @@ test::getSourceFilesViaExecution() {
   return 0
 }
 
-test::getSourceFilesViaExecution::loading_individual_library() {
+test__getSourceFilesViaExecution::loading_individual_library() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
   declare -a AVAILABLE_LIBRARIES=(

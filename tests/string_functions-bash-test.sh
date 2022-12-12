@@ -7,7 +7,7 @@ if [[ ! -d ${SCRIPTS_LIB_DIR} ]]; then
   exit 1
 fi
 
-test::iscolorcode() {
+test__iscolorcode() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     if iscolorcode $'\e[0;32m'; then
@@ -24,7 +24,7 @@ test::iscolorcode() {
   return 0
 }
 
-test::colorcode() {
+test__colorcode() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     colorcode "COLOR_BG_BLUE" > "${stdoutF}" 2> "${stderrF}"
@@ -45,7 +45,7 @@ test::colorcode() {
 
   return 0
 }
-test::uppercase() {
+test__uppercase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     uppercase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -56,7 +56,7 @@ test::uppercase() {
   assertEquals 'uppercase output does not match expected output' "${TEST_OUTPUT_STRING_UPPERCASE}" "$(cat "${stdoutF}")"
   return 0
 }
-test::lowercase() {
+test__lowercase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     lowercase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -67,7 +67,7 @@ test::lowercase() {
   assertEquals 'lowercase output does not match expected output' "${TEST_OUTPUT_STRING_LOWERCASE}" "$(cat "${stdoutF}")"
   return 0
 }
-test::titlecase() {
+test__titlecase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     titlecase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -78,7 +78,7 @@ test::titlecase() {
   assertEquals 'titlecase output does not match expected output' "${TEST_OUTPUT_TITLE_CASE_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-test::squash_spaces() {
+test__squash_spaces() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     squash_spaces "${TEST_INPUT_OVERLY_SPACED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -89,7 +89,7 @@ test::squash_spaces() {
   assertEquals 'squash_spaces output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-test::trim_dash() {
+test__trim_dash() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim_dash "${TEST_INPUT_DASH_PADDED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -100,7 +100,7 @@ test::trim_dash() {
   assertEquals 'trim_dash output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-test::trim::just_spaces() {
+test__trim::just_spaces() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim "${TEST_INPUT_PADDED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -111,7 +111,7 @@ test::trim::just_spaces() {
   assertEquals 'trim output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-test::trim::spaces_mixed_with_color() {
+test__trim::spaces_mixed_with_color() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim "${TEST_INPUT_PADDED_STRING_COLORIZED}" > "${stdoutF}" 2> "${stderrF}"
@@ -122,7 +122,7 @@ test::trim::spaces_mixed_with_color() {
   assertEquals 'trim output does not match expected output' "${TEST_INPUT_STRING_COLORIZED}" "$(cat "${stdoutF}")"
   return 0
 }
-test::stripcolor() {
+test__stripcolor() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     stripcolor "${TEST_INPUT_STRING_COLORIZED}" > "${stdoutF}" 2> "${stderrF}"
@@ -133,7 +133,7 @@ test::stripcolor() {
   assertEquals 'stripcolor output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-test::squash_output() {
+test__squash_output() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -145,7 +145,7 @@ test::squash_output() {
   assertEquals 'squash_output output does not match expected output' "" "$(cat "${stdoutF}")"
   return 0
 }
-test::empty() {
+test__empty() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -170,7 +170,7 @@ test::empty() {
 
   return 0
 }
-test::IsEmptyString() {
+test__IsEmptyString() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"

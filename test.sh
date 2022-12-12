@@ -10,5 +10,5 @@ if [[ ${GITHUB_ACTIONS+x} == x ]]; then
   . tests/run.sh "$@" | grep -v 'ASSERT:' || exit 1
 else
   info_log "Running tests locally in docker-compose"
-  docker compose run -it test "$@" | grep -v 'ASSERT:' || exit 1
+  docker compose run --rm -it test "$@" | grep -v 'ASSERT:' || exit 1
 fi

@@ -1,6 +1,9 @@
 services:
   runner:
-    image: myoung34/github-runner:latest
+    image: myoung34/github-runner:latest-zsh
+    build:
+      context: tests/test-container
+      dockerfile: Dockerfile
     container_name: runner
     ports:
       - '22:8022'
@@ -9,7 +12,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./:/_work
   test:
-    image: myoung34/github-runner:latest
+    image: myoung34/github-runner:latest-zsh
+    build:
+      context: tests/test-container
+      dockerfile: Dockerfile
     container_name: runner-test
     ports:
       - '22:8022'
@@ -18,4 +24,4 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./:/_work
     working_dir: /_work
-    entrypoint: ['/bin/bash', '-c', '. tests/run.sh']
+    entrypoint: ['/bin/bash', 'tests/run.sh']
