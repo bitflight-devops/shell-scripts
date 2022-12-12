@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2248,SC2292
+# shellcheck disable=SC2248,SC1091,SC2166,SC2292
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}")"  > /dev/null 2>&1 && pwd)"
 ZSH_AVAILABLE=0
 
@@ -54,7 +54,6 @@ else
 fi
 
 ## tests/bootstrap-bash-test.sh
-
 SUM_OF_SOURCED_FILES=12
 echo "DIR: ${DIR}"
 getSourceFilesViaSource() {
@@ -85,11 +84,11 @@ getSourceFilesViaExecution() {
   ${useshell} -- "${DIR}/../lib/bootstrap.sh" "$@"
 }
 
-testBootstrapScriptReadable() {
+test::BootstrapScriptIsReadable() {
   assertTrue '' "[ -r \"${DIR}/../lib/bootstrap.sh\" ]"
 }
 
-testGenerateOutputViaSource() {
+test::getSourceFilesViaSource() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
   ( getSourceFilesViaSource > "${stdoutF}" 2> "${stderrF}")
@@ -112,7 +111,7 @@ testGenerateOutputViaSource() {
   return 0
 }
 
-testGenerateOutputViaExecution() {
+test::getSourceFilesViaExecution() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
 
@@ -150,10 +149,10 @@ testGenerateOutputViaExecution() {
     "$(env | grep -c -E '^(BFD_REPOSITORY|SCRIPTS_LIB_DIR)=')" 0
 
   assertNull "the command leaks the variable BFD_REPOSITORY to the shell" \
-    "${BFD_REPOSITORY}"
+    "${BFD_REPOSITORY:-}"
 
   assertNull "the command leaks the variable SCRIPTS_LIB_DIR to the shell" \
-    "${SCRIPTS_LIB_DIR}"
+    "${SCRIPTS_LIB_DIR:-}"
 
   if [[ ${ZSH_AVAILABLE} -eq 1 ]]; then
     (getSourceFilesViaExecution "zsh" "--silent" > "${stdoutF}" 2> "${stderrF}")
@@ -173,7 +172,7 @@ testGenerateOutputViaExecution() {
   return 0
 }
 
-testGenerateOutputViaExecution_IndividualLibrary() {
+test::getSourceFilesViaExecution::loading_individual_library() {
   unset BFD_REPOSITORY
   unset SCRIPTS_LIB_DIR
   declare -a AVAILABLE_LIBRARIES=(
@@ -218,13 +217,11 @@ testGenerateOutputViaExecution_IndividualLibrary() {
 }
 
 showOutput() {
-  # shellcheck disable=SC2166
   if [ -n "${stdoutF}" -a -s "${stdoutF}" ]; then
     echo '>>> STDOUT' >&2
     cat "${stdoutF}" >&2
     echo '<<< STDOUT' >&2
   fi
-  # shellcheck disable=SC2166
   if [ -n "${stderrF}" -a -s "${stderrF}" ]; then
     echo '>>> STDERR' >&2
     cat "${stderrF}" >&2

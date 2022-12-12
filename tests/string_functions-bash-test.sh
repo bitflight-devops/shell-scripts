@@ -1,35 +1,13 @@
 #!/bin/bash
+# shellcheck disable=SC1091,SC2166,SC2292
 DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
 export SCRIPTS_LIB_DIR="$(cd "${DIR}/../lib" && pwd -P)"
 if [[ ! -d ${SCRIPTS_LIB_DIR} ]]; then
   echo "ERROR: SCRIPTS_LIB_DIR does not exist"
   exit 1
 fi
-export BFD_REPOSITORY="${SCRIPTS_LIB_DIR%/lib}"
 
-# Test Constants
-COLOR_BG_BLUE=$'\e[1;44m'
-COLOR_BG_MAGENTA=$'\e[1;45m'
-COLOR_GREEN=$'\e[0;32m'
-COLOR_YELLOW=$'\e[0;33m'
-COLOR_RESET=$'\e[0m'
-
-TEST_INPUT_STRING_COLORIZED="${COLOR_BG_BLUE}This is a test String${COLOR_RESET}"
-TEST_INPUT_PADDED_STRING_COLORIZED="  ${COLOR_BG_BLUE}   This is a test String  ${COLOR_RESET}  "
-TEST_INPUT_STRING='This is a test String'
-TEST_INPUT_PADDED_STRING='  This is a test String  '
-TEST_INPUT_DASH_PADDED_STRING='--This is a test String--'
-TEST_INPUT_OVERLY_SPACED_STRING='This   is   a   test      String
-
-
-'
-
-TEST_OUTPUT_STRING='This is a test String'
-TEST_OUTPUT_TITLE_CASE_STRING='This Is A Test String'
-TEST_OUTPUT_STRING_UPPERCASE='THIS IS A TEST STRING'
-TEST_OUTPUT_STRING_LOWERCASE='this is a test string'
-
-testIscolorcodeOutput() {
+test::iscolorcode() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     if iscolorcode $'\e[0;32m'; then
@@ -46,7 +24,7 @@ testIscolorcodeOutput() {
   return 0
 }
 
-testColorcodeOutput() {
+test::colorcode() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     colorcode "COLOR_BG_BLUE" > "${stdoutF}" 2> "${stderrF}"
@@ -67,7 +45,7 @@ testColorcodeOutput() {
 
   return 0
 }
-testUppercaseOutput() {
+test::uppercase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     uppercase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -78,7 +56,7 @@ testUppercaseOutput() {
   assertEquals 'uppercase output does not match expected output' "${TEST_OUTPUT_STRING_UPPERCASE}" "$(cat "${stdoutF}")"
   return 0
 }
-testLowercaseOutput() {
+test::lowercase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     lowercase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -89,7 +67,7 @@ testLowercaseOutput() {
   assertEquals 'lowercase output does not match expected output' "${TEST_OUTPUT_STRING_LOWERCASE}" "$(cat "${stdoutF}")"
   return 0
 }
-testTitlecaseOutput() {
+test::titlecase() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     titlecase "${TEST_INPUT_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -100,7 +78,7 @@ testTitlecaseOutput() {
   assertEquals 'titlecase output does not match expected output' "${TEST_OUTPUT_TITLE_CASE_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-testSquash_SpacesOutput() {
+test::squash_spaces() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     squash_spaces "${TEST_INPUT_OVERLY_SPACED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -111,7 +89,7 @@ testSquash_SpacesOutput() {
   assertEquals 'squash_spaces output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-testTrim_DashesOutput() {
+test::trim_dash() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim_dash "${TEST_INPUT_DASH_PADDED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -122,7 +100,7 @@ testTrim_DashesOutput() {
   assertEquals 'trim_dash output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-testTrimOutput() {
+test::trim::just_spaces() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim "${TEST_INPUT_PADDED_STRING}" > "${stdoutF}" 2> "${stderrF}"
@@ -133,7 +111,7 @@ testTrimOutput() {
   assertEquals 'trim output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-testTrim_with_colorOutput() {
+test::trim::spaces_mixed_with_color() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     trim "${TEST_INPUT_PADDED_STRING_COLORIZED}" > "${stdoutF}" 2> "${stderrF}"
@@ -144,7 +122,7 @@ testTrim_with_colorOutput() {
   assertEquals 'trim output does not match expected output' "${TEST_INPUT_STRING_COLORIZED}" "$(cat "${stdoutF}")"
   return 0
 }
-testStripcolorOutput() {
+test::stripcolor() {
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
     stripcolor "${TEST_INPUT_STRING_COLORIZED}" > "${stdoutF}" 2> "${stderrF}"
@@ -155,7 +133,7 @@ testStripcolorOutput() {
   assertEquals 'stripcolor output does not match expected output' "${TEST_OUTPUT_STRING}" "$(cat "${stdoutF}")"
   return 0
 }
-testSquash_OutputOutput() {
+test::squash_output() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -167,7 +145,7 @@ testSquash_OutputOutput() {
   assertEquals 'squash_output output does not match expected output' "" "$(cat "${stdoutF}")"
   return 0
 }
-testEmptyOutput() {
+test::empty() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -192,7 +170,7 @@ testEmptyOutput() {
 
   return 0
 }
-testIsEmptyStringOutput() {
+test::IsEmptyString() {
   # With non-empty string
   ( 
     source "${SCRIPTS_LIB_DIR}/string_functions.sh"
@@ -219,13 +197,11 @@ testIsEmptyStringOutput() {
 }
 
 showOutput() {
-  # shellcheck disable=SC2166,SC2292
   if [ -n "${stdoutF}" -a -s "${stdoutF}" ]; then
     echo '>>> STDOUT' >&2
     cat "${stdoutF}" >&2
     echo '<<< STDOUT' >&2
   fi
-  # shellcheck disable=SC2166,SC2292
   if [ -n "${stderrF}" -a -s "${stderrF}" ]; then
     echo '>>> STDERR' >&2
     cat "${stderrF}" >&2
@@ -237,6 +213,27 @@ oneTimeSetUp() {
   # Define global variables for command output.
   stdoutF="${SHUNIT_TMPDIR}/stdout"
   stderrF="${SHUNIT_TMPDIR}/stderr"
+
+  BFD_REPOSITORY="${SCRIPTS_LIB_DIR%/lib}"
+
+  # Test Constants
+  COLOR_BG_BLUE=$'\e[1;44m'
+  COLOR_BG_MAGENTA=$'\e[1;45m'
+  COLOR_GREEN=$'\e[0;32m'
+  COLOR_YELLOW=$'\e[0;33m'
+  COLOR_RESET=$'\e[0m'
+
+  TEST_INPUT_STRING_COLORIZED="${COLOR_BG_BLUE}This is a test String${COLOR_RESET}"
+  TEST_INPUT_PADDED_STRING_COLORIZED="  ${COLOR_BG_BLUE}   This is a test String  ${COLOR_RESET}  "
+  TEST_INPUT_STRING='This is a test String'
+  TEST_INPUT_PADDED_STRING='  This is a test String  '
+  TEST_INPUT_DASH_PADDED_STRING='--This is a test String--'
+  TEST_INPUT_OVERLY_SPACED_STRING='This   is   a   test      String'
+
+  TEST_OUTPUT_STRING='This is a test String'
+  TEST_OUTPUT_TITLE_CASE_STRING='This Is A Test String'
+  TEST_OUTPUT_STRING_UPPERCASE='THIS IS A TEST STRING'
+  TEST_OUTPUT_STRING_LOWERCASE='this is a test string'
 }
 
 setUp() {
@@ -246,6 +243,4 @@ setUp() {
 }
 
 # Load and run shUnit2.
-# shellcheck disable=SC1091
-# Load shUnit2.
 . "${DIR}/shunit2/shunit2"
