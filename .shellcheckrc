@@ -18,5 +18,7 @@ disable=SC2310
 disable=SC2311
 disable=SC2312
 disable=SC2249
+disable=SC2148
+
 
 ignore=~/.zshrc,~/.antigen,functions/shell-scripts_plugin_load,functions/shell-scripts_plugin_unload,*.zsh

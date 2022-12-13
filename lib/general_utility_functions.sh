@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -18,21 +18,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
   set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh"   ]]
+  }
+  if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -40,7 +43,6 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-
 # End Lookup Current Script Directory
 ##########################################################
 
@@ -55,11 +57,11 @@ export BOOLEAN_TRUE="(true|on|yes|1)"
 export BOOLEAN_FALSE="(false|off|no|0)"
 
 isTrue() {
-  grep -q -i -E "${BOOLEAN_TRUE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_TRUE}" <<< "${1}"
 }
 
 isFalse() {
-  grep -q -i -E "${BOOLEAN_FALSE}" <<<"${1}"
+  grep -q -i -E "${BOOLEAN_FALSE}" <<< "${1}"
 }
 
 squash_output() {
@@ -114,12 +116,18 @@ isBoolean() {
 
 # Run the command given by "$@" in the background
 silent_background() {
-  if [[ "${whichshell}" == "zsh" ]]; then # zsh:  https://superuser.com/a/1285272/365890
+  if [[ ${whichshell} == "zsh"   ]]; then # zsh:  https://superuser.com/a/1285272/365890
     setopt local_options no_notify no_monitor
     "$@" &
-  elif [[ "${whichshell}" == "bash" ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
-    { "$@" 2>&3 & } 3>&2 2>/dev/null
+  elif [[ ${whichshell} == "bash"   ]]; then # bash: https://stackoverflow.com/a/27340076/5353461
+    { "$@" 2>&3 & } 3>&2 2> /dev/null
   else # Unknownness - just background it
     "$@" &
   fi
 }
+
+if ! command_exists realpath; then
+  realpath() {
+    readlink -f -- "$@"
+  }
+fi

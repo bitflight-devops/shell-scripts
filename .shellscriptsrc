@@ -4,16 +4,16 @@
 : ##########################################################
 : ##### Lookup BFD Repository Directory
 
-command_exists() { command -v "$@" > /dev/null 2>&1; }
+command_exists() { command -v "$@" >/dev/null 2>&1; }
 LC_ALL=C
 export LC_ALL
 : # by using a HEREDOC, we are disabling shellcheck and shfmt
 set +e
-read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+read -r -d '' LOOKUP_SHELL_FUNCTION <<-'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
 		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
 		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
 		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
@@ -23,29 +23,29 @@ set -e
 eval "${LOOKUP_SHELL_FUNCTION}"
 lookup_shell
 
-if [[ -z "${BFD_REPOSITORY:-}" ]]; then
+if [[ -z ${BFD_REPOSITORY:-} ]]; then
   set +e
-  read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
+  read -r -d '' GET_LIB_DIR_IN_ZSH <<-'EOF'
 	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	BFD_REPOSITORY="${0:a:h}"
 	BFD_REPOSITORY="$(cd "${BFD_REPOSITORY}" > /dev/null 2>&1 && pwd -P)"
-	EOF
+EOF
   set -e
-# shellcheck enable=all
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  # shellcheck enable=all
+  if command_exists zsh && [[ ${whichshell} == "zsh" ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
     # we are running in bash/sh
-    BFD_REPOSITORY="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
+    BFD_REPOSITORY="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)"
   fi
 fi
 
 # End Lookup BFD Repository Directory
 ##########################################################
 bash_or_zsh() {
-  { [[ "${whichshell}" == "zsh" ]] && echo "zsh";} || echo "bash"
+  { [[ ${whichshell} == "zsh" ]] && echo "zsh"; } || echo "bash"
 }
 
 : "${SCRIPTS_LIB_DIR:=${BFD_REPOSITORY}/lib}"

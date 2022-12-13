@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -14,25 +14,31 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
 	0="${${(M)0:#/*}:-$PWD/$0}"
 	SCRIPTS_LIB_DIR="${0:a:h}"
 	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
+	if [[ -f "${SCRIPTS_LIB_DIR:-}/lib/.scripts.lib.md" ]]; then
+		SCRIPTS_LIB_DIR="${SCRIPTS_LIB_DIR:-}/lib"
+	fi
 	EOF
-  set -e
+
   # by using a HEREDOC, we are disabling shellcheck and shfmt
-  set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh" ]]
+  }
+  if command_exists zsh && [[ ${whichshell} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -45,7 +51,6 @@ fi
 ##########################################################
 : "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
 : "${SHELL_SCRIPTS_BOOTSTRAP_LOADED:=1}"
-
 
 declare -a AVAILABLE_LIBRARIES=(
   "color_and_emoji_variables"
@@ -126,10 +131,10 @@ unload_libraries() {
 }
 
 is_sourced() {
-  if [[ "${SHELL}" =~ zsh ]]; then
+  if [[ ${SHELL} =~ zsh   ]]; then
     [[ -n ${ZSH_EVAL_CONTEXT:-} ]] && [[ ${ZSH_EVAL_CONTEXT} =~ :file$ ]]
   else
-    [[ "${FUNCNAME[1]}" == source ]] && [[ "${BASH_SOURCE[1]}" != "${0}" ]]
+    [[ ${FUNCNAME[1]} == source   ]] && [[ ${BASH_SOURCE[1]} != "${0}"   ]]
   fi
 }
 

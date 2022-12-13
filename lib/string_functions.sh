@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -18,21 +18,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
   set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh"   ]]
+  }
+  if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -40,7 +43,6 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-
 # End Lookup Current Script Directory
 ##########################################################
 
@@ -62,7 +64,7 @@ lowercase() {
 }
 
 iscolorcode() {
-    grep -q -E $'\e\\[''(?:[0-9]{1,3})(?:(?:;[0-9]{1,3})*)?[mGK]' <<< "$1"
+  [[ $(perl -ne 'print "1" if($_ =~ /[[:cntrl:]]\[\d{1,3}(?:[;]\d{1,3})*[mGK]/)' <<< "$1") == 1 ]]
 }
 
 colorcode() {
@@ -109,8 +111,10 @@ empty() {
     echo 'false' && return 1
   fi
 }
-
-# Alias for empty
+squash_output() {
+  "$@" > /dev/null 2>&1
+}
+# Alias for empty, but doesn't print true/false
 isEmptyString() {
   squash_output empty "${*}"
 }
@@ -119,16 +123,8 @@ trim_dash() {
   sed 's/^[- ]*//g;s/[- ]*$//g' <<< "${*}"
 }
 
-uppercase() {
-  tr '[:lower:]' '[:upper:]' <<< "${*}"
-}
-
-lowercase() {
-  tr '[:upper:]' '[:lower:]' <<< "${*}"
-}
-
 squash_spaces() {
-  tr -s '[:space:]' ' ' <<< "${*}"
+  tr -s '[:blank:]' ' ' <<< "${*}"
 }
 
 # Remove Starting # from the string

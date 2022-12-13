@@ -17,87 +17,38 @@
 # https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh
 
 set -eu
-BOLD="$(tput bold 2> /dev/null || printf '')"
-GREY="$(tput setaf 0 2> /dev/null || printf '')"
-UNDERLINE="$(tput smul 2> /dev/null || printf '')"
-RED="$(tput setaf 1 2> /dev/null || printf '')"
-GREEN="$(tput setaf 2 2> /dev/null || printf '')"
-YELLOW="$(tput setaf 3 2> /dev/null || printf '')"
-BLUE="$(tput setaf 4 2> /dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2> /dev/null || printf '')"
-NO_COLOR="$(tput sgr0 2> /dev/null || printf '')"
-
-COLOR_BOLD_BLACK=$'\e[1;30m'
-COLOR_BOLD_RED=$'\e[1;31m'
-COLOR_BOLD_GREEN=$'\e[1;32m'
-COLOR_BOLD_YELLOW=$'\e[1;33m'
-COLOR_BOLD_BLUE=$'\e[1;34m'
-COLOR_BOLD_MAGENTA=$'\e[1;35m'
-COLOR_BOLD_CYAN=$'\e[1;36m'
-COLOR_BOLD_WHITE=$'\e[1;37m'
-COLOR_BOLD=$'\e[1m'
-COLOR_BOLD_YELLOW=$'\e[1;33m'
-COLOR_RESET=$'\e[0m'
-CLEAR_SCREEN="$(tput rc 2> /dev/null || printf '')"
-
-COLOR_BRIGHT_BLACK=$'\e[0;90m'
-COLOR_BRIGHT_RED=$'\e[0;91m'
-COLOR_BRIGHT_GREEN=$'\e[0;92m'
-COLOR_BRIGHT_YELLOW=$'\e[0;93m'
-COLOR_BRIGHT_BLUE=$'\e[0;94m'
-COLOR_BRIGHT_MAGENTA=$'\e[0;95m'
-COLOR_BRIGHT_CYAN=$'\e[0;96m'
-COLOR_BRIGHT_WHITE=$'\e[0;97m'
-
-COLOR_BG_BLACK=$'\e[1;40m'
-COLOR_BG_RED=$'\e[1;41m'
-COLOR_BG_GREEN=$'\e[1;42m'
-COLOR_BG_YELLOW=$'\e[1;43m'
-COLOR_BG_BLUE=$'\e[1;44m'
-COLOR_BG_MAGENTA=$'\e[1;45m'
-COLOR_BG_CYAN=$'\e[1;46m'
-COLOR_BG_WHITE=$'\e[1;47m'
-COLOR_RESET=$'\e[0m'
-
-INFO_ICON=$'ℹ️'
-DEBUG_ICON=$'🛠️'
-STARTING_STAR=$'⭐'
-STEP_STAR=$'✨'
-HOURGLASS_IN_PROGRESS=$'⏳' # ⏳ hourglass not done
-HOURGLASS_DONE=$'⌛'        # ⌛ hourglass done
-CHECK_MARK_BUTTON=$'✅'     # ✅ check mark button
-CROSS_MARK=$'❌'            # ❌ cross mark
-
 # BFD == BitFlight Devops
 SHELL_SCRIPTS_OWNER="bitflight-devops"
 SHELL_SCRIPTS_REPOSITORY_NAME="shell-scripts"
 SHELL_SCRIPTS_GITHUB_REPOSITORY="${SHELL_SCRIPTS_OWNER}/${SHELL_SCRIPTS_REPOSITORY_NAME}"
-if [[ -n "${SUDO_USER:-}" ]]; then
+if [[ -n ${SUDO_USER:-}   ]]; then
   MAIN_USER="${SUDO_USER}"
 else
   MAIN_USER="$(id -un 2> /dev/null || true)"
 fi
-
 command_exists() { command -v "$@" > /dev/null 2>&1; }
+is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
+downloader_installed() {
+  command_exists curl || command_exists wget || command_exists fetch
+}
 # by using a HEREDOC, we are disabling shellcheck and shfmt
 set +e
-read -r -d '' LOOKUP_SHELL_FUNCTION <<'EOF'
+read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
 EOF
-set -e
 eval "${LOOKUP_SHELL_FUNCTION}"
 # shellcheck enable=all
 lookup_shell
-
+set -e
 is_zsh() {
-  [[ "${whichshell}" == "zsh" ]]
+  [[ ${whichshell:-} == "zsh"   ]]
 }
 
 sourced=0
@@ -134,9 +85,6 @@ run_quietly() {
   fi
 }
 
-command_exists() { command -v "$@" > /dev/null 2>&1; }
-is_scripts_lib_dir() { [[ -f "${1}/.scripts.lib.md" ]]; }
-
 shell_join() {
   local arg
   printf "%s" "$1"
@@ -155,180 +103,43 @@ escape_github_command_data() {
   local -r data="${1}"
   printf '%s' "${data}" | perl -ne '$_ =~ s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g;print;'
 }
-
-# Duplicate of function in lib/log_functions.sh
-get_log_type() {
-  set +x
-  LOG_TYPES=(
-    "error"
-    "info"
-    "warning"
-    "notice"
-    "debug"
-  )
-  if [[ -z ${GITHUB_ACTIONS:-} ]]; then
-    LOG_TYPES+=(
-      "success"
-      "failure"
-      "step"
-    )
-  fi
-  local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-  if [[ ${LOG_TYPES[*]} =~ ( |^)"${logtype}"( |$) ]]; then
-    printf '%s' "${logtype}"
+if ! downloader_installed; then
+  abort "curl, wget, or fetch is required to download files."
+fi
+download() {
+  file="$1"
+  url="$2"
+  if command_exists curl; then
+    curl --fail --silent --location --output "${file}" "${url}"
+  elif command_exists wget; then
+    wget --quiet --output-document="${file}" "${url}"
+  elif command_exists fetch; then
+    fetch --quiet --output="${file}" "${url}"
   else
-    echo ""
+    error "No HTTP download program (curl, wget, fetch) found, exiting…"
+    return 1
   fi
 }
-
-function failure() {
-  local -r message="${*}"
-  simple_log failure "${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
-}
-
-function success() {
-  local -r message="${*}"
-  simple_log success "${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
-}
-
-function start_step() {
-  local -r message="${*}"
-  simple_log step "${COLOR_BRIGHT_WHITE}${message}${COLOR_RESET}" 2>&1
-}
-
-get_log_color() {
-  if [[ -n ${GITHUB_ACTIONS:-} ]]; then
-    printf '%s' "::"
-    return
-  elif [[ -n ${CI:-} ]]; then
-    printf '%s' "##"
-    return
-  fi
-
-  LOG_COLOR_error="${RED}"
-  LOG_COLOR_info="${GREEN}"
-  LOG_COLOR_warning="${YELLOW}"
-  LOG_COLOR_notice="${MAGENTA}"
-  LOG_COLOR_debug="${GREY}"
-  LOG_COLOR_step="${COLOR_BOLD_CYAN}"
-  LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
-  LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
-  local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-
-  if [[ ! ${arg} =~ (success|failure|step) ]]; then
-    local -r logtype="$(get_log_type "${arg}")"
-  else
-    local -r logtype="${arg}"
-  fi
-  if [[ -z ${logtype} ]]; then
-    printf '%s' "${NO_COLOR}"
-  else
-    eval 'printf "%s" "${LOG_COLOR_'"${logtype}"'}"'
-  fi
-}
-
-stripcolor() {
-  # shellcheck disable=SC2001
-  sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" <<< "${*}"
-}
-
-indent_style() {
-  local logtype="${1}"
-  local -r width="${2}"
-
-  local final_style=''
-  case "${logtype}" in
-    notice)
-      style=" "
-      final_style="${STARTING_STAR}"
-      ;;
-    step)
-      style=" "
-      final_style="${STEP_STAR}"
-      ;;
-    failure)
-      style=" "
-      final_style="${CROSS_MARK}"
-      ;;
-    success)
-      style=" "
-      final_style="${CHECK_MARK_BUTTON}"
-      ;;
-    info)
-      style=" "
-      final_style="${INFO_ICON} "
-      # logtype=''
-      ;;
-    debug)
-      style=" "
-      final_style="${DEBUG_ICON:-} "
-      ;;
-    *)
-      style=""
-      final_style="-->"
-      ;;
-  esac
-  local -r indent_length="$((width - ${#logtype}))"
-  printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
-  printf -- "${style}%.0s" $(seq "${indent_length}")
-  printf '%s' "${final_style}"
-}
-
-simple_log() {
-  in_quiet_mode && return 0
-  local -r logtype="$(get_log_type "${1}")"
-  local -r logcolor="$(get_log_color "${logtype}")"
-  local msg
-  if [[ -z ${logtype} ]]; then
-    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
-    printf '%s%s\n' "${NO_COLOR}" "${msg}"
-  else
-    shift
-    msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
-    if [[ ${logcolor} != "::" ]]; then
-      local indent_width=11
-      local indent="$(indent_style "${logtype}" "${indent_width}")"
-      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
-      # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
-      printf -v space "%*s" "$((indent_width + 2))" ''
-      msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${msg}")"
-    else
-      printf -v log_prefix '::%s ::' "${logtype}"
-      local -r msg="$(escape_github_command_data "${*}")"
-    fi
-    printf '%s%s\n' "${log_prefix}" "${msg}"
-  fi
-}
-
-abort() {
-  simple_log "error" "$@" >&2
+branch_r="${GITHUB_HEAD_REF:-${GITHUB_REF:-}}"
+branch_r="${branch_r:-${SHELL_SCRIPTS_BRANCH:-}}"
+branch_r="${branch_r##refs/heads/}"
+branch_r="${branch_r##*/merge/}"
+branch="${branch_r##merge/}"
+eval "$(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/${branch:-main}/simple_log.sh" 2> /dev/null)"
+if ! command_exists debug_log; then
+  echo "simple_log.sh failed to load."
   exit 1
-}
-
+fi
 execute() {
   if ! run_quietly "$@"; then
     abort "$(printf "Failed during: %s" "$(shell_join "$@")")"
   fi
 }
 
-error() { simple_log error "$@"; }
-warn() { simple_log warning "$@"; }
-warning() { simple_log warning "$@"; }
-notice() { simple_log notice "$@"; }
-info() { simple_log info "$@"; }
-chomp() { printf "%s" "${1/"$'\n'"/}"; }
-debug() {
-  if [[ -n ${DEBUG:-} ]]; then
-    simple_log debug "$@"
-  fi
-}
 ohai() {
-  run_quietly printf "${BLUE}==>${BOLD} %s${NO_COLOR}\n" "$(shell_join "$@")"
+  run_quietly printf "${BLUE}==>${BOLD} %s${COLOR_RESET}\n" "$(shell_join "$@")"
 }
 
-downloader_installed() {
-  command_exists curl || command_exists wget || command_exists fetch
-}
 # Fail fast with a concise message when not using bash
 # Single brackets are needed here for POSIX compatibility
 # shellcheck disable=SC2292
@@ -339,10 +150,10 @@ downloader_installed() {
 if [[ -n ${GITHUB_ACTIONS:+x} ]]; then
   BFD_PREFIX="${HOME%./}"
 fi
-if [[ -n "${BFD_REPOSITORY:-}" ]]; then
-  if [[ -n "${BFD_CLEAN_INSTALL:-}" ]]; then
+if [[ -n ${BFD_REPOSITORY:-}   ]]; then
+  if [[ -n ${BFD_CLEAN_INSTALL:-}   ]]; then
     # Try to safely remove the existing installation
-    if [[ "${BFD_REPOSITORY}" == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}" ]]; then
+    if [[ ${BFD_REPOSITORY} == *"/${SHELL_SCRIPTS_REPOSITORY_NAME}"   ]]; then
       rm -rf "${BFD_REPOSITORY}"
     fi
     timeNowSecondsEpoch=$(date +%s)
@@ -377,36 +188,36 @@ if [[ -n ${INTERACTIVE-} && -n ${NONINTERACTIVE-} ]]; then
   abort 'Both `$INTERACTIVE` and `$NONINTERACTIVE` are set. Please unset at least one variable and try again.'
 fi
 
-debug "checking which mode to use"
+debug_log "checking which mode to use"
 # Check if script is run non-interactively (e.g. CI)
 # If it is run non-interactively we should not prompt for passwords.
 # Always use single-quoted strings with `exp` expressions
 # shellcheck disable=SC2016
 if [[ -z ${NONINTERACTIVE-} ]]; then
   if [[ -n ${CI-} ]]; then
-    debug 'Running in non-interactive mode because `$CI` is set.'
+    debug_log 'Running in non-interactive mode because `$CI` is set.'
     NONINTERACTIVE=1
     unset INTERACTIVE
   elif [[ ! -t 0 ]] && [[ ${sourced} -eq 1 ]]; then
     if [[ -z ${INTERACTIVE-} ]]; then
-      debug 'Running in non-interactive mode because `stdin` is not a TTY.'
+      debug_log 'Running in non-interactive mode because `stdin` is not a TTY.'
       NONINTERACTIVE=1
       unset INTERACTIVE
     else
-      debug 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
+      debug_log 'Running in interactive mode despite `stdin` not being a TTY because `$INTERACTIVE` is set.'
     fi
   else
-    debug 'Running in interactive mode.'
+    debug_log 'Running in interactive mode.'
     INTERACTIVE=1
     unset NONINTERACTIVE || true
   fi
 else
-  debug 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
+  debug_log 'Running in non-interactive mode because `$NONINTERACTIVE` is set.'
 fi
 
 # USER isn't always set so provide a fall back for the installer and subprocesses.
 if [[ -z ${USER:-} ]]; then
-  debug "No USER variable, creating one"
+  debug_log "No USER variable, creating one"
   USER="$(chomp "$(id -un)")"
   export USER
 fi
@@ -418,7 +229,7 @@ if [[ ${OS} == "Linux" ]]; then
 elif [[ ${OS} != "Darwin" ]]; then
   abort "shell-scripts is only supported on macOS and Linux."
 fi
-if [[ -n "${BFD_EXISTING_INSTALLATION:-}" ]]; then
+if [[ -n ${BFD_EXISTING_INSTALLATION:-}   ]]; then
   BFD_REPOSITORY="${BFD_EXISTING_INSTALLATION}"
 else
   BFD_PREFIX_DEFAULT="${HOME}/.local/${SHELL_SCRIPTS_OWNER}"
@@ -550,42 +361,42 @@ create_script_directory() {
   local fix_ownership='false'
   if [[ -d ${path} ]]; then
     if ! test_writeable "${path}"; then
-      info "The directory ${YELLOW}${path}${NO_COLOR}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
+      info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis not writeable by the current user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}.\nWe will attempt to change the permissions \nof the directory to ${permissions}."
     else
-      info "The directory ${YELLOW}${path}${NO_COLOR}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis available and writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
       return 0
     fi
   else
 
-    info "Attempting to create ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info_log "Attempting to create ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     if ! execute "${MKDIR[@]}" "${path}"; then
       if [[ ${user} != 'root' ]]; then
         if ! run_as_root "${MKDIR[@]}" "${path}"; then
-          abort "Failed to create ${YELLOW}${path}${RED} as root."
+          abort "Failed to create ${COLOR_YELLOW}${path}${RED} as root."
         else
           fix_ownership='true'
-          info "Created ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}root${NO_COLOR}."
+          info_log "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}root${COLOR_RESET}."
         fi
       else
-        abort "Failed to create ${YELLOW}${path}${RED}."
+        abort "Failed to create ${COLOR_YELLOW}${path}${RED}."
       fi
     else
-      info "Created ${YELLOW}${path}${NO_COLOR} as ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+      info_log "Created ${COLOR_YELLOW}${path}${COLOR_RESET} as ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
     fi
   fi
 
   if [[ -d ${path} ]] && [[ ${fix_ownership} == 'true' ]]; then
-    info "Setting ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${YELLOW}${path}${NO_COLOR} to ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}"
-    info "Setting permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
-    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${YELLOW}${path}${NO_COLOR} to ${permissions}"
+    info_log "Setting ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
+    run_as_root "${CHOWN[@]}" "${user}" "${path}" 2> /dev/null || abort "Failed to set ownership on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}"
+    info_log "Setting permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
+    run_as_root "${CHMOD[@]}" "${permissions}" "${path}" 2> /dev/null || abort "Failed to set permissions on ${COLOR_YELLOW}${path}${COLOR_RESET} to ${permissions}"
   fi
 
-  info "Verifying that ${YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+  info_log "Verifying that ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   if ! test_writeable "${path}"; then
-    abort "The directory ${YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
+    abort "The directory ${COLOR_YELLOW}${path}${RED}\nis inaccessible to user ${COLOR_BRIGHT_CYAN}${user}${RED}."
   else
-    info "The directory ${YELLOW}${path}${NO_COLOR}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${NO_COLOR}."
+    info_log "The directory ${COLOR_YELLOW}${path}${COLOR_RESET}\nis writeable by the user ${COLOR_BRIGHT_CYAN}${user}${COLOR_RESET}."
   fi
 
 }
@@ -597,7 +408,7 @@ create_directories() {
 # require_sudo() {
 
 #   local -r user="$(id -un 2>/dev/null || true)"
-#   info "Running install as ${user}"
+#   info_log "Running install as ${user}"
 #   local -r SUDO_CMD="$(root_available)"
 #   ROOT_IS_AVAILABLE=$?
 #   REQUIRE_SUDO=0
@@ -677,10 +488,10 @@ download_shell_scripts() {
     SHELL_SCRIPTS_REF="main"
   fi
   if command_exists git; then
-    (
+    ( 
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
-      info "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
+      info_log "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
       # we do it in four steps to avoid merge errors when reinstalling
       execute "git" "init" "-q"
       # "git remote add" will fail if the remote is defined in the global config
@@ -694,12 +505,12 @@ download_shell_scripts() {
       execute "git" "fetch" "--force" "--tags" "origin" > /dev/null 2>&1
       execute "git" "remote" "set-head" "origin" "--auto" > /dev/null
       execute "git" "reset" "--hard" "origin/${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
-      info "Pulling latest shell scripts - starting..."
+      info_log "Pulling latest shell scripts - starting..."
       execute "git" "pull" "--quiet" "--force" "origin" "${SHELL_SCRIPTS_REF}" > /dev/null 2>&1
-      info "Pulling latest shell scripts - completed."
+      info_log "Pulling latest shell scripts - completed."
     )
   else
-    (
+    ( 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
@@ -708,26 +519,11 @@ download_shell_scripts() {
         rm -rf "${bfd_cache}"
         abort_msg=(
           "Unable to download shell-scripts from\n"
-          "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${NO_COLOR}"
+          "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${SHELL_SCRIPTS_RELEASES_URL}${COLOR_RESET}"
         )
         abort "${abort_msg[*]}"
       fi
     )
-  fi
-}
-
-download() {
-  file="$1"
-  url="$2"
-  if command_exists curl; then
-    curl --fail --silent --location --output "${file}" "${url}"
-  elif command_exists wget; then
-    wget --quiet --output-document="${file}" "${url}"
-  elif command_exists fetch; then
-    fetch --quiet --output="${file}" "${url}"
-  else
-    error "No HTTP download program (curl, wget, fetch) found, exiting…"
-    return 1
   fi
 }
 
@@ -750,8 +546,8 @@ unpack() {
     *)
       error "Unknown package extension."
       printf "\n"
-      info "This almost certainly results from a bug in this script--please file a"
-      info "bug report at https://github.com/starship/starship/issues"
+      info_log "This almost certainly results from a bug in this script--please file a"
+      info_log "bug report at https://github.com/starship/starship/issues"
       return 1
       ;;
   esac
@@ -842,11 +638,11 @@ add_to_path() {
   if [[ -z ${PATH} ]]; then
     export PATH="${1}"
     running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
-    debug "Path created: ${1}"
+    debug_log "Path created: ${1}"
   elif not_in_path "${1}"; then
     export PATH="${1}:${PATH}"
     running_in_github_actions && echo "${1}" >> "${GITHUB_PATH}"
-    debug "Path added: ${1}"
+    debug_log "Path added: ${1}"
   fi
   # fi
 }
@@ -856,7 +652,7 @@ check_bin_dir() {
 
   if [[ ! -d ${bin_dir} ]]; then
     error "Installation location ${bin_dir} does not appear to be a directory"
-    info "Make sure the location exists and is a directory, then try again."
+    info_log "Make sure the location exists and is a directory, then try again."
     exit 1
   fi
 
@@ -882,12 +678,17 @@ progress_bar() {
   done
 }
 
-export DEPENDENCIES=(
+DEPENDENCIES=(
   git
   jq
-  wget
   perl
 )
+
+if ! command_exists wget && ! command_exists curl; then
+  DEPENDENCIES+=(
+    curl
+  )
+fi
 
 missing_dependencies() {
   REQUIRED_DEPENDENCIES=()
@@ -943,9 +744,9 @@ install_dependencies() {
     fi
   fi
   if [[ -n ${NO_PACKAGE_MANAGER:-} ]]; then
-    abort "No package manager found. Please install ${YELLOW}${dependencies[*]}${NO_COLOR} manually."
+    abort "No package manager found. Please install ${COLOR_YELLOW}${dependencies[*]}${COLOR_RESET} manually."
   fi
-  success "Installed ${YELLOW}${dependencies[*]}${NO_COLOR}."
+  success "Installed ${COLOR_YELLOW}${dependencies[*]}${COLOR_RESET}."
 }
 
 installer_dependencies() {
@@ -961,10 +762,10 @@ installer_dependencies() {
     # permission to install the dependencies.
 
     local message="This script requires the following dependencies:\n"
-    for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${NO_COLOR}\n"; done
+    for i in "${REQUIRED_DEPENDENCIES[@]}"; do message="${message}  - ${COLOR_BRIGHT_CYAN}${i}${COLOR_RESET}\n"; done
     if root_available; then
       notice "${message}\nThese dependencies can be installed for you as root.\n"
-      start_step "Do you want to install them now? [Y/n] "
+      step "Do you want to install them now? [Y/n] "
       if is_zsh; then
         read -k 1 -r -q answer
       else
@@ -980,11 +781,11 @@ installer_dependencies() {
   fi
 
   if [[ ${INSTALL_DEPS:-} == 'true' ]]; then
-    info "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${NO_COLOR}"
+    info_log "Installing dependencies…${COLOR_BRIGHT_CYAN}" "${REQUIRED_DEPENDENCIES[@]}" "${COLOR_RESET}"
     install_dependencies "${REQUIRED_DEPENDENCIES[@]}"
   elif [[ ${#REQUIRED_DEPENDENCIES[@]} -gt 0 ]]; then
     ohai "Skipping dependency installation…"
-    abort "Please install ${YELLOW}${REQUIRED_DEPENDENCIES[*]}${NO_COLOR} manually."
+    abort "Please install ${COLOR_YELLOW}${REQUIRED_DEPENDENCIES[*]}${COLOR_RESET} manually."
   fi
 
 }
@@ -1050,7 +851,7 @@ set_env_var() {
 
 next_steps() {
 
-  ohai "Next steps:"
+  result "Next steps:"
   RC_CONTENT="source \"${BFD_REPOSITORY}/.shellscriptsrc\""
 
   local shell_profile="$(shell_rc_file)"
@@ -1060,54 +861,54 @@ next_steps() {
       "To use the installed functions add this to your scripts:\n"
       "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
     )
-    notice "${notice_msg[*]}"
+    step "${notice_msg[*]}"
     if [[ -f ${shell_profile} ]] && grep -m 1 -q -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
       matches="$(awk '/.*(BFD_REPOSITORY|shellscripts).*/ {print "On line "NR" --> "$0};' "${shell_profile}")"
-      info_msg=(
+      info_log_msg=(
         "Environment variable\n"
         "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
         "is possibly already set in ${shell_profile}.\n"
         "Matches:\n"
         "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${matches}${COLOR_RESET}"
       )
-      info "${debug_msg[*]}"
+      step "${debug_msg[*]}"
     else
-      start_step_msg=(
+      step_question_msg=(
         "Do you want to add this to\n"
         "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${shell_profile}${COLOR_RESET}${COLOR_BRIGHT_WHITE} now? [Y/n] "
         "${COLOR_RESET}"
       )
-      start_step "${start_step_msg[*]}"
+      step_question "${step_question_msg[*]}"
       add_to_shell="$(bash -c 'read -r -n 1 -t 30 prompt; echo "${prompt:-}"')"
       printf "\n"
       if [[ ${add_to_shell:-y} =~ [Yy] ]]; then
-        info_msg=("Adding script source:\n"
+        info_log_msg=("Adding script source:\n"
           "${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
           "${RC_CONTENT}"
           "${COLOR_RESET}\n"
           "to ${shell_profile}"
         )
-        info "${info_msg[*]}"
+        info_log "${info_log_msg[*]}"
         tee -a "${shell_profile}" <<< "${RC_CONTENT}" && return 0
       fi
     fi
-    info_msg=(
+    info_log_msg=(
       "Run this command in the shell to load the scripts now:\n"
       "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}\n"
       "Or reload the shell:\n"
       "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}"
       "exec ${whichshell}${COLOR_RESET}"
     )
-    info "${info_msg[*]}"
+    info_log "${info_log_msg[*]}"
   fi
 
   if [[ -n ${NONINTERACTIVE:-} ]]; then
 
-      info_msg=(
+      info_log_msg=(
         "Adding environment variable\n"
         "\t${COLOR_BG_BLACK}${COLOR_BRIGHT_BLUE}${RC_CONTENT}${COLOR_RESET}"
     )
-      info "${info_msg[*]}"
+      info_log "${info_log_msg[*]}"
       if grep -m 1 -q -v -E '(BFD_REPOSITORY|shellscripts)' "${shell_profile}"; then
         tee -a "${shell_profile}" <<< "${RC_CONTENT}"
     fi
@@ -1123,16 +924,16 @@ if ! command_exists git && ! downloader_installed; then
 fi
 
 install() {
-  notice "Installing ${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
-  start_step "Validating git user name and email..."
-  { execute configure_git && success "Validated git user name and email"; } || failure "Failed to configure git"
-  start_step "Creating install directory..."
-  { execute create_directories && success "Created install directory"; } || failure "Failed to create directories"
-  start_step "Installing shell-scripts..."
-  { execute download_shell_scripts && success "Installed shell-scripts"; } || failure "Failed to install shell-scripts"
+  starting "Installing ${SHELL_SCRIPTS_GITHUB_REPOSITORY}"
+  step "Validating git user name and email..."
+  { execute configure_git && step_passed "Validated git user name and email"; } || step_failed "Failed to configure git"
+  step "Creating install directory..."
+  { execute create_directories && step_passed "Created install directory"; } || step_failed "Failed to create directories"
+  step "Installing shell-scripts..."
+  { execute download_shell_scripts && step_passed "Installed shell-scripts"; } || step_failed "Failed to install shell-scripts"
   next_steps
 
-  success "${STARTING_STAR} Install completed"
+  finished "${START_ICON} Install completed"
   unset INTERACTIVE
   unset NONINTERACTIVE
   set +eu

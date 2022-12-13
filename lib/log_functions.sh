@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -18,21 +18,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
   set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh"   ]]
+  }
+  if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -152,7 +155,6 @@ running_in_ci() {
   [[ -n ${CI:-} ]]
 }
 
-# Duplicate of function in lib/log_functions.sh
 get_log_type() {
   set +x
   LOG_TYPES=(
@@ -161,12 +163,19 @@ get_log_type() {
     "notice"
     "debug"
   )
-  if [[ -z ${GITHUB_ACTIONS-} ]]; then
+  if [[ -z ${GITHUB_ACTIONS:-} ]]; then
     LOG_TYPES+=(
       "info"
       "success"
       "failure"
       "step"
+      "question"
+      "pass"
+      "fail"
+      "skip"
+      "starting"
+      "finished"
+      "result"
     )
   fi
   local -r logtype="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
@@ -176,7 +185,7 @@ get_log_type() {
     echo ""
   fi
 }
-
+# shellcheck disable=SC2034
 get_log_color() {
   if [[ -n ${GITHUB_ACTIONS:-} ]]; then
     printf '%s' "::"
@@ -191,12 +200,23 @@ get_log_color() {
   LOG_COLOR_warning="${YELLOW}"
   LOG_COLOR_notice="${MAGENTA}"
   LOG_COLOR_debug="${GREY}"
-  LOG_COLOR_step="${COLOR_BOLD_CYAN}"
-  LOG_COLOR_failure="${COLOR_BG_YELLOW}${RED}"
+  LOG_COLOR_starting="${COLOR_BOLD_CYAN}"
+  LOG_COLOR_step="${COLOR_BRIGHT_CYAN}"
+  LOG_COLOR_question="${tty_underline}${COLOR_BOLD_MAGENTA}"
+  LOG_COLOR_pass="${COLOR_GREEN}"
+  LOG_COLOR_fail="${COLOR_RED}"
+  LOG_COLOR_skipped="${COLOR_YELLOW}"
+  LOG_COLOR_failure="${COLOR_BOLD_RED}"
   LOG_COLOR_success="${COLOR_BOLD_YELLOW}"
+  LOG_COLOR_finished="${COLOR_BOLD_CYAN}"
+  LOG_COLOR_result="${COLOR_BOLD_WHITE}"
   local arg="$(tr '[:upper:]' '[:lower:]' <<< "${1}")"
-  local -r logtype="$(get_log_type "${arg}")"
 
+  if [[ ! ${arg} =~ (success|failure|step|result|finished|starting) ]]; then
+    local -r logtype="$(get_log_type "${arg}")"
+  else
+    local -r logtype="${arg}"
+  fi
   if [[ -z ${logtype} ]]; then
     printf '%s' "${NO_COLOR}"
   else
@@ -212,27 +232,56 @@ indent_style() {
   case "${logtype}" in
     notice)
       style=" "
-      final_style="${STARTING_STAR}"
+      final_style="${NOTICE_ICON:-}"
+      ;;
+    starting)
+      style=" "
+      final_style="${STARTING_ICON:-}"
+      ;;
+    finished)
+      style=" "
+      final_style="${FINISHED_ICON:-}"
+      ;;
+    result)
+      style=" "
+      final_style="${RESULT_ICON:-}"
       ;;
     step)
       style=" "
-      final_style="${STEP_STAR}"
+      final_style="${STEP_ICON:-}"
+      ;;
+    question)
+      style=" "
+      final_style="${QUESTION_ICON:-}"
       ;;
     failure)
       style=" "
-      final_style="${CROSS_MARK}"
+      final_style="${FAILURE_ICON:-}"
       ;;
     success)
       style=" "
-      final_style="${CHECK_MARK_BUTTON}"
+      final_style="${SUCCESS_ICON:-}"
+      ;;
+    pass)
+      style=" "
+      final_style="${PASS_ICON:-}"
+      ;;
+    fail)
+      style=" "
+      final_style="${FAIL_ICON:-}"
+      ;;
+    skipped)
+      style=" "
+      final_style="${SKIP_ICON:-}"
       ;;
     info)
       style=" "
-      final_style="${INFO_ICON} "
+      final_style="${INFO_ICON:-}"
+      # logtype=''
       ;;
     debug)
       style="-"
-      final_style="${DEBUG_ICON:-} "
+      final_style="${DEBUG_ICON:-}"
       ;;
     *)
       style=""
@@ -243,29 +292,6 @@ indent_style() {
   printf '%s' "$(tr '[:lower:]' '[:upper:]' <<< "${logtype}")"
   printf -- "${style}%.0s" $(seq "${indent_length}")
   printf '%s' "${final_style}"
-}
-
-simple_log() {
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
-  local -r logtype="$(get_log_type "${1}")"
-  local -r logcolor="$(get_log_color "${logtype}")"
-  if [[ -z ${logtype} ]]; then
-    plain_log "${fulllogtype}" "${*}"
-  else
-    shift
-    if [[ ${logcolor} != "::" ]]; then
-      local indent_width=11
-      local indent="$(indent_style "${logtype}" "${indent_width}")"
-      printf -v log_prefix '%s%s%s%s%s' "${BOLD}" "${logcolor}" "${indent}" "${logcolor}" "${NO_COLOR}"
-      # log_prefix_length="$(stripcolor "${log_prefix}" | wc -c)"
-      printf -v space "%*s" "$((indent_width + 2))" ''
-      local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
-    else
-      printf -v log_prefix '::%s ::' "${logtype}"
-      local -r msg="$(escape_github_command_data "${*}")"
-    fi
-    printf '%s%s\n' "${log_prefix}" "${msg}"
-  fi
 }
 
 plain_log() {
@@ -302,7 +328,7 @@ github_log() {
   local -r logtype="$(get_log_type "${1}")"
   shift
 
-  if [[ $(type -t escape_github_command_data) == 'function' ]] && [[ -n ${logtype} ]]; then
+  if [[ $(type escape_github_command_data) == *function* ]] && [[ -n ${logtype} ]]; then
     local -r msg="$(escape_github_command_data "$(trim "${*}")")"
   else
     local -r msg="${*}"
@@ -314,7 +340,7 @@ github_log() {
       LOG_STRING=("::${logtype} ")
       shift
       FILE="$(trim "${GITHUB_LOG_FILE:-${BASH_SOURCE[0]}}")"
-      if [[ $(type -t escape_github_command_property) == 'function' ]] && [[ -n ${logtype} ]]; then
+      if [[ $(type escape_github_command_property) == *'function'* ]] && [[ -n ${logtype} ]]; then
         [[ ${#FILE} -gt 0 ]] && LOG_ARGS+=("file=$(escape_github_command_property "${FILE}")")
         [[ -n ${GITHUB_LOG_TITLE:-} ]] && LOG_ARGS+=("title=$(escape_github_command_property "${GITHUB_LOG_TITLE}")")
       else
@@ -362,7 +388,7 @@ log_output() {
   shift
   local msg="${*}"
   local -r logtype="$(get_log_type "${labelUppercase}")"
-
+  local space
   if caller 1 > /dev/null 2>&1; then
     local function_name="$(caller 1 | awk '{print $2}')"
     [[ ${function_name} =~ ^(bash|source)$ ]] && unset function_name
@@ -372,7 +398,7 @@ log_output() {
   else
     indent_width=7
     printf -v space "%*s" "$((indent_width))" ''
-    local msg="$(awk -v space="${space}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
+    local msg="$(awk -v space="${space:-}" '{if (NR!=1) x = space} {print x,$0}' RS='\n|(\\\\n)' <<< "${*}")"
     printf "%s[%s%5s%s] %s%s\n" "${COLOR_RESET:-}" "${color:-}" "${labelUppercase}" "${COLOR_RESET:-}" "${function_name:+${function_name}: }" "${msg}"
   fi
   if ! running_in_github_actions; then
@@ -417,7 +443,7 @@ fatal() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
-  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ☠️ ${*}" | to_stderr
+  log_output "${return_code}" "ERROR" "COLOR_BOLD_RED" "FATAL: ${FATAL_ICON:-} ${*}" | to_stderr
   exit "${return_code}"
 }
 
@@ -432,17 +458,60 @@ warn() {
 warning() { warn "${@}"; }
 
 failure() {
-  local -r message="${*}"
   if [[ $1 =~ ^[\d]+$ ]] && [[ $1 -gt 0 ]]; then
     local -r return_code="$1"
     shift
   fi
-  log_output "${return_code}" "FAILURE" "COLOR_BRIGHT_RED" "${CROSS_MARK} ${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
+  local -r message="${*}"
+  log_output "${return_code}" "FAILURE" "COLOR_BRIGHT_RED" "${FAILURE_ICON} ${COLOR_BRIGHT_RED}${message}${COLOR_RESET}"
 }
 
 success() {
   local -r message="${*}"
-  log_output "0" "SUCCESS" "COLOR_BRIGHT_YELLOW" "${CHECK_MARK_BUTTON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
+  log_output "0" "SUCCESS" "COLOR_BRIGHT_YELLOW" "${SUCCESS_ICON} ${COLOR_BRIGHT_YELLOW}${message}${COLOR_RESET}" 2>&1
+}
+
+starting() {
+  local -r message="${*}"
+  log_output "0" "STARTING" "COLOR_YELLOW" "${START_ICON} ${message}${COLOR_RESET}" 2>&1
+
+}
+
+finished() {
+  local -r message="${*}"
+  log_output "0" "FINISHED" "COLOR_YELLOW" "${DONE_ICON} ${message}${COLOR_RESET}" 2>&1
+}
+
+step() {
+  local -r message="${*}"
+  log_output "0" "STEP   " "COLOR_CYAN" "${STEP_ICON} ${message}${COLOR_RESET}" 2>&1
+}
+
+step_question() {
+    local -r message="${*}"
+    log_output "0" "QUESTION" "COLOR_CYAN" "${STEP_ICON} ${message}${COLOR_RESET}" 2>&1
+}
+
+step_passed() {
+  local -r message="${*}"
+  log_output "0" "PASS   " "COLOR_BOLD_GREEN" "${PASS_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+}
+
+step_failed() {
+  local -r message="${*}"
+    log_output "0" "FAIL   " "COLOR_BOLD_RED" "${FAIL_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+}
+
+step_skipped() {
+  local -r message="${*}"
+    log_output "0" "SKIPPED " "COLOR_BOLD_CYAN" "${SKIP_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+
+}
+
+result() {
+  local -r message="${*}"
+    log_output "0" "RESULT  " "COLOR_BOLD_CYAN" "${RESULT_ICON} ${COLOR_RESET}${message}${COLOR_RESET}" 2>&1
+
 }
 
 pipe_errors_to_github_workflow() {
@@ -468,7 +537,8 @@ print_single_log_file() {
         export GITHUB_FILE_PROCESSED='true'
       fi
 
-      export GITHUB_LOG_TITLE="${DEPLOY_VERSION:-${GITHUB_ACTION:-${short_filename:-}}}"
+      local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
+      export GITHUB_LOG_TITLE="${version_label:-${GITHUB_ACTION:-${short_filename:-}}}"
 
       pipe_errors_to_github_workflow "${GITHUB_LOG_FILE}" && touch "${GITHUB_LOG_FILE}.processed"
       unset GITHUB_FILE_PROCESSED
@@ -511,10 +581,10 @@ print_logs_from_zip() {
 run_as_root() {
   user="$(id -un 2> /dev/null || true)"
 
-  export sh_c=""
+  local sh_c=()
   if [[ ${user} != 'root' ]]; then
     if command_exists sudo; then
-      export sh_c='sudo'
+      sh_c=('sudo')
     else
       cat >&2 <<- 'EOF'
 				Error: this command needs the ability to run other commands as root.
@@ -523,5 +593,5 @@ run_as_root() {
       exit 1
     fi
   fi
-  ${sh_c} "${@}"
+  "${sh_c[@]}" "${@}"
 }

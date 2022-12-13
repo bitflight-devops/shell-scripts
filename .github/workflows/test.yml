@@ -1,0 +1,59 @@
+name: Test
+on:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Trunk Check
+        uses: trunk-io/trunk-action@v1
+  unit-test:
+    strategy:
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Run ShUnit tests
+        run: |
+          source test.sh
+
+  installer-test:
+    strategy:
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Test running Remote Installer Script
+        run: |
+          set -x
+          branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF}}
+          branch_r=${branch_r##refs/heads/}
+          branch_r=${branch_r##*/merge/}
+          branch=${branch_r##merge/}
+          NONINTERACTIVE=1 eval "$(curl -sL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${branch}/install.sh")"
+          source ~/.bashrc
+          echo "SCRIPTS_LIB_DIR: ${SCRIPTS_LIB_DIR:-}"
+          echo "BFD_REPOSITORY: ${BFD_REPOSITORY:-}"
+          if [[ -f "${BFD_REPOSITORY}/lib/bootstrap.sh" ]]; then
+            echo "BFD_REPOSITORY/lib/bootstrap.sh exists"
+          else
+            echo "BFD_REPOSITORY/lib/bootstrap.sh does not exist"
+            exit 1
+          fi
+          eval $(bash -- "${BFD_REPOSITORY}/lib/bootstrap.sh") || exit 1

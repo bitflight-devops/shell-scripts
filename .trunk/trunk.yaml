@@ -5,21 +5,26 @@ runtimes:
     - node@16.14.2
 actions:
   enabled:
+    - trunk-announce
+    - trunk-check-pre-push
+    - trunk-fmt-pre-commit
     - trunk-cache-prune
     - trunk-upgrade-available
 cli:
-  version: 1.0.1
+  version: 1.2.1
 
 
 lint:
   disabled:
     - git-diff-check
   enabled:
+    - golangci-lint@1.50.1
+    - gofmt@1.19.3
     - markdownlint@0.32.2
-    - gitleaks@8.15.0
-    - hadolint@2.10.0
-    - prettier@2.7.1
-    - shellcheck@0.8.0
+    - gitleaks@8.15.2
+    - hadolint@2.12.0
+    - prettier@2.8.1
+    - shellcheck@0.9.0
     - shfmt@3.5.0
   ignore:
     - linters: [ALL]

@@ -91,3 +91,9 @@ fi
 <!-- start outputs -->
 
 <!-- end outputs -->
+
+## Testing
+
+This project uses [shUnit2](https://github.com/kward/shunit2) for testing.
+It is included as a submodule in the `tests` directory.
+To run the tests, run `./tests/run.sh` from the root of the repository.

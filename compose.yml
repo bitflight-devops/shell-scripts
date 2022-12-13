@@ -1,0 +1,27 @@
+services:
+  runner:
+    image: myoung34/github-runner:latest-zsh
+    build:
+      context: tests/test-container
+      dockerfile: Dockerfile
+    container_name: runner
+    ports:
+      - '22:8022'
+    env_file: .env.secrets
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/_work
+  test:
+    image: myoung34/github-runner:latest-zsh
+    build:
+      context: tests/test-container
+      dockerfile: Dockerfile
+    container_name: runner-test
+    ports:
+      - '22:8022'
+    env_file: .env.secrets
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/_work
+    working_dir: /_work
+    entrypoint: ['/bin/bash', 'tests/run.sh']

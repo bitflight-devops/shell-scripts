@@ -5,10 +5,10 @@
 Where possible packages are installed to userspace, but some packages require root access.
 If you see an opportunity to switch any of the root access installations to userspace, please [submit a PR](https://github.com/bitflight-devops/shell-scripts/pulls),or a [new issue](https://github.com/bitflight-devops/shell-scripts/issues/new/choose).
 
--   [Homebrew](https://brew.sh/) is the most ubiquitous package manager for MacOS. It is required for installing many of the tools listed below.
--   [Docker for Mac](https://docs.docker.com/desktop/install/mac-install/) is the most integrated container manager for MacOS, and is required for running many of the tools listed below. 
--   [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) is the package manager for Rust, and is required for installing some of the high performance tools listed below.
--   [pipx](https://pipxproject.github.io/pipx/) is the package manager for Python, and is required for installing some of the python tools listed below, into _userspace_.
+- [Homebrew](https://brew.sh/) is the most ubiquitous package manager for MacOS. It is required for installing many of the tools listed below.
+- [Docker for Mac](https://docs.docker.com/desktop/install/mac-install/) is the most integrated container manager for MacOS, and is required for running many of the tools listed below.
+- [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html) is the package manager for Rust, and is required for installing some of the high performance tools listed below.
+- [pipx](https://pipxproject.github.io/pipx/) is the package manager for Python, and is required for installing some of the python tools listed below, into _userspace_.
 
 ### Install [Homebrew](https://brew.sh/)
 
@@ -19,7 +19,7 @@ Install Homebrew without being prompted for input.
 ```zsh
 NONINTERACTIVE=1 sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Fix permissions for Homebrew
-sudo zsh -c "$(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\"" 
+sudo zsh -c "$(declare -f compaudit);compaudit | xargs chown -R \"$(whoami)\""
 # Fix permissions on all files in /usr/local
 sudo zsh -c "$(declare -f compaudit);compaudit | xargs chmod go-w"
 ```
@@ -36,25 +36,25 @@ sudo zsh -c "$(declare -f compaudit);compaudit | xargs chmod go-w"
 </details>
 <details><summary>Mac M1 Chip Requirements</summary>
 
--   Beginning with Docker Desktop 4.3.0, we have removed the hard requirement to install Rosetta 2. There are a few optional command line tools that still require Rosetta 2 when using Darwin/AMD64. See the Known issues section. However, to get the best experience, we recommend that you install Rosetta 2. To install Rosetta 2 manually from the command line, run the following command:
+- Beginning with Docker Desktop 4.3.0, we have removed the hard requirement to install Rosetta 2. There are a few optional command line tools that still require Rosetta 2 when using Darwin/AMD64. See the Known issues section. However, to get the best experience, we recommend that you install Rosetta 2. To install Rosetta 2 manually from the command line, run the following command:
 
-    ```zsh
-      softwareupdate --install-rosetta
-    ```
+  ```zsh
+    softwareupdate --install-rosetta
+  ```
 
 </details>
 
 <details><summary>🗒️ Setup Instructions</summary>
 
--   Manual install via a package installer are [available via the docker website](https://docs.docker.com/desktop/install/mac-install/).
+- Manual install via a package installer are [available via the docker website](https://docs.docker.com/desktop/install/mac-install/).
 
--   Scripted install via [install_docker_for_mac.sh](install_docker_for_mac.sh) script in your terminal:
+- Scripted install via [install_docker_for_mac.sh](install_docker_for_mac.sh) script in your terminal:
 
-    ```zsh
-    # It requires root access, so you will be prompted for your password if you are not already root
-    sudo -v # Prompt for sudo first
-    curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/mac_development_computer_setup/install_docker_for_mac.sh" | bash
-    ```
+  ```zsh
+  # It requires root access, so you will be prompted for your password if you are not already root
+  sudo -v # Prompt for sudo first
+  curl -sL "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/main/mac_development_computer_setup/install_docker_for_mac.sh" | bash
+  ```
 
 </details>
 
@@ -106,7 +106,7 @@ these changes will be reverted.
 brew list rust >/dev/null 2>&1 && brew uninstall rust
 # TODO add `asdf` check and uninstall
 
-# Install rustup: 
+# Install rustup:
 # Options: -y = non-interactive, -q = quiet, -v = verbose
 #          --default-host <default-host>              Choose a default host triple
 #          --default-toolchain <default-toolchain>    Choose a default toolchain to install
@@ -148,13 +148,11 @@ install_global_python
 
 </details>
 
-
 ### Install [meta-package-manager](https://kdeldycke.github.io/meta-package-manager/install.html) (mpm)
 
 ```sh
 pipx install meta-package-manager || true
 ```
-
 
 ## Installation Helper Functions
 
@@ -232,7 +230,6 @@ brew_install_all --cask temurin temurin8 temurin11 temurin18 # Java JDK's
 
 </details>
 
-
 ## ZSH Plugin Frameworks
 
 ### [zr](https://github.com/jedahan/zr)
@@ -250,6 +247,21 @@ cargo install zr
 </details>
 
 ## Collect and Install Mac Development Support Tools
+
+### Cargo Packages
+
+```zsh
+cargo_packages=()
+cargo_packages+=("cargo-edit") # Cargo subcommand for managing dependencies
+cargo_packages+=("cargo-make") # Make-like build tool for Rust
+cargo_packages+=("cargo-watch") # Watch Cargo.toml and Cargo.lock for changes and rerun cargo build
+cargo_packages+=("coreutils") # GNU core utilities
+cargo_packages+=("shellharden") # Shellharden is a tool to make shell scripts more robust
+
+cargo install "${cargo_packages[@]}"
+: # Post Install
+~/.cargo/bin/coreutils
+```
 
 ### Brew Packages and Casks
 
@@ -340,6 +352,7 @@ brew_apps+=("procs") # A modern replacement for ps written in Rust
 
 ## Install base linux tools
 brew_apps+=("coreutils") # GNU File, Shell, and Text utilities
+brew_apps+=("uutils-coreutils") # GNU File, Shell, and Text utilities written in rust
 brew_apps+=("findutils") # Collection of GNU find, xargs, and locate
 brew_apps+=("gawk") # GNU awk utility
 brew_apps+=("gnu-indent") # C code prettifier
@@ -400,6 +413,7 @@ brew_apps+=("wdiff") # Display word differences between text files
 
 ## Directory navigation tools
 brew_apps+=("fzf") # Command-line fuzzy finder written in Go
+brew_apps+=("sk") # Fuzzy finder in rust!
 brew_apps+=("exa") # Modern replacement for 'ls'
 brew_apps+=("ripgrep") # Search tool like grep and The Silver Searcher
 brew_apps+=("fd") # Simple, fast and user-friendly alternative to find
@@ -621,6 +635,7 @@ version=${version:+latest:${version}}
 done
 
 ```
+
 </details>
 
 ## Configure ZSH
@@ -727,7 +742,7 @@ TODO: Add instructions for installing VS Code extensions
 
 ## Benchmarking Shell functions and aliases
 
-### If you are using bash, you can export shell functions to directly benchmark them with hyperfine:
+### If you are using bash, you can export shell functions to directly benchmark them with hyperfine
 
 ```zsh
      my_function() { sleep 1; }

@@ -24,7 +24,7 @@ slurp() {
   if [[ -p /dev/stdin ]]; then
     cat -
   fi
-  if [[ "$#" -ne 0 ]]; then
+  if [[ $# -ne 0   ]]; then
     echo "$@"
   fi
 }
@@ -55,7 +55,7 @@ brew_install_all() {
   # Install all packages supplied via stdin, and as arguments
   # Attempt to install all packages, even if some fail
   IFS=" " read -r -a wordlist <<< "$(slurp "$@")"
-  if [[ "${#wordlist[@]}" -eq 0 ]]; then
+  if [[ ${#wordlist[@]} -eq 0   ]]; then
     echo "No formulae supplied to brew_install_all" >&2
     return 1
   fi

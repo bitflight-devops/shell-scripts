@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -18,21 +18,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
   set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh"   ]]
+  }
+  if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -40,7 +43,6 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
   fi
 fi
-
 # End Lookup Current Script Directory
 ##########################################################
 
@@ -166,9 +168,10 @@ set_env() {
     fi
   fi
   if running_in_ci; then
-    if [[ -z "${ACT:-}" ]]; then
+    : "${GITHUB_ENV:="./env.environment.local.github"}"
+    if [[ -z ${ACT:-}   ]]; then
       touch "${GITHUB_ENV}"
-      echo "${key}"="${value}" >> "${GITHUB_ENV}"
+      multiline_variable "${GITHUB_ENV}" "${key}" "${value}"
     else
       # ACT is used for testing GitHub Actions locally
       echo "set-env name=${1}::${2}"
@@ -196,8 +199,10 @@ set_output() {
   fi
 
   if running_in_github_actions; then
-    if [[ -z "${ACT:-}" ]]; then
-      echo "${key}"="${value}" >> "${GITHUB_OUTPUT}"
+    : "${GITHUB_OUTPUT:="./env.output.local.github"}"
+    if [[ -z ${ACT:-}   ]]; then
+      touch "${GITHUB_OUTPUT}"
+      multiline_variable "${GITHUB_OUTPUT}" "${key}" "${value}"
       debug "Output Variable set: ${key}=${value}"
     else
       # ACT is used for testing GitHub Actions locally
@@ -215,8 +220,9 @@ set_state() {
     return 1
   fi
   if running_in_github_actions; then
+    : "${GITHUB_STATE:="./env.state.local.github"}"
     touch "${GITHUB_STATE}"
-    echo "${1}"="${2}" >> "${GITHUB_STATE}"
+    multiline_variable "${GITHUB_STATE}" "${1}" "${2}"
     debug "State Variable set: ${1}=${2}"
   else
     debug "Not in CI, State Variable not set: ${1}=${2}"
@@ -269,15 +275,25 @@ escape_github_command_property() {
   local -r data="${1}"
   printf '%s' "${data}" | perl -ne '$_ =~ s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g;s/:/%3A/g;s/,/%2C/g;print;'
 }
-
+multiline_variable() {
+  local -r variable_file="${1}"
+  local -r variable_name="${2}"
+  if [[ $# -eq 3 ]]; then
+    local -r delimiter="$(openssl rand -hex 8)"
+    local -r variable_value="${3}"
+    printf "%s<<%s\n%s\n%s\n" "${variable_name}" "${delimiter}" "${variable_value:-}" "${delimiter}" >> "${variable_file}"
+  else
+    error "You need to provide a variable name and value. Args: ${*}"
+  fi
+}
 get_last_github_author_email() {
   if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
-    execute jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
+    jq -r --arg default "$1" '.check_suite // .workflow_run // .sender // . | .head_commit // .commit.commit // . | .author.email // .pusher.email // .email // "$default"' "${GITHUB_EVENT_PATH:-}"
   fi
 }
 get_last_github_author_name() {
   if command_exists jq && [[ -f ${GITHUB_EVENT_PATH:-} ]]; then
-    execute jq -r '.pull_request // .check_suite // .workflow_run // .issue // .sender // .commit // .repository // . | .head_commit // .commit // . | .author.name // .pusher.name // .login // .user.login // .owner.login // ""' "${GITHUB_EVENT_PATH:-}"
+    jq -r '.pull_request // .check_suite // .workflow_run // .issue // .sender // .commit // .repository // . | .head_commit // .commit // . | .author.name // .pusher.name // .login // .user.login // .owner.login // ""' "${GITHUB_EVENT_PATH:-}"
   fi
 }
 

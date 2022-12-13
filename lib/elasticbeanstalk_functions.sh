@@ -5,7 +5,7 @@
 
 command_exists() { command -v "$@" > /dev/null 2>&1; }
 
-if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
+if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
@@ -18,21 +18,24 @@ if [[ -z "${SCRIPTS_LIB_DIR:-}" ]]; then
   set -e
   # by using a HEREDOC, we are disabling shellcheck and shfmt
   set +e
-  read -r -d '' LOOKUP_SHELL_FUNCTION <<- 'EOF'
+  read -r -d '' LOOKUP_SHELL_FUNCTION << 'EOF'
 	lookup_shell() {
 		export whichshell
-		case $ZSH_VERSION in *.*) { whichshell=zsh;return;};;esac
-		case $BASH_VERSION in *.*) { whichshell=bash;return;};;esac
-		case "$VERSION" in *zsh*) { whichshell=zsh;return;};;esac
-		case "$SH_VERSION" in *PD*) { whichshell=sh;return;};;esac
-		case "$KSH_VERSION" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
+		case ${ZSH_VERSION:-} in *.*) { whichshell=zsh;return;};;esac
+		case ${BASH_VERSION:-} in *.*) { whichshell=bash;return;};;esac
+		case "${VERSION:-}" in *zsh*) { whichshell=zsh;return;};;esac
+		case "${SH_VERSION:-}" in *PD*) { whichshell=sh;return;};;esac
+		case "${KSH_VERSION:-}" in *PD*|*MIRBSD*) { whichshell=ksh;return;};;esac
 	}
-	EOF
-  set -e
+EOF
   eval "${LOOKUP_SHELL_FUNCTION}"
   # shellcheck enable=all
   lookup_shell
-  if command_exists zsh && [[ "${whichshell}" == "zsh" ]]; then
+  set -e
+  is_zsh() {
+    [[ ${whichshell:-} == "zsh"   ]]
+  }
+  if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
   else
@@ -158,7 +161,7 @@ install_ebcli_ubuntu_dependencies() {
       MISSING_APPS+=("libreadline-dev")
     fi
   fi
-  if [[ "${#MISSING_APPS[@]}" -gt 0 ]]; then
+  if [[ ${#MISSING_APPS[@]} -gt 0   ]]; then
     { command_exists apt && install_apt-fast; } || true
     install_app "${MISSING_APPS[@]}"
   fi
@@ -377,7 +380,7 @@ function install_chamber() {
 function install_package_to_path() {
   local current_file="${1}"
   local install_path="${2}"
-  if [[ -f "${current_file}" ]]; then
+  if [[ -f ${current_file}   ]]; then
     local install_dir="$(dirname "${install_path}")"
     mkdir -p "${install_dir}"
     rm -f "${install_path}"
@@ -404,7 +407,7 @@ install_chamber_version() {
     local url="${url_base}/${url_version}/chamber-${url_version}-${url_platform}-${url_arch}"
     downloadFile "${url}" "${temp_file_location}"
 
-    if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+    if root_available && [[ ${PREFER_USERSPACE:-} != "true"   ]]; then
       local install_path="/usr/local/bin/chamber"
       $(root_available) install_package_to_path "${temp_file_location}" "${install_path}"
     else
@@ -426,11 +429,11 @@ function install_golang() {
       local temp_file_location=$(mktemp -d || true)
       local url="${url_base}/${package_name}"
       local package_path="${temp_file_location:=/tmp}/${package_name}"
-      if [[ ! -f "${package_path}" ]]; then
+      if [[ ! -f ${package_path}   ]]; then
         downloadFile "${url}" "${package_path}" "true" || fatal "Failed to download golang"
       fi
 
-      if root_available && [[ "${PREFER_USERSPACE:-}" != "true" ]]; then
+      if root_available && [[ ${PREFER_USERSPACE:-} != "true"   ]]; then
         local install_path="/usr/local"
         $(root_available) bash -c "mkdir -p '${install_path}' && rm -rf '${install_path}/go' && tar -C '${install_path}' -xzf '${package_path}'" || fatal "Failed to extract ${package_path} to ${install_path}"
       else
@@ -458,27 +461,28 @@ essential_variable() {
   local variable_name="${1:-}"
   shift
   local skip_list="${*:-}"
-  if ! test -v "${variable_name}" || [[ -z "${!variable_name}" ]]; then
+  if ! test -v "${variable_name}" || [[ -z ${!variable_name}   ]]; then
     declare -a caller_stack_messages
     local caller_stack_count=0
     for func in "${FUNCNAME[@]}"; do
-      if [[ "${func}" == "${FUNCNAME[0]}" ]]; then
+      if [[ ${func} == "${FUNCNAME[0]}"   ]]; then
         continue
       fi
-      if [[ -n "${skip_list}" ]] && [[ "${skip_list}" == *"${func}"* ]]; then
+      if [[ -n ${skip_list}   ]] && [[ ${skip_list} == *"${func}"*   ]]; then
         continue
       fi
       ((caller_stack_count++))
       if [[ ${caller_stack_count} -gt 1 ]]; then
-        caller_stack_messages+=(", called by ${func}")
+        caller_stack_messages+=("called by ${func}")
       else
         caller_stack_messages+=("in ${func}")
       fi
     done
-    if [[ -n "${BASH_SOURCE:-}" ]]; then
+    if [[ -n ${BASH_SOURCE:-}   ]]; then
       caller_stack_messages+=("in script ${BASH_SOURCE[1]}")
     fi
-    fatal "The variable ${variable_name} was needed ${caller_stack_messages[*]}"
+    printf -v backtrace '%s, ' "${caller_stack_messages[@]}"
+    fatal "The variable ${variable_name} was needed ${backtrace%, }"
   fi
 }
 # Elastic Beanstalk Functions
@@ -536,7 +540,7 @@ passive_cname_prefix() {
 
 cname_available() (
   set +o pipefail
-  if [[ -z ${1:-} ]]; then
+  if [[ $# -eq 0 ]]; then
     error "${0}(): missing cname prefix as arg"
     return 2
   fi
@@ -558,13 +562,13 @@ cname_available() (
 )
 
 environment_name_by_cname() {
-  local -r name_type="${1}"
+  local -r name_type="${1?'cname prefix of type active or passive required'}"
   if grep -i -q -v -E "(passive|active)" <<< "${name_type}"; then
     error "${0}(): Invalid name type provided: ${name_type}"
     return 2
   fi
   DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
-  if [[ -n ${APPLICATION_NAME:-} ]]; then
+  if [[ -n ${APPLICATION_NAME:-}   ]]; then
     DEARGS+=("--application-name" "${APPLICATION_NAME}")
   fi
   local -r cname_prefix="$(cname_prefix_by_type "${name_type}")"
@@ -583,7 +587,7 @@ cname_by_environment_name() {
     fi
     aws_run elasticbeanstalk describe-environments \
       "${DEARGS[@]}" \
-      --query "Environments[?EnvironmentName==\`${env}\` && Status!=\`Terminated\`].[CNAME]" | head -n 1 || true
+      --query "Environments[?EnvironmentName==\`${env_name}\` && Status!=\`Terminated\`].[CNAME]" | head -n 1 || true
   else
     error "${0}(): Environment name not provided"
     return 2
@@ -746,15 +750,13 @@ wait_for_environment_cname_release() {
 }
 
 wait_for_passive_cname() {
-  if [[ -z ${1:-} ]]; then
-    local -r env_name="$(environment_name_by_cname passive)"
-    if [[ -z ${env_name:-} ]]; then
-      info "${0}(): No passive environment found"
-      return 1
-    fi
-  else
-    local -r env_name="${1}"
+  local env_name="${1:-$(environment_name_by_cname passive)}"
+
+  if [[ -z ${env_name:-} ]]; then
+    warning "${0}: No passive environment found"
+    return 1
   fi
+
   wait_for_environment_cname_release "${env_name}"
 }
 
@@ -763,7 +765,7 @@ wait_for_passive_cname() {
 retrieve_ebs_pending_logs() (
   set +e
   local -r env_name="${1:-$(current_environment_name)}"
-  local -r infofile="${2:-/tmp/${env}.loginfo.json}"
+  local -r infofile="${2:-/tmp/${env_name}.loginfo.json}"
   aws_run elasticbeanstalk retrieve-environment-info --info-type bundle --query 'sort_by(EnvironmentInfo, &SampleTimestamp)[-1]' --environment-name "${env_name}" 1> "${infofile}" 2> /dev/null
   local -r r_value=$?
   if [[ ${r_value} -gt 0 ]]; then
@@ -786,7 +788,7 @@ wait_for_ebs_logs() {
 
   while env_available=$(retrieve_ebs_pending_logs "${env_name}" "${loginfo_file}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ ${env_available} -gt 0 ]]; then
-      debug "${0}(): Waited for ${env} logs for $(($(date +%s) - start_time)) seconds"
+      debug "${0}(): Waited for ${env_name} logs for $(($(date +%s) - start_time)) seconds"
       return 0
     fi
     sleep "${interval}"
@@ -847,7 +849,7 @@ pipe_errors_from_ebs_to_github_actions() {
       return 0
     fi
   else
-    debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env}")"
+    debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env_name}")"
     info "Elastic Beanstalk's env ${env_name} status is [$(environment_state "${env_name}")] which means logs cannot be requested"
   fi
 
@@ -868,11 +870,8 @@ stop_current_eb_processes() (
 )
 
 remove_passive() {
-  if [[ -n ${2:-} ]]; then
-    local -r env_name="${2:-}"
-  else
-    local -r env_name="$(environment_name_by_cname passive)"
-  fi
+  local -r waitforcomplete="${1:-false}"
+  local -r env_name="${2:-$(environment_name_by_cname passive)}"
   if [[ -z ${env_name:-} ]]; then
     info "${0}(): No passive environment found"
     return 0
@@ -882,7 +881,7 @@ remove_passive() {
   fi
   eb_run terminate --nohang --force "${env_name}"
   notice "Passive Environment [${env_name}] termination signal sent - waiting for CNAME $(passive_cname_prefix) to be released"
-  if [[ ${1} == "hang" ]]; then
+  if [[ ${waitforcomplete} == "hang" ]] || [[ ${waitforcomplete} == "true" ]]; then
     wait_for_passive_cname "${env_name}" && notice "Passive Environment [${env_name}] has released the CNAME $(passive_cname_prefix)"
   fi
 }
@@ -900,7 +899,10 @@ create_application_version() {
   local version_label="${1:-}"
   local version_description="${2:-}"
   local app_name="$(current_app_name)"
-
+  if [[ ${#version_label} -gt 100   ]]; then
+    error "Version label cannot be longer than 100 characters"
+    return 1
+  fi
   if ! version_available "${version_label}"; then
     notice "Creating application version ${version_label}"
     eb_run appversion -a "${app_name}" \
@@ -925,7 +927,7 @@ count_environments() {
 }
 
 environments() {
-local -r env_name="${1:-$(current_environment_name)}"
+  local -r env_name="${1:-$(current_environment_name)}"
   if [[ -n ${INSTANCEID:-} ]]; then
     debug "Environment logs from ${INSTANCEID} for ${env_name}"
     eb_run logs --stream --instance "${INSTANCEID}" "${env_name}"
@@ -971,25 +973,26 @@ create_environment() {
   local -r env_name="${1:-$(current_environment_name)}"
   local -r cname_p="${2:-${CNAME_PREFIX}}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-25}"
+  local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
 
   notice "Creating environment ${env_name} within application ${APPLICATION_NAME}"
-  if [[ -z ${DEPLOY_VERSION:-} ]]; then
+  if [[ -z ${version_label} ]] && [[ -n ${ASSET_PATH+x} || -n ${ZIPFILE+x}     ]]; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
       "${env_name}" &
     PID="$!"
-  elif version_available "${DEPLOY_VERSION}"; then
+  elif version_available "${version_label}"; then
     eb_run create \
       --cfg "${ENVIRONMENT_CFG}" \
       --cname "${cname_p}" \
       --timeout "${timeout}" \
-      --version "${DEPLOY_VERSION}" \
+      --version "${version_label}" \
       "${env_name}" &
     PID="$!"
   else
-    fatal "The version label to be deployed ${DEPLOY_VERSION} is unavailable"
+    fatal "The version label to be deployed ${version_label} is unavailable"
   fi
 
   # Stream the logs in the background while we wait
@@ -1002,24 +1005,25 @@ create_environment() {
 deploy_asset() {
   local -r env_name="${1:-$(current_environment_name)}"
   local -r timeout="${TIMEOUT_IN_MINUTES:-20}"
-  debug "Deploying asset to environment ${env_name} with version ${DEPLOY_VERSION}"
-  if [[ -z ${DEPLOY_VERSION:-} ]]; then
-    error "The env variable DEPLOY_VERSION is required"
+  local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
+  debug "Deploying asset to environment ${env_name} with version ${version_label}"
+  if [[ -z ${version_label:-} ]]; then
+    error "The env variable VERSION_LABEL or VERSION_ID is required"
     return 1
-  elif version_available "${DEPLOY_VERSION}"; then
+  elif version_available "${version_label}"; then
     eb_run deploy \
-      --version "${DEPLOY_VERSION}" \
+      --version "${version_label}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   elif [[ -f ${ZIPFILE} ]]; then
     eb_run deploy \
-      --label "${DEPLOY_VERSION}" \
+      --label "${version_label}" \
       --staged \
       --timeout "${timeout}" \
       "${env_name}"
   else
-    error "The version label to be deployed ${DEPLOY_VERSION} is unavailable, and there is no built zipfile to deploy"
+    error "The version label to be deployed ${version_label} is unavailable, and there is no built zipfile to deploy"
     return 1
   fi
 }
