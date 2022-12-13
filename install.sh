@@ -120,10 +120,11 @@ download() {
     return 1
   fi
 }
-branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF:-${SHELL_SCRIPTS_BRANCH:-}}}
-branch_r=${branch_r##refs/heads/}
-branch_r=${branch_r##*/merge/}
-branch=${branch_r##merge/}
+branch_r="${GITHUB_HEAD_REF:-${GITHUB_REF:-}}"
+branch_r="${branch_r:-${SHELL_SCRIPTS_BRANCH:-}}"
+branch_r="${branch_r##refs/heads/}"
+branch_r="${branch_r##*/merge/}"
+branch="${branch_r##merge/}"
 eval "$(download "-" "https://raw.githubusercontent.com/bitflight-devops/shell-scripts/${branch:-main}/simple_log.sh" 2> /dev/null)"
 if ! command_exists debug_log; then
   echo "simple_log.sh failed to load."
