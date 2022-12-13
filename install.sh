@@ -120,7 +120,7 @@ download() {
     return 1
   fi
 }
-branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF:-}}
+branch_r=${GITHUB_HEAD_REF:-${GITHUB_REF:-${SHELL_SCRIPTS_BRANCH:-}}}
 branch_r=${branch_r##refs/heads/}
 branch_r=${branch_r##*/merge/}
 branch=${branch_r##merge/}

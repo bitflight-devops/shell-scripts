@@ -581,10 +581,10 @@ print_logs_from_zip() {
 run_as_root() {
   user="$(id -un 2> /dev/null || true)"
 
-  export sh_c=""
+  local sh_c=()
   if [[ ${user} != 'root' ]]; then
     if command_exists sudo; then
-      export sh_c='sudo'
+      sh_c=('sudo')
     else
       cat >&2 <<- 'EOF'
 				Error: this command needs the ability to run other commands as root.
@@ -593,5 +593,5 @@ run_as_root() {
       exit 1
     fi
   fi
-  ${sh_c} "${@}"
+  "${sh_c[@]}" "${@}"
 }

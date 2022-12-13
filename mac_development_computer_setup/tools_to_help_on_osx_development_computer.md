@@ -248,6 +248,21 @@ cargo install zr
 
 ## Collect and Install Mac Development Support Tools
 
+### Cargo Packages
+
+```zsh
+cargo_packages=()
+cargo_packages+=("cargo-edit") # Cargo subcommand for managing dependencies
+cargo_packages+=("cargo-make") # Make-like build tool for Rust
+cargo_packages+=("cargo-watch") # Watch Cargo.toml and Cargo.lock for changes and rerun cargo build
+cargo_packages+=("coreutils") # GNU core utilities
+cargo_packages+=("shellharden") # Shellharden is a tool to make shell scripts more robust
+
+cargo install "${cargo_packages[@]}"
+: # Post Install
+~/.cargo/bin/coreutils
+```
+
 ### Brew Packages and Casks
 
 <details><summary>🗒️ Setup Instructions</summary>
@@ -337,6 +352,7 @@ brew_apps+=("procs") # A modern replacement for ps written in Rust
 
 ## Install base linux tools
 brew_apps+=("coreutils") # GNU File, Shell, and Text utilities
+brew_apps+=("uutils-coreutils") # GNU File, Shell, and Text utilities written in rust
 brew_apps+=("findutils") # Collection of GNU find, xargs, and locate
 brew_apps+=("gawk") # GNU awk utility
 brew_apps+=("gnu-indent") # C code prettifier
@@ -397,6 +413,7 @@ brew_apps+=("wdiff") # Display word differences between text files
 
 ## Directory navigation tools
 brew_apps+=("fzf") # Command-line fuzzy finder written in Go
+brew_apps+=("sk") # Fuzzy finder in rust!
 brew_apps+=("exa") # Modern replacement for 'ls'
 brew_apps+=("ripgrep") # Search tool like grep and The Silver Searcher
 brew_apps+=("fd") # Simple, fast and user-friendly alternative to find
