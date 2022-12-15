@@ -199,7 +199,7 @@ install_eb_cli() {
     fi
 
     if ! command_exists python; then
-      run_as_root ln -sf /usr/bin/python3 /usr/bin/python
+      run_as_root ln -sf /usr/bin/python3 /usr/bin/python || true
     fi
 
     if [[ -z ${EB_INSTALLER_PATH:-} ]]; then
@@ -212,6 +212,7 @@ install_eb_cli() {
     else
       git -C "${EB_INSTALLER_PATH}" reset --hard HEAD || true
       if ! git -C "${EB_INSTALLER_PATH}" pull -f; then
+        rm -rf "${EB_INSTALLER_PATH}"
         git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
       fi
     fi
@@ -225,12 +226,17 @@ install_eb_cli() {
     fi
 
     if [[ ! -x "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb; then
+      rm -rf "${HOME}/.local/aws-elastic-beanstalk-cli-package"
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
         --quiet \
         --hide-export-recommendation \
         --location "${EB_PACKAGE_PATH}"
     fi
 
+  fi
+  if ! eb --version > /dev/null 2>&1 || eb --version | grep -q -v 'EB CLI 3'; then
+    error "EB CLI not installed"
+    exit 1
   fi
 }
 
