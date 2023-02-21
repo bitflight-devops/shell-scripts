@@ -526,6 +526,15 @@ pipe_errors_to_github_workflow() {
   fi
 }
 
+# Remove leading words from a version string. This function is used to
+# remove leading words from version strings, such as "v1.0" or "version 2.0".
+# The function is used to remove the leading "v" or "version" words from
+# version strings.
+remove_leading_words() {
+  local version="$1"
+  echo "${version}" | sed 's/^[a-zA-Z\-_ \t]*//'
+}
+
 print_single_log_file() {
   export GITHUB_LOG_FILE="${1}"
   if [[ -f ${GITHUB_LOG_FILE} ]]; then

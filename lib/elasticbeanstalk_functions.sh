@@ -180,7 +180,7 @@ install_eb_cli() {
   info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   local REINSTALL=false
-
+  local corrupted=false
   set +o pipefail
   if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]]; then
     REINSTALL=true
@@ -188,6 +188,7 @@ install_eb_cli() {
     REINSTALL=true
   elif grep -q -v 'EB CLI 3' <<< "$(eb --version 2> /dev/null || true)"; then
     REINSTALL=true
+    corrupted=true
   fi
 
   if [[ ${REINSTALL:-} == "true"  ]]; then
@@ -197,7 +198,7 @@ install_eb_cli() {
     elif ! python3 -m pipx --version > /dev/null 2>&1; then
       debug "Upgrade pipx:\n$(python3 -m pip install --user -U pipx)"
     fi
-
+    info_log "pipx installed"
     if python3 -m pipx ensurepath 2> /dev/null | grep -q -v "is already in PATH"; then
       if [[ -f ~/.bashrc ]]; then
         source ~/.bashrc
@@ -205,44 +206,72 @@ install_eb_cli() {
         source ~/.profile
       fi
     fi
-
+    info_log "pipx path added"
+    info_log "checking if virtualenv exists"
     if ! command_exists virtualenv || virtualenv --version | grep -q -v "virtualenv 2"; then
       debug "Install virtualenv:\n$(python3 -m pipx install --system-site-packages virtualenv 2> /dev/null || python3 -m pipx --system-site-packages -f upgrade virtualenv)"
     fi
-
-    if ! command_exists python; then
-      run_as_root ln -sf /usr/bin/python3 /usr/bin/python || true
+    info_log "virtualenv installed"
+    info_log "checking if python3 is mapped to python command"
+    if ! command_exists python && command_exists python3; then
+      p3path="$(command -v python3)"
+      info_log "python3 path: ${p3path}"
+      run_as_root ln -sf "${p3path}" "$(dirname "${p3path}")/python" || true
     fi
-
+    info_log "setting eb installer path"
     if [[ -z ${EB_INSTALLER_PATH:-} ]]; then
       set_env EB_INSTALLER_PATH "${HOME}/.cache/aws-elastic-beanstalk-cli-setup"
     fi
-
+    info_log "eb installer path: ${EB_INSTALLER_PATH}"
+    info_log "checking if eb installer path exists"
     if [[ ! -d ${EB_INSTALLER_PATH} ]]; then
+      info_log "eb installer path does not exist, creating"
       mkdir -p "${EB_INSTALLER_PATH}"
       git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
+      info_log "eb installer path created, and git cloned"
     else
+      info_log "eb installer path exists, resetting and pulling"
       git -C "${EB_INSTALLER_PATH}" reset --hard HEAD || true
+      info_log "eb installer path reset"
+      info_log "Pulling latest changes"
       if ! git -C "${EB_INSTALLER_PATH}" pull -f; then
+        error_log "aws/aws-elastic-beanstalk-cli-setup: git pull failed, removing and cloning"
         rm -rf "${EB_INSTALLER_PATH}"
+        mkdir -p "${EB_INSTALLER_PATH}"
         git clone https://github.com/aws/aws-elastic-beanstalk-cli-setup.git "${EB_INSTALLER_PATH}"
+        info_log "eb installer path created, and git cloned"
       fi
     fi
-
+    info_log "checking if EB_PACKAGE_PATH environment var exists exists"
     if [[ -z ${EB_PACKAGE_PATH:-} ]]; then
+      info_log "EB_PACKAGE_PATH environment var does not exist, creating"
       set_env EB_PACKAGE_PATH "${HOME}/.local/aws-elastic-beanstalk-cli-package"
     fi
-
+    info_log "EB_PACKAGE_PATH: ${EB_PACKAGE_PATH}"
     if [[ ! -d ${EB_PACKAGE_PATH} ]]; then
+      info_log "${EB_PACKAGE_PATH} does not exist, creating"
       mkdir -p "${EB_PACKAGE_PATH}"
     fi
+    info_log "check if eb cli is installed in the virtualenv"
 
-    if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb; then
-      rm -rf "${HOME}/.local/aws-elastic-beanstalk-cli-package"
+    if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || corrupted; then
+      info_log "Install is corrupted: ${corrupted}"
+      info_log "eb cli is not installed in the virtualenv, removing and installing"
+      rm -rf "${EB_PACKAGE_PATH}"
+      mkdir -p "${EB_PACKAGE_PATH}"
+      local installed=false
+      group_start "Installing EB CLI"
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
         --quiet \
         --hide-export-recommendation \
-        --location "${EB_PACKAGE_PATH}"
+        --location "${EB_PACKAGE_PATH}" && installed=true
+        group_end
+      if [[ ${installed:-} == "true" ]]; then
+        info_log "EB CLI installed"
+      else
+        error_log "EB CLI install failed"
+        exit 1
+      fi
     fi
 
   fi
@@ -461,7 +490,7 @@ function install_golang() {
 
       rm -f "${package_path}"
       add_to_path "${install_path}/go/bin" "true"
-      which go
+      command -v go
       squash_output go version || fatal "golang install failed"
       add_to_path "$(go env GOPATH)" "true"
     fi

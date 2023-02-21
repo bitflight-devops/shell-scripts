@@ -114,6 +114,22 @@ step_summary() (
   return 0
 )
 
+group_start() {
+  local name="$1"
+  if [[ -n ${GITHUB_ACTIONS+x} ]]; then
+    echo "::group::${name}"
+  else
+    info_log "🍔 Log group start: ${name}"
+  fi
+}
+group_end() {
+  if [[ -n ${GITHUB_ACTIONS+x} ]]; then
+    echo "::endgroup::"
+  else
+    info_log "🍟 Log group end"
+  fi
+}
+
 step_summary_display() {
   cat "${GITHUB_STEP_SUMMARY}"
   return 0

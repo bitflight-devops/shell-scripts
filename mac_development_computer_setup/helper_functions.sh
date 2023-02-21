@@ -66,7 +66,7 @@ brew_install_all() {
   else
     echo "Installing ${wordlist[*]}"
   fi
-  # shellcheck disable=SC2248
+  # shellcheck disable=SC2248,SC2086
   NONINTERACTIVE=1 brew install -f ${iscask-} "${wordlist[@]}" || brew_install_individually ${iscask-} <<< "${wordlist[*]}"
 }
 
