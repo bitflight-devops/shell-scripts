@@ -174,11 +174,13 @@ install_ebcli_ubuntu_dependencies() {
 }
 
 install_eb_cli() {
+
   mkdir -p ~/.cache ~/.local
   install_ebcli_ubuntu_dependencies
   info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   local REINSTALL=false
+  set -x
   if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]]; then
     REINSTALL=true
   elif ! command_exists eb; then
@@ -188,7 +190,7 @@ install_eb_cli() {
   fi
 
   if [[ ${REINSTALL:-} == "true"  ]]; then
-
+    info_log "Reinstall EB CLI"
     if ! command_exists pipx; then
       debug "Install pipx:\n$(python3 -m pip install --user pipx)"
     elif ! python3 -m pipx --version > /dev/null 2>&1; then
