@@ -254,7 +254,7 @@ install_eb_cli() {
     fi
     info_log "check if eb cli is installed in the virtualenv"
 
-    if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || corrupted; then
+    if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || "${corrupted}"; then
       info_log "Install is corrupted: ${corrupted}"
       info_log "eb cli is not installed in the virtualenv, removing and installing"
       rm -rf "${EB_PACKAGE_PATH}"
