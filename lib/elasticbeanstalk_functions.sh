@@ -180,12 +180,13 @@ install_eb_cli() {
   info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   local REINSTALL=false
-  set -x
+
+  set +o pipefail
   if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]]; then
     REINSTALL=true
   elif ! command_exists eb; then
     REINSTALL=true
-  elif eb --version | grep -q -v 'EB CLI 3'; then
+  elif grep -q -v 'EB CLI 3' <<< "$(eb --version 2> /dev/null || true)"; then
     REINSTALL=true
   fi
 
@@ -245,7 +246,7 @@ install_eb_cli() {
     fi
 
   fi
-  if ! eb --version > /dev/null 2>&1 || eb --version | grep -q -v 'EB CLI 3'; then
+  if grep -q -v 'EB CLI 3' <<< "$(eb --version 2> /dev/null || true)"; then
     error "EB CLI not installed"
     exit 1
   fi
