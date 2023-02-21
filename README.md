@@ -8,6 +8,13 @@
 
 <!-- end description -->
 
+## Use in Github actions
+
+```yml
+- uses: bitflight-devops/shell-scripts@v2
+  name: Install shell utility scripts
+```
+
 ## CLI Install
 
 Install Options as Environment Vars:

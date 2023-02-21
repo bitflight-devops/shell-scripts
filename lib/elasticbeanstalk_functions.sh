@@ -178,7 +178,14 @@ install_eb_cli() {
   info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
 
-  if [[ ! -x "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb || eb --version | grep -q -v 'EB CLI 3'; then
+  if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]]; then
+    REINSTALL=true
+  elif ! command_exists eb; then
+    REINSTALL=true
+  elif eb --version | grep -q -v 'EB CLI 3'; then
+    REINSTALL=true
+  fi
+  if [[ -n ${REINSTALL-}   ]]; then
 
     if ! command_exists pipx; then
       debug "Install pipx:\n$(python3 -m pip install --user pipx)"
@@ -225,7 +232,7 @@ install_eb_cli() {
       mkdir -p "${EB_PACKAGE_PATH}"
     fi
 
-    if [[ ! -x "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb; then
+    if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]] || ! command_exists eb; then
       rm -rf "${HOME}/.local/aws-elastic-beanstalk-cli-package"
       python3 "${EB_INSTALLER_PATH}/scripts/ebcli_installer.py" \
         --quiet \
