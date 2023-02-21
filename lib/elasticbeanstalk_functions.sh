@@ -114,6 +114,7 @@ add_ebcli_bin_paths() {
   # Use add_to_path from system_functions
   save_in_shellrc="${GITHUB_ACTIONS+"yes"}"
   add_to_path "${HOME}/.local/bin" "${save_in_shellrc:-}"
+  add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin" "${save_in_shellrc:-}"
   add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package" "${save_in_shellrc:-}"
   add_to_path "${HOME}/.ebcli-virtual-env/executables" "${save_in_shellrc:-}"
   add_to_path "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/executables" "${save_in_shellrc:-}"
@@ -177,7 +178,7 @@ install_eb_cli() {
   install_ebcli_ubuntu_dependencies
   info "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
-
+  local REINSTALL=false
   if [[ ! -f "${HOME}/.local/aws-elastic-beanstalk-cli-package/.ebcli-virtual-env/bin/eb" ]]; then
     REINSTALL=true
   elif ! command_exists eb; then
@@ -185,7 +186,8 @@ install_eb_cli() {
   elif eb --version | grep -q -v 'EB CLI 3'; then
     REINSTALL=true
   fi
-  if [[ -n ${REINSTALL-}   ]]; then
+
+  if [[ ${REINSTALL:-} == "true"  ]]; then
 
     if ! command_exists pipx; then
       debug "Install pipx:\n$(python3 -m pip install --user pipx)"
