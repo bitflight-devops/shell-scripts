@@ -73,6 +73,10 @@ is_wsl() {
   esac
 }
 
+has_apt_package_manager() {
+  ! is_darwin && command_exists apt-get
+}
+
 get_distribution() {
   local lsb_dist=""
   # Every system that we officially support has /etc/os-release
@@ -231,7 +235,7 @@ getLastAptGetUpdate() {
 runAptGetUpdate() (
   set +x
   local lastAptGetUpdate="$(getLastAptGetUpdate)"
-  if [[ $# -gt 0 ]] && ! isEmptyString "${updateInterval:-}"; then
+  if [[ $# -gt 0 ]] && [[ -z ${updateInterval:-} ]]; then
     local updateInterval="${1:-}"
   else
     updateInterval="$((24 * 60 * 60))"
@@ -279,9 +283,80 @@ root_available() {
   fi
 }
 
+# Return 0 if the current user has passwordless sudo access.
+# Return 1 otherwise.
+# This function is used to determine whether we need to use sudo commands
+# when running commands that require root privileges.
+has_passwordless_sudo_access() {
+  # If we are already root, then we have passwordless sudo access.
+  local whoami="$(whoami)"
+  if [[ ${whoami} == "root" ]]; then
+    return 0
+  fi
+  # If the SUDO_USER variable is set, then we have passwordless sudo access.
+  # This variable is set by sudo when running commands with sudo.
+  if [[ -n ${SUDO_USER:-} ]]; then
+    return 0
+  fi
+  # If the SUDO_UID variable is set, then we have passwordless sudo access.
+  # This variable is set by sudo when running commands with sudo.
+  if [[ -n ${SUDO_UID:-} ]]; then
+    return 0
+  fi
+  # If the SUDO_GID variable is set, then we have passwordless sudo access.
+  # This variable is set by sudo when running commands with sudo.
+  if [[ -n ${SUDO_GID:-} ]]; then
+    return 0
+  fi
+  # If the SUDO_ASKPASS variable is set to /bin/false, then we do not have
+  # passwordless sudo access.  We set this variable to /bin/false and then
+  # attempt to run the whoami command with sudo, which will prompt for a
+  # password.  If the whoami command returns successfully, then we have
+  # passwordless sudo access.  Otherwise, we do not.
+  SUDO_ASKPASS="/bin/false" sudo -A whoami > /dev/null 2>&1
+}
+
 prefix_sudo() {
   if command_exists sudo && ! sudo -v > /dev/null 2>&1; then
     echo sudo
+  fi
+}
+
+formula_in_directory() {
+  command_exists brew || return 1
+  local directory="$1"
+  local formula="$2"
+
+  local exact="${3:-true}"
+
+  if [[ ${exact:-} == "true"   ]]; then
+    [[ -e "${directory}/${formula}" ]]
+  else
+    [[ -e "${directory}/${formula}" ]] || grep -q -i -E '\b'"${formula:?}"'-?.*(\b|$|,)' <<< "$(ls -m "${directory}")"
+  fi
+}
+formula_in_brew_opt() {
+  command_exists brew || return 1
+  local -r formula="$1"
+  local -r opt="$(brew --prefix)/opt"
+  formula_in_directory "${opt}" "${formula}" "${2:-true}"
+}
+
+# Checks if a given Homebrew formula exists.
+# Usage: brew_formula_installed <formula>
+# Returns: 0 if the formula exists, 1 otherwise
+brew_formula_installed() {
+  local formula="$1"
+  local formula_file="$(HOMEBREW_NO_INSTALL_FROM_API=1 brew formula "${formula}")"
+  [[ ${formula_file} == */*.rb ]] && HOMEBREW_NO_INSTALL_FROM_API=1 brew ls --versions "${formula}" > /dev/null 2>&1
+}
+
+# If brew has the formula passed as an argument, upgrade it; otherwise, install it.
+brewInstall() {
+  if brew_package_installed "$1" && [[ -n ${UPGRADE_PACKAGES:-}   ]]; then
+    NONINTERACTIVE=1 brew upgrade "$1" || true > /dev/null
+  else
+    NONINTERACTIVE=1 brew install "$1" || true > /dev/null
   fi
 }
 
@@ -311,6 +386,22 @@ pip_package_installed() {
     return 1
   fi
 }
+
+# This function takes a Python binary name as an argument and outputs the
+# version of the binary as a number. If the binary is not found, it outputs 0.
+# Example: get_python_version_as_integer("python3") -> 306
+
+get_python_version_as_integer() {
+  local version
+  local python_bin="${1:-python3}"
+  if command_exists "${python_bin}"; then
+    version="$("${python_bin}" -c 'import sys; print(sys.version_info[0]*100 + sys.version_info[1])')"
+  else
+    version=0
+  fi
+  echo "${version}"
+}
+
 install_python3_suite() {
   declare -a MISSING_APPS
   if ! command_exists python3; then
@@ -329,7 +420,7 @@ install_python3_suite() {
       MISSING_APPS+=("python3-wheel")
   fi
   if [[ ${#MISSING_APPS[@]} -ne 0   ]]; then
-    { command_exists apt && squash_output install_apt-fast; } || true
+    { ! is_darwin && command_exists apt-get && squash_output install_apt-fast; } || true
     install_app "${MISSING_APPS[@]}" || true
   fi
 
@@ -340,32 +431,117 @@ install_python3_suite() {
   add_to_path "${HOME}/.local/bin"
 }
 
-install_meta_package_manager() {
-  install_python3_suite
-  pipx install meta-package-manager
-
+dircolors() {
+  if command_exists vivid; then
+    if [[ ${#} -eq 0 ]]; then
+      command vivid generate molokai
+    else
+      command vivid "$@"
+    fi
+  else
+    if [[ ${#} -eq 0 ]]; then
+      if command_exists gdircolors; then
+        command gdircolors -b
+      elif command_exists dircolors; then
+        command dircolors -b
+      fi
+    else
+      if command_exists gdircolors; then
+        command gdircolors "$@"
+      elif command_exists dircolors; then
+        command dircolors "$@"
+      fi
+    fi
+  fi
 }
 
-package_manager() (
-  set +x
+find_file_under_directory() {
+  local directory="$1"
+  shift
+  local file="$1"
+  shift
+  local depth="${1:-1}"
+  shift
+
+  if command_exists fd; then
+
+    local flags=("--type" "f" "--ignore-case" "--hidden" "--follow" --max-depth "${depth}")
+    if [[ -n ${1:-}   ]]; then
+      flags+=("${@}")
+    fi
+
+    fd "${flags[@]}" \
+      --exclude .git \
+      --exclude .svn \
+      --exclude .hg \
+      --exclude .bzr \
+      --exclude .DS_Store \
+      "${file}" \
+      "${directory}"
+  elif command_exists find; then
+    # "-print" "-quit"
+    local flags=("-type" "f" "-iregex" ".*${file}" -depth "${depth:-1}")
+    if [[ -n ${1:-}   ]]; then
+      flags+=("${@}")
+    fi
+    find "${directory}" "${flags[@]}"
+  elif [[ -f "${directory}/${file}" ]]; then
+    echo "${directory}/${file}"
+  fi
+}
+
+mpm_configuration_file_path() {
+  local file_regex='*.(toml|yaml|yml|json|ini|xml)'
+  local config_dir
+  if is_darwin; then
+    config_dir="${HOME}/Library/Application Support/mpm/"
+  else
+    config_dir="${HOME}/.config/mpm/"
+  fi
+  file_list=$(find_file_under_directory "${config_dir}" "${file_regex}")
+  if [[ $(wc -l <<< "${file_list}" | tr -d ' ') -gt 1 ]]; then
+    error "Multiple mpm configuration files found in ${config_dir}"
+    error "Please remove all but one of the following files:"
+    error "${file_list}"
+    return 1
+  fi
+  config_file=$(head -1 <<< "${file_list}")
+  if [[ -z ${config_file}   ]]; then
+    config_file="${config_dir}/mpm.toml"
+    touch "${config_file}"
+  fi
+  echo "${config_file}"
+}
+
+configure_meta_package_manager() {
+  config_file="$(mpm_configuration_file_path)"
+
+  info_log "configure_meta_package_manager: command not completed"
+}
+
+install_meta_package_manager() {
+  install_python3_suite
+  if command_exists mpm; then
+    version=$(mpm --version | head -1 | cut -d' ' -f3 | tr -d '.')
+    if [[ ${version} -lt 5120   ]]; then
+      squash_output pipx upgrade meta-package-manager || true 2> /dev/null
+    fi
+  fi
+  squash_output pipx install meta-package-manager
+  # configure_meta_package_manager
+}
+
+package_manager() {
 
   if command_exists apt; then
     runAptGetUpdate 2> /dev/null
   fi
   if command_exists brew; then
-    brew "$@"
+    HOMEBREW_NO_INSTALL_FROM_API=1 NONINTERACTIVE=1 brew "$@"
   elif command_exists apt-fast; then
     DEBIAN_FRONTEND=noninteractive run_as_root apt-fast -y -qq "$@"
   elif command_exists yum; then
     run_as_root yum -y -qq -t "$@"
-  elif command_exists dnf; then
-    run_as_root dnf -y "$@"
-  elif command_exists zypper; then
-    run_as_root zypper -n "$@"
-  elif command_exists apk; then
-    run_as_root apk "$@"
-  elif command_exists pacman; then
-    run_as_root pacman -S --noconfirm "$@"
   elif command_exists apt-get; then
     DEBIAN_FRONTEND=noninteractive run_as_root apt-get -y -qq "$@"
   else
@@ -374,13 +550,17 @@ package_manager() (
       install_meta_package_manager
     fi
     if command_exists mpm; then
-      run_as_root mpm install --continue-on-error --time -v CRITICAL "${@}"
+      if is_darwin || command_exists brew; then
+        mpm -m brew -m cargo -m pip -m npm --continue-on-error --time -v CRITICAL "${@}"
+      else
+        DEBIAN_FRONTEND=noninteractive run_as_root mpm  --continue-on-error --time -v CRITICAL "${@}"
+      fi
     else
       error "No package manager found"
       return 1
     fi
   fi
-)
+}
 
 installer() {
   package_manager "$@"
