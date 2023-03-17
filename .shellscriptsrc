@@ -50,4 +50,4 @@ bash_or_zsh() {
 
 : "${SCRIPTS_LIB_DIR:=${BFD_REPOSITORY}/lib}"
 
-eval "$("${SCRIPTS_LIB_DIR}/bootstrap.sh")"
+eval "$(source "${SCRIPTS_LIB_DIR}/bootstrap.sh")"
