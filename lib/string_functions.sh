@@ -38,9 +38,11 @@ EOF
   if command_exists zsh && [[ ${whichshell:-} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
+    IN_ZSH=true
   else
     # we are running in bash/sh
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
+    IN_BASH=true
   fi
 fi
 # End Lookup Current Script Directory
@@ -54,13 +56,55 @@ fi
 command_exists() {
   command -v "$@" > /dev/null 2>&1
 }
-
-uppercase() {
-    tr '[:lower:]' '[:upper:]' <<< "${*}"
+bash_version() {
+  local as_number="${1:-false}"
+  if command_exists bash; then
+    local available_bash_version
+    local ret=0
+    if [[ -z ${BASH_VERSION:-} ]]; then
+      available_bash_version="$(bash --version | head -n1 | cut -d' ' -f4 | cut -d'(' -f1)" || ret=$?
+    else
+      available_bash_version="${BASH_VERSION//\(*/}"
+    fi
+    if [[ ${ret} -ne 0 ]]; then
+      available_bash_version="0.0.0"
+    fi
+    if [[ ${as_number} == "true" ]]; then
+      printf "%d%-0.2d%-0.2d\n" ${available_bash_version//./ }
+    else
+      printf "%s\n" "${available_bash_version}"
+    fi
+  fi
 }
 
-lowercase() {
+AVAILABLE_BASH_VERSION="$(bash_version)"
+AVAILABLE_BASH_VERSION_NUMBER="$(bash_version true)"
+BASH_VERSION_4_OR_GREATER=false
+[[ ${AVAILABLE_BASH_VERSION_NUMBER:-0} -gt 40000 ]] && BASH_VERSION_4_OR_GREATER=true
+
+if "${BASH_VERSION_4_OR_GREATER:-false}"; then
+  uppercase() {
+    printf "%s\n" "${*^^}"
+  }
+  lowercase() {
+    printf "%s\n" "${*,,}"
+  }
+  # reverse_case() {
+  #   # Usage: reverse_case "string"
+  #   local -r string="${*}"
+  #   #printf "%s\n" "${string~~}"
+  # }
+else
+  uppercase() {
+    tr '[:lower:]' '[:upper:]' <<< "${*}"
+  }
+  lowercase() {
     tr '[:upper:]' '[:lower:]' <<< "${*}"
+  }
+fi
+  reverse_case() {
+    # Usage: reverse_case "string"
+    perl -pe 'tr/A-Za-z/a-zA-Z/' <<< "${*}"
 }
 
 iscolorcode() {
@@ -89,13 +133,41 @@ stripcolor() {
   sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,3})*)?[mGK]//g" <<< "${*}"
 }
 
-if [[ -f "${SCRIPTS_LIB_DIR}/trim_keeping_colors.perl" ]] && command_exists perl; then
-  trim() {
-    "${SCRIPTS_LIB_DIR}/trim_keeping_colors.perl" <<< "${*}"
+  if "${BASH_VERSION_4_OR_GREATER}"; then
+    trim_string() {
+      # Usage: trim "   example   string    "
+      : "${1#"${1%%[![:space:]]*}"}"
+      : "${_%"${_##*[![:space:]]}"}"
+      printf "%s\n" "${_}"
   }
 else
-  trim() {
-    sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "${*}"
+    trim_string() {
+      sed -e 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "${*}"
+  }
+fi
+
+  trim_keeping_colors() {
+    if [[ -f "${SCRIPTS_LIB_DIR:-}/trim_keeping_colors.perl" ]] && command_exists perl; then
+    "${SCRIPTS_LIB_DIR:-}/trim_keeping_colors.perl" <<< "${*}"
+  else
+      trim_string "${*}"
+  fi
+}
+
+trim() {
+  trim_keeping_colors "${*}"
+}
+
+if ${IN_BASH:-false}; then
+  trim_quotes() {
+    # Usage: trim_quotes "string"
+    : "${1//\'/}"
+    printf '%s\n' "${_//\"/}"
+  }
+else
+  trim_quotes() {
+    # Usage: trim_quotes "string"
+    sed -e "s/'//g;s/\"//g" <<< "${*}"
   }
 fi
 # Alias for trim
@@ -103,14 +175,43 @@ trimString() {
   trim "${*}"
 }
 
-# Is provided string empty
-empty() {
-  if [[ -z "$(tr -d '[:space:]' <<< "${*}")" ]]; then
-    echo 'true' && return 0
-  else
-    echo 'false' && return 1
-  fi
-}
+if "${BASH_VERSION_4_OR_GREATER:-false}"; then
+  # shellcheck disable=SC2244
+  remove_array_dups() {
+    # Usage: remove_array_dups "array"
+    declare -A tmp_array
+
+    for i in "$@"; do
+        [[ ${i} ]] && IFS=" " tmp_array["${i:- }"]=1
+    done
+
+    printf '%s\n' "${!tmp_array[@]}"
+  }
+else
+  remove_array_dups() {
+    # Usage: remove_array_dups "array"
+    trim "$(printf "%s\n" "$@" | sort -u | tr '\n' ' ')"
+  }
+fi
+
+if ${IN_BASH:-false}; then
+  empty() {
+    if [[ -z "${*// /}" ]]; then
+      echo 'true' && return 0
+    else
+      echo 'false' && return 1
+    fi
+  }
+else
+  # Is provided string empty
+  empty() {
+    if [[ -z "$(tr -d '[:space:]' <<< "${*}")" ]]; then
+      echo 'true' && return 0
+    else
+      echo 'false' && return 1
+    fi
+  }
+fi
 squash_output() {
   "$@" > /dev/null 2>&1
 }
@@ -123,9 +224,37 @@ trim_dash() {
   sed 's/^[- ]*//g;s/[- ]*$//g' <<< "${*}"
 }
 
-squash_spaces() {
-  tr -s '[:blank:]' ' ' <<< "${*}"
-}
+# shellcheck disable=SC2086,SC2048
+if ${IN_BASH:-false}; then
+  # from https://github.com/dylanaraps/pure-bash-bible#trim-all-white-space-from-string-and-truncate-spaces
+  squash_spaces() {
+    # Usage: squash_spaces "   example   string    "
+    set -f
+    set -- ${*}
+    printf "%s\n" "$*"
+    set +f
+  }
+else
+  squash_spaces() {
+    local string="$(trim ${*})"
+    tr -s '[:blank:]' ' ' <<< "${string}"
+  }
+fi
+
+# from https://github.com/dylanaraps/pure-bash-bible#use-regex-on-a-string
+if ${IN_BASH:-false}; then
+  regex() {
+    # Usage: regex "string" "regex"
+    [[ $1 =~ $2 ]] && printf "%s\n" "${BASH_REMATCH[1]}"
+  }
+else
+  regex() {
+    # Usage: regex "string" "regex"
+    local string="${1}"
+    local regex="${2}"
+    perl -ne 'print $1 if($_ =~ /'"${regex}"'/)' <<< "${string}"
+  }
+fi
 
 # Remove Starting # from the string
 # Trim leading and trailing spaces
@@ -137,4 +266,11 @@ titlecase() {
   local string="$(trim "${*###}")"
 
   perl -pe 's/^#+//g;s/(^\h*|\h*$)//g;s/(\w)([\w'"'"']*)/\U$1\L$2/gm;tr/ //s;s/([a-zA-Z]{3,8}-[0-9]+)/\U$1/g;' <<< "${string}"
+}
+
+# from https://github.com/dylanaraps/pure-bash-bible#split-a-string-on-a-delimiter
+split() {
+   # Usage: split "string" "delimiter"
+   IFS=$'\n' read -d "" -ra arr <<< "${1//$2/$'\n'}"
+   printf "%s\n" "${arr[@]}"
 }

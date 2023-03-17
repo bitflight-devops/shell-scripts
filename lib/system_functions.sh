@@ -3,7 +3,14 @@
 ##########################################################
 ##### Lookup Current Script Directory
 
+# function_exists is a function to check if a function exists, faster than command_exists
+function_exists() { declare -Ff -- "$@" > /dev/null; }
+# command_exists is a function to check if a command exists, which is portable
 command_exists() { command -v "$@" > /dev/null 2>&1; }
+export -f command_exists
+export -f function_exists
+COMMAND_EXISTS_FUNCTION="$(declare -f command_exists)"
+FUNCTION_EXISTS_FUNCTION="$(declare -f function_exists)"
 
 if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
@@ -49,12 +56,58 @@ fi
 : "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
 : "${SYSTEM_FUNCTIONS_LOADED:=1}"
 
-get_iso_time() {
-  date +%Y-%m-%dT%H:%M:%S%z
+# Either returns bash or zsh
+current_shell_type() {
+  \shopt -u lastpipe > /dev/null 2>&1
+  shell_name='bash'
+  : | shell_name='zsh'
+  echo "${shell_name}"
+}
+shell_major_version() {
+  shell_name="$(current_shell_type)"
+  case "${shell_name}" in
+    bash)
+      echo "${BASH_VERSINFO[0]}"
+      ;;
+    zsh)
+      echo "${ZSH_VERSION%%.*}"
+      ;;
+    *)
+      echo "Unknown shell type: ${0}"
+      ;;
+  esac
+}
+shell_minor_version() {
+  shell_name="$(current_shell_type)"
+  case "${shell_name}" in
+    bash)
+      echo "${BASH_VERSINFO[1]}"
+      ;;
+    zsh)
+      echo "${ZSH_VERSION#*.}"
+      ;;
+    *)
+      echo "Unknown shell type: ${0}"
+      ;;
+  esac
+}
+current_shell_version() {
+  shell_name="$(current_shell_type)"
+  case "${shell_name}" in
+    bash)
+      echo "${BASH_VERSION}"
+      ;;
+    zsh)
+      echo "${ZSH_VERSION}"
+      ;;
+    *)
+      echo "Unknown shell type: ${0}"
+      ;;
+  esac
 }
 
-command_exists() {
-  command -v "$@" > /dev/null 2>&1
+get_iso_time() {
+  date +%Y-%m-%dT%H:%M:%S%z
 }
 
 is_darwin() {
@@ -351,12 +404,14 @@ brew_formula_installed() {
   [[ ${formula_file} == */*.rb ]] && HOMEBREW_NO_INSTALL_FROM_API=1 brew ls --versions "${formula}" > /dev/null 2>&1
 }
 
+
+
 # If brew has the formula passed as an argument, upgrade it; otherwise, install it.
 brewInstall() {
-  if brew_package_installed "$1" && [[ -n ${UPGRADE_PACKAGES:-}   ]]; then
-    NONINTERACTIVE=1 brew upgrade "$1" || true > /dev/null
+  if brew_formula_installed "$1" && [[ -n ${UPGRADE_PACKAGES:-}   ]]; then
+    HOMEBREW_NO_INSTALL_FROM_API=1 NONINTERACTIVE=1 brew upgrade "$1" || true > /dev/null
   else
-    NONINTERACTIVE=1 brew install "$1" || true > /dev/null
+    HOMEBREW_NO_INSTALL_FROM_API=1 NONINTERACTIVE=1 brew install "$1" || true > /dev/null
   fi
 }
 

@@ -11,17 +11,18 @@ actions:
     - trunk-cache-prune
     - trunk-upgrade-available
 cli:
-  version: 1.5.0
+  version: 1.5.1
 
 
 lint:
   disabled:
     - git-diff-check
   enabled:
+    - actionlint@1.6.23
     - golangci-lint@1.51.2
     - gofmt@1.19.3
     - markdownlint@0.33.0
-    - gitleaks@8.15.3
+    - gitleaks@8.16.0
     - hadolint@2.12.0
     - prettier@2.8.4
     - shellcheck@0.9.0

@@ -41,9 +41,13 @@ EOF
   if command_exists zsh && [[ ${whichshell} == "zsh"   ]]; then
     # We are running in zsh
     eval "${GET_LIB_DIR_IN_ZSH}"
+    IN_ZSH=true
+    IN_BASH=false
   else
     # we are running in bash/sh
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
+    IN_BASH=true
+    IN_ZSH=false
   fi
 fi
 
@@ -131,10 +135,10 @@ unload_libraries() {
 }
 
 is_sourced() {
-  if [[ ${SHELL} =~ zsh   ]]; then
+  if "${IN_ZSH:-false}"; then
     [[ -n ${ZSH_EVAL_CONTEXT:-} ]] && [[ ${ZSH_EVAL_CONTEXT} =~ :file$ ]]
-  else
-    [[ ${FUNCNAME[1]} == source   ]] && [[ ${BASH_SOURCE[1]} != "${0}"   ]]
+  elif "${IN_BASH:-false}"; then
+    [[ ${BASH_SOURCE[1]} != "${0}"   ]]
   fi
 }
 
@@ -163,29 +167,31 @@ if [[ ${#PROVIDED_LIBRARY_LIST[@]} -eq 0 ]]; then
 else
   LOAD_LIBRARIES=("${PROVIDED_LIBRARY_LIST[@]}")
 fi
+
+if [[ -z ${UNLOAD_LIBRARIES-} ]]; then
+    bootstrap_exec info "Loading libraries..."
+    SOURCED_LIBRARIES="$(load_libraries "${LOAD_LIBRARIES[@]}")"
+    sourcing_errored=$?
+fi
 if is_sourced; then
   if [[ -n ${UNLOAD_LIBRARIES-} ]]; then
-    eval "$(unload_libraries "${LOAD_LIBRARIES[@]}")"
+    eval "$(unload_libraries "${LOAD_LIBRARIES[@]}")" || sourcing_errored=$?
   else
-    bootstrap_exec info "Loading libraries..."
-    if load_libraries "${LOAD_LIBRARIES[@]}" > /dev/null && eval "$(load_libraries "${LOAD_LIBRARIES[@]}")"; then
-      bootstrap_exec info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
-    else
-      error "Failed to load libraries"
-    fi
+    eval "${SOURCED_LIBRARIES}" || sourcing_errored=$?
   fi
 else
   # We are running as a script
   # So echo the commands
   if [[ -n ${UNLOAD_LIBRARIES-} ]]; then
-    unload_libraries "${LOAD_LIBRARIES[@]}"
-  else
-    if load_libraries "${LOAD_LIBRARIES[@]}" > /dev/null; then
-      load_libraries "${LOAD_LIBRARIES[@]}"
-    else
-      error "Failed to load libraries"
-    fi
+    unload_libraries "${LOAD_LIBRARIES[@]}" || sourcing_errored=$?
+  elif [[ ${sourcing_errored} -eq 0 ]]; then
+    load_libraries "${LOAD_LIBRARIES[@]}" || sourcing_errored=$?
   fi
+fi
+if [[ ${sourcing_errored} -eq 0 ]]; then
+  bootstrap_exec info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+else
+  error "Failed to load libraries"
 fi
 unset LOAD_LIBRARIES
 unset AVAILABLE_LIBRARIES

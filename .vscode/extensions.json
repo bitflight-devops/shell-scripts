@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "mads-hartmann.bash-ide-vscode",
-    "jeff-hykin.better-shellscript-syntax"
+    "jeff-hykin.better-shellscript-syntax",
+    "tetradresearch.vscode-h2o"
   ]
 }

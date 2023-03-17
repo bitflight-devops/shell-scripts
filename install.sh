@@ -12,9 +12,10 @@
 # NONINTERACTIVE=1    # Set this to 1 to disable interactive prompts
 # INTERACTIVE=1       # Set this to 1 to enable interactive prompts
 # BFD_CLEAN_INSTALL=1 # Set to 1 to force a clean install
-
+# HOT_LOAD=1          # Set to 1 to hot load the shell scripts
 # Download the latest version of the script from the following URL:
-# https://raw.githubusercontent.com/bitflight-devops/scripts/master/install.sh
+# https://raw.githubusercontent.com/bitflight-devops/shell-scripts/master/install.sh
+## install command: eval "$(curl --fail -sSlL https://raw.githubusercontent.com/bitflight-devops/shell-scripts/master/install.sh 2>/dev/null)"
 
 set -eu
 # BFD == BitFlight Devops
@@ -488,7 +489,7 @@ download_shell_scripts() {
     SHELL_SCRIPTS_REF="main"
   fi
   if command_exists git; then
-    ( 
+    (
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info_log "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
@@ -510,7 +511,7 @@ download_shell_scripts() {
       info_log "Pulling latest shell scripts - completed."
     )
   else
-    ( 
+    (
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then

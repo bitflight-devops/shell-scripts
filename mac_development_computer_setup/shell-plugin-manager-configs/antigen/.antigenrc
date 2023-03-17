@@ -1,9 +1,8 @@
 #!/usr/bin/env zsh
 antigen use oh-my-zsh
+
 antigen bundles <<EOBUNDLES
 git
-asdf
-# curl
 fzf
 aws
 brew
@@ -11,10 +10,8 @@ docker
 iterm2
 macos
 npm
-nvm
 thefuck
 tmux
-vscode
 yarn
 zoxide
 python

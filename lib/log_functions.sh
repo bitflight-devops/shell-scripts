@@ -57,6 +57,23 @@ fi
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
+
+print_function_name() {
+  local level="${1:-0}"
+  if [[ -n "${FUNCNAME[${level}]}" ]]; then
+    printf '%s\n' "${FUNCNAME[${level}]}"
+  else
+    printf '%s\n' "${funcstack[@]:${level}:1}"
+  fi
+}
+
+print_parent_of_current_func_name() {
+  print_function_name 3
+}
+print_current_func_name() {
+  print_function_name 2
+}
+
 # Certain string functions are used in this file
 # so we create them here if they are not already loaded
 # from lib/string_functions.sh

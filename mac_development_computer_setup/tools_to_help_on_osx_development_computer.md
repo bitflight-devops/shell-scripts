@@ -269,8 +269,29 @@ cargo install "${cargo_packages[@]}"
 
 ```zsh
 brew_apps=()
+## Shell Plugin Managers
+## Choose one of the following
+[[ -n ${USE_SHELDON+x} ]] && brew_apps+=("omz")
+[[ -n ${USE_ANTIGEN+x} ]] && brew_apps+=("antigen") # Plugin manager for zsh, inspired by oh-my-zsh and vundle
+[[ -n ${USE_ZINIT+x} ]] && brew_apps+=("zinit") # Flexible and fast Zsh plugin manager with clean fpath, reports, completion management, Turbo mode, annexes, services, asynchronicity, completion widgets and utilities, and much more
+[[ -n ${USE_ZPLUG+x} ]] && brew_apps+=("zplug") # A next-generation plugin manager for zsh
+[[ -n ${USE_ZGEN+x} ]] && brew_apps+=("zgen") # A lightweight plugin manager for zsh
+[[ -n ${USE_ZPM+x} ]] && brew_apps+=("zpm") # A plugin manager for zsh
+[[ -n ${USE_ZPLUGIN+x} ]] && brew_apps+=("zplugin") # A flexible and fast plugin manager for zsh
+[[ -n ${USE_ZR+x} ]] && brew_apps+=("zr") # Quick, simple zsh plugin manager
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-plugins") # A collection of zsh plugins
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-autosuggestions") # Fish-like autosuggestions for zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-syntax-highlighting") # Fish shell like syntax highlighting for Zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-history-substring-search") # Fish shell like history search for Zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-completions") # Additional completion definitions for Zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-interactive-cd") # Fish shell like interactive directory change for Zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-autopair") # Fish shell like autopair for Zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-async") # Asynchronous tasks for zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-notify") # Desktop notifications for zsh
+[[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-quickstart-kit") # A quickstart kit for zsh
+[[ -n ${USE_SHELDON+x} ]] && brew_apps+=("sheldon") # A plugin manager for multiple shells
+
 ## Install Shell Utilities
-brew_apps+=("antigen") # Plugin manager for zsh, inspired by oh-my-zsh and vundle
 brew_apps+=("zsh") # UNIX shell (command interpreter)
 brew_apps+=("iterm2") # Terminal Gui
 
