@@ -230,7 +230,7 @@ set_output() {
   fi
 }
 
-set_state() {
+set_github_state() {
   if [[ $# -ne 2 ]]; then
     error "${0}: You need to provide two arguments. Provided args ${*}"
     return 1

@@ -268,8 +268,11 @@ cargo install "${cargo_packages[@]}"
 <details><summary>🗒️ Setup Instructions</summary>
 
 ```zsh
+upper() { local u=u;[[ $(: ${u^^} 2>&1echo "${1^^}"; }
 brew_apps=()
 ## Shell Plugin Managers
+DEFAULT_PLUGIN_MANAGER="SHELDON"
+USE_SHELDON=1
 ## Choose one of the following
 [[ -n ${USE_SHELDON+x} ]] && brew_apps+=("omz")
 [[ -n ${USE_ANTIGEN+x} ]] && brew_apps+=("antigen") # Plugin manager for zsh, inspired by oh-my-zsh and vundle
@@ -279,6 +282,14 @@ brew_apps=()
 [[ -n ${USE_ZPM+x} ]] && brew_apps+=("zpm") # A plugin manager for zsh
 [[ -n ${USE_ZPLUGIN+x} ]] && brew_apps+=("zplugin") # A flexible and fast plugin manager for zsh
 [[ -n ${USE_ZR+x} ]] && brew_apps+=("zr") # Quick, simple zsh plugin manager
+[[ -n ${USE_SHELDON+x} ]] && brew_apps+=("sheldon") # A plugin manager for multiple shells
+
+## Install Shell Utilities
+brew_apps+=("zsh") # UNIX shell (command interpreter)
+brew_apps+=("iterm2") # Terminal Gui
+
+## ZSH PLUGINS - available in brew, but instead use a plugin manager from above
+## To Enable ZSH Plugins, set the USE_ZSH_PLUGINS environment variable to 1
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-plugins") # A collection of zsh plugins
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-autosuggestions") # Fish-like autosuggestions for zsh
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-syntax-highlighting") # Fish shell like syntax highlighting for Zsh
@@ -289,12 +300,6 @@ brew_apps=()
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-async") # Asynchronous tasks for zsh
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-notify") # Desktop notifications for zsh
 [[ -n ${USE_ZSH_PLUGINS+x} ]] && brew_apps+=("zsh-quickstart-kit") # A quickstart kit for zsh
-[[ -n ${USE_SHELDON+x} ]] && brew_apps+=("sheldon") # A plugin manager for multiple shells
-
-## Install Shell Utilities
-brew_apps+=("zsh") # UNIX shell (command interpreter)
-brew_apps+=("iterm2") # Terminal Gui
-
 
 ## Install compression libraries
 brew_apps+=("zstd") # Zstandard is a real-time compression algorithm
