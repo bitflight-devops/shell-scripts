@@ -57,12 +57,14 @@ command_exists() {
   command -v "$@" > /dev/null 2>&1
 }
 bash_version() {
+  # Usage: bash_version [as_number] [bash_path]
   local as_number="${1:-false}"
+  local bash_path="${2:-bash}"
   if command_exists bash; then
     local available_bash_version
     local ret=0
     if [[ -z ${BASH_VERSION:-} ]]; then
-      available_bash_version="$(bash --version | head -n1 | cut -d' ' -f4 | cut -d'(' -f1)" || ret=$?
+      available_bash_version="$(${bash_path} -c 'echo "${BASH_VERSION//\(*/}"' 2> /dev/null)"
     else
       available_bash_version="${BASH_VERSION//\(*/}"
     fi
@@ -70,7 +72,7 @@ bash_version() {
       available_bash_version="0.0.0"
     fi
     if [[ ${as_number} == "true" ]]; then
-      printf "%d%-0.2d%-0.2d\n" ${available_bash_version//./ }
+      ${bash_path} -c 'printf "%d%-0.2d%-0.2d\n" ${BASH_VERSINFO[0]} ${BASH_VERSINFO[1]} ${BASH_VERSINFO[2]}' 2> /dev/null
     else
       printf "%s\n" "${available_bash_version}"
     fi
@@ -196,7 +198,7 @@ fi
 
 if ${IN_BASH:-false}; then
   empty() {
-    if [[ -z "${*// /}" ]]; then
+    if [[ -z ${*// /}   ]]; then
       echo 'true' && return 0
     else
       echo 'false' && return 1

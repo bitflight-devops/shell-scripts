@@ -100,6 +100,8 @@ load_library() {
   if [[ -f "${SCRIPTS_LIB_DIR}/${library}" ]]; then
     echo "source '${SCRIPTS_LIB_DIR}/${library}'"
     return 0
+  else
+    error "unable to find: source '${SCRIPTS_LIB_DIR}/${library}'"
   fi
   return 1
 }

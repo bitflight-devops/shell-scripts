@@ -7,8 +7,7 @@
 function_exists() { declare -Ff -- "$@" > /dev/null; }
 # command_exists is a function to check if a command exists, which is portable
 command_exists() { command -v "$@" > /dev/null 2>&1; }
-export -f command_exists
-export -f function_exists
+
 COMMAND_EXISTS_FUNCTION="$(declare -f command_exists)"
 FUNCTION_EXISTS_FUNCTION="$(declare -f function_exists)"
 
@@ -403,8 +402,6 @@ brew_formula_installed() {
   local formula_file="$(HOMEBREW_NO_INSTALL_FROM_API=1 brew formula "${formula}")"
   [[ ${formula_file} == */*.rb ]] && HOMEBREW_NO_INSTALL_FROM_API=1 brew ls --versions "${formula}" > /dev/null 2>&1
 }
-
-
 
 # If brew has the formula passed as an argument, upgrade it; otherwise, install it.
 brewInstall() {
