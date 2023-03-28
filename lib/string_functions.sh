@@ -52,6 +52,7 @@ fi
 : "${STRING_VARIABLES_LOADED:=1}"
 
 [[ -z ${COLOR_AND_EMOJI_VARIABLES_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/color_and_emoji_variables.sh"
+[[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 
 command_exists() {
   command -v "$@" > /dev/null 2>&1
@@ -78,11 +79,11 @@ bash_version() {
     fi
   fi
 }
-
+IN_SHELL="$(current_shell_type)"
 AVAILABLE_BASH_VERSION="$(bash_version)"
 AVAILABLE_BASH_VERSION_NUMBER="$(bash_version true)"
 BASH_VERSION_4_OR_GREATER=false
-[[ ${AVAILABLE_BASH_VERSION_NUMBER:-0} -gt 40000 ]] && BASH_VERSION_4_OR_GREATER=true
+[[ ${IN_SHELL} == "bash"   ]] && [[ ${AVAILABLE_BASH_VERSION_NUMBER:-0} -gt 40000 ]] && BASH_VERSION_4_OR_GREATER=true
 
 if "${BASH_VERSION_4_OR_GREATER:-false}"; then
   uppercase() {
@@ -104,7 +105,8 @@ else
     tr '[:upper:]' '[:lower:]' <<< "${*}"
   }
 fi
-  reverse_case() {
+
+reverse_case() {
     # Usage: reverse_case "string"
     perl -pe 'tr/A-Za-z/a-zA-Z/' <<< "${*}"
 }

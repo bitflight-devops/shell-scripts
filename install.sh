@@ -117,7 +117,7 @@ download() {
   elif command_exists fetch; then
     fetch --quiet --output="${file}" "${url}"
   else
-    error "No HTTP download program (curl, wget, fetch) found, exiting…"
+    error_log "No HTTP download program (curl, wget, fetch) found, exiting…"
     return 1
   fi
 }
@@ -489,7 +489,7 @@ download_shell_scripts() {
     SHELL_SCRIPTS_REF="main"
   fi
   if command_exists git; then
-    (
+    ( 
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info_log "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
@@ -511,7 +511,7 @@ download_shell_scripts() {
       info_log "Pulling latest shell scripts - completed."
     )
   else
-    (
+    ( 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
@@ -545,7 +545,7 @@ unpack() {
       return 0
       ;;
     *)
-      error "Unknown package extension."
+      error_log "Unknown package extension."
       printf "\n"
       info_log "This almost certainly results from a bug in this script--please file a"
       info_log "bug report at https://github.com/starship/starship/issues"
@@ -621,7 +621,7 @@ detect_platform() {
     darwin) platform="apple-darwin" ;;
     freebsd) platform="unknown-freebsd" ;;
     *)
-      error "Unsupported platform: ${platform}"
+      error_log "Unsupported platform: ${platform}"
       exit 1
       ;;
   esac
@@ -652,7 +652,7 @@ check_bin_dir() {
   bin_dir="${1%/}"
 
   if [[ ! -d ${bin_dir} ]]; then
-    error "Installation location ${bin_dir} does not appear to be a directory"
+    error_log "Installation location ${bin_dir} does not appear to be a directory"
     info_log "Make sure the location exists and is a directory, then try again."
     exit 1
   fi
@@ -830,7 +830,7 @@ set_env_var() {
     prefix='export '
   fi
   if [[ -z ${file:-} ]]; then
-    error "Could not find a shell profile file to set the environment variable in."
+    error_log "Could not find a shell profile file to set the environment variable in."
     return 1
   fi
   if [[ ! -f ${file} ]]; then

@@ -92,7 +92,7 @@ install_apt-fast() {
     run_as_root mkdir -p /usr/local/sbin
     run_as_root downloadFile "https://raw.githubusercontent.com/ilikenwf/apt-fast/master/apt-fast" "/usr/local/sbin/apt-fast" "true"
     if [[ ! -f /usr/local/sbin/apt-fast ]]; then
-      error "Failed to download apt-fast"
+      error_log "Failed to download apt-fast"
       return 1
     fi
     run_as_root chmod +x /usr/local/sbin/apt-fast
@@ -177,7 +177,7 @@ install_eb_cli() {
 
   mkdir -p ~/.cache ~/.local
   install_ebcli_ubuntu_dependencies
-  info "Install EB CLI with python3 $(python3 --version || true)"
+  info_log "Install EB CLI with python3 $(python3 --version || true)"
   [[ -z ${HOME-} ]] && export HOME="$(cd ~/ && pwd -P)"
   local REINSTALL=false
   local corrupted=false
@@ -276,7 +276,7 @@ install_eb_cli() {
 
   fi
   if grep -q -v 'EB CLI 3' <<< "$(eb --version 2> /dev/null || true)"; then
-    error "EB CLI not installed"
+    error_log "EB CLI not installed"
     exit 1
   fi
 }
@@ -295,7 +295,7 @@ eb_run() {
   if command_exists eb; then
     eb "${@}"
   else
-    error "eb command not found"
+    error_log "eb command not found"
     exit 1
   fi
 }
@@ -336,7 +336,7 @@ EOF
 aws_run() {
   if ! command_exists aws; then
     if ! install_aws_cli > /tmp/install_aws_cli.log 2>&1; then
-      error "Failed to install aws cli" && info "$(cat /tmp/install_aws_cli.log)"
+      error_log "Failed to install aws cli" && info "$(cat /tmp/install_aws_cli.log)"
       exit 1
     fi
   fi
@@ -365,7 +365,7 @@ golang_arch() {
       echo "386"
       ;;
     *)
-      error "Unsupported architecture $(uname -m)"
+      error_log "Unsupported architecture $(uname -m)"
       exit 1
       ;;
   esac
@@ -387,7 +387,7 @@ golang_os() {
       echo "freebsd"
       ;;
     *)
-      error "Unsupported OS $(uname -s)"
+      error_log "Unsupported OS $(uname -s)"
       exit 1
       ;;
   esac
@@ -395,7 +395,7 @@ golang_os() {
 
 add_user() {
   if [[ $(id -un) != 'root' ]]; then
-    error "you must run add_user as root"
+    error_log "you must run add_user as root"
     return 1
   fi
   local user_name="${1}"
@@ -434,7 +434,7 @@ function install_package_to_path() {
     mv "${temp_file_location}" "${install_path}"
     add_to_path "${install_dir}"
     chmod +x "${install_path}"
-    info "Installed ${current_file} to ${install_path}"
+    info_log "Installed ${current_file} to ${install_path}"
   else
     fatal "Failed to install ${current_file} to ${install_path}"
   fi
@@ -588,7 +588,7 @@ passive_cname_prefix() {
 cname_available() (
   set +o pipefail
   if [[ $# -eq 0 ]]; then
-    error "${0}(): missing cname prefix as arg"
+    error_log "${0}(): missing cname prefix as arg"
     return 2
   fi
   local -r trimmed_arg="$(trim "${1}")"
@@ -611,7 +611,7 @@ cname_available() (
 environment_name_by_cname() {
   local -r name_type="${1?'cname prefix of type active or passive required'}"
   if grep -i -q -v -E "(passive|active)" <<< "${name_type}"; then
-    error "${0}(): Invalid name type provided: ${name_type}"
+    error_log "${0}(): Invalid name type provided: ${name_type}"
     return 2
   fi
   DEARGS=("--no-paginate" "--output" "text" "--no-include-deleted")
@@ -636,7 +636,7 @@ cname_by_environment_name() {
       "${DEARGS[@]}" \
       --query "Environments[?EnvironmentName==\`${env_name}\` && Status!=\`Terminated\`].[CNAME]" | head -n 1 || true
   else
-    error "${0}(): Environment name not provided"
+    error_log "${0}(): Environment name not provided"
     return 2
   fi
 }
@@ -695,18 +695,18 @@ wait_for_ready() {
 
   while STATE=$(environment_state_waitable "${env_name}") && [[ $(date +%s) -lt ${end_time} ]]; do
     if [[ -z ${STATE:-} ]]; then
-      error "${0}(): FAIL: Environment ${env_name} status is Terminating or Terminated"
+      error_log "${0}(): FAIL: Environment ${env_name} status is Terminating or Terminated"
       return 1
     fi
 
     if [[ ${STATE} == "Ready" ]]; then
-      info "${0}(): Environment ${env_name} status became Ready in $(($(date +%s) - start_time)) seconds"
+      info_log "${0}(): Environment ${env_name} status became Ready in $(($(date +%s) - start_time)) seconds"
       return 0
     fi
     sleep "${interval}"
   done
 
-  error "Environment ${env_name} status not ready after ${timeout} seconds"
+  error_log "Environment ${env_name} status not ready after ${timeout} seconds"
   return 1
 
 }
@@ -730,7 +730,7 @@ wait_for_terminated() {
     sleep "${interval}"
   done
   if environment_state_waitable "${env_name}"; then
-    error "${0}(): Environment ${env_name} status is still 'Ready' after ${grace_timeout} seconds! Did the terminate command get sent?"
+    error_log "${0}(): Environment ${env_name} status is still 'Ready' after ${grace_timeout} seconds! Did the terminate command get sent?"
     return 3
   fi
   while STATE=$(environment_state_terminating "${env_name}") && [[ $(date +%s) -lt ${end_time} ]]; do
@@ -740,10 +740,10 @@ wait_for_terminated() {
     sleep "${interval}"
   done
   if environment_state_terminated "${env_name}"; then
-    info "${0}(): Environment ${env_name} status became Terminated in $(($(date +%s) - start_time)) seconds"
+    info_log "${0}(): Environment ${env_name} status became Terminated in $(($(date +%s) - start_time)) seconds"
     return 0
   fi
-  error "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")] not terminated after ${timeout} seconds "
+  error_log "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")] not terminated after ${timeout} seconds "
   return 1
 }
 
@@ -789,10 +789,10 @@ wait_for_environment_cname_release() {
     sleep "${interval}"
   done
   if environment_state_terminated "${env_name}" && cname_available "${current_cname_prefix}"; then
-    info "${0}(): Environment ${env_name} status Terminated: cname prefix ${current_cname_prefix} released after $(($(date +%s) - start_time)) seconds"
+    info_log "${0}(): Environment ${env_name} status Terminated: cname prefix ${current_cname_prefix} released after $(($(date +%s) - start_time)) seconds"
     return 0
   fi
-  error "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")]: cname prefix ${current_cname_prefix} not released after ${timeout} seconds"
+  error_log "${0}(): Environment ${env_name} status [$(environment_state "${env_name}")]: cname prefix ${current_cname_prefix} not released after ${timeout} seconds"
   return 1
 }
 
@@ -841,7 +841,7 @@ wait_for_ebs_logs() {
     sleep "${interval}"
   done
 
-  error "Environment ${env_name} eb logs not available after waiting ${timeout} seconds"
+  error_log "Environment ${env_name} eb logs not available after waiting ${timeout} seconds"
   return 1
 
 }
@@ -858,10 +858,10 @@ pipe_errors_from_ebs_to_github_actions() {
   local -r log_output_path=".elasticbeanstalk/logs/${env_name}/"
   if wait_for_ready "${env_name}" "10" "3"; then
     if [[ ! -f ${log_zipfile} ]]; then
-      info "Requesting logs from Elastic Beanstalk's env ${env_name}: Starting"
+      info_log "Requesting logs from Elastic Beanstalk's env ${env_name}: Starting"
       if aws_run elasticbeanstalk request-environment-info --info-type bundle --environment-name "${env_name}"; then
-        info "Requesting logs from Elastic Beanstalk's env ${env_name}: Success"
-        info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Starting"
+        info_log "Requesting logs from Elastic Beanstalk's env ${env_name}: Success"
+        info_log "Retrieving logs from Elastic Beanstalk's env ${env_name}: Starting"
         loginfo_file="/tmp/${env_name}.loginfo.json"
         if wait_for_ebs_logs "${env_name}" "${loginfo_file}"; then
           local -r url="$(jq -r '.Message' "${loginfo_file}")"
@@ -869,35 +869,35 @@ pipe_errors_from_ebs_to_github_actions() {
             mkdir -p "${log_output_path}"
             debug "UNZIP log files:\n$(unzip -o "${log_zipfile}" -d "${log_output_path}" -x "*.gz")"
             print_logs_from_zip "${log_output_path}"
-            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Success"
+            info_log "Retrieving logs from Elastic Beanstalk's env ${env_name}: Success"
             return 0
           else
             debug "${0}(): Cannot download ${url} - possibly doesn't exist.\n$(cat "${loginfo_file}")"
-            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
+            info_log "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
             return 0
           fi
         else
           if ! jq -r '.Message' "${loginfo_file}" > /dev/null 2>&1; then
             debug "${0}(): Environment ${env_name} not available to download logs: [${loginfo_file}]\n$(jq '.' "${loginfo_file}")"
-            info "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
+            info_log "Retrieving logs from Elastic Beanstalk's env ${env_name}: Failure"
             return 0
           fi
         fi
       else
-        info "Requesting logs from Elastic Beanstalk's env ${env_name}: Failure"
+        info_log "Requesting logs from Elastic Beanstalk's env ${env_name}: Failure"
       fi
     else
-      info "Printing logs from Elastic Beanstalk's env ${env_name}: Starting"
+      info_log "Printing logs from Elastic Beanstalk's env ${env_name}: Starting"
       if print_logs_from_zip "${log_output_path}"; then
-        info "Printing logs from Elastic Beanstalk's env ${env_name}: Success"
+        info_log "Printing logs from Elastic Beanstalk's env ${env_name}: Success"
       else
-        info "Printing logs from Elastic Beanstalk's env ${env_name}: Failure"
+        info_log "Printing logs from Elastic Beanstalk's env ${env_name}: Failure"
       fi
       return 0
     fi
   else
     debug "Environment state:\n$(elasticbeanstalk describe-environments --environment-names "${env_name}")"
-    info "Elastic Beanstalk's env ${env_name} status is [$(environment_state "${env_name}")] which means logs cannot be requested"
+    info_log "Elastic Beanstalk's env ${env_name} status is [$(environment_state "${env_name}")] which means logs cannot be requested"
   fi
 
 }
@@ -906,12 +906,12 @@ stop_current_eb_processes() (
   set -e -o pipefail
   local -r env_name="${1:-$(current_environment_name)}"
   if aws_run elasticbeanstalk describe-environments --environment-names "${env_name}" 2> /dev/null | jq -r '.Environments[0].AbortableOperationInProgress' 2> /dev/null | grep -q 'true'; then
-    info "Abort environment update for ${env_name}: Starting"
+    info_log "Abort environment update for ${env_name}: Starting"
     if aws_run elasticbeanstalk abort-environment-update --environment-name "${env_name}"; then
       wait_for_ready "${env_name}"
-      info "Abort environment update for ${env_name}: Completed"
+      info_log "Abort environment update for ${env_name}: Completed"
     else
-      error "Abort environment update for ${env_name}: Failed"
+      error_log "Abort environment update for ${env_name}: Failed"
     fi
   fi
 )
@@ -920,7 +920,7 @@ remove_passive() {
   local -r waitforcomplete="${1:-false}"
   local -r env_name="${2:-$(environment_name_by_cname passive)}"
   if [[ -z ${env_name:-} ]]; then
-    info "${0}(): No passive environment found"
+    info_log "${0}(): No passive environment found"
     return 0
   fi
   if environment_state_ready "${env_name}" 2> /dev/null; then
@@ -947,7 +947,7 @@ create_application_version() {
   local version_description="${2:-}"
   local app_name="$(current_app_name)"
   if [[ ${#version_label} -gt 100   ]]; then
-    error "Version label cannot be longer than 100 characters"
+    error_log "Version label cannot be longer than 100 characters"
     return 1
   fi
   if ! version_available "${version_label}"; then
@@ -1006,7 +1006,7 @@ stream_environment_events() {
       step_summary_title "Error creating ${env_name}"
       step_summary_append "\`${line}\`"
     else
-      info "${line}"
+      info_log "${line}"
     fi
     if [[ -n ${pid:-} ]] && ! process_is_running "${pid}"; then
       notice "Environment ${env_name} creation process [${pid}] has completed"
@@ -1055,7 +1055,7 @@ deploy_asset() {
   local version_label=${VERSION_ID:-${VERSION_LABEL:-${DEPLOY_VERSION:-}}} # DEPLOY_VERSION is deprecated
   debug "Deploying asset to environment ${env_name} with version ${version_label}"
   if [[ -z ${version_label:-} ]]; then
-    error "The env variable VERSION_LABEL or VERSION_ID is required"
+    error_log "The env variable VERSION_LABEL or VERSION_ID is required"
     return 1
   elif version_available "${version_label}"; then
     eb_run deploy \
@@ -1070,7 +1070,7 @@ deploy_asset() {
       --timeout "${timeout}" \
       "${env_name}"
   else
-    error "The version label to be deployed ${version_label} is unavailable, and there is no built zipfile to deploy"
+    error_log "The version label to be deployed ${version_label} is unavailable, and there is no built zipfile to deploy"
     return 1
   fi
 }
@@ -1078,7 +1078,7 @@ deploy_asset() {
 eb_init() {
   debug "eb_init: Init EB CLI"
   if [[ -z ${EB_PLATFORM:-} ]]; then
-    error "eb_init: requires an EB_PLATFORM environment variable to exist"
+    error_log "eb_init: requires an EB_PLATFORM environment variable to exist"
     return 1
   fi
   EB_ARGS=("--platform=${EB_PLATFORM}")
@@ -1093,7 +1093,7 @@ eb_load_config() {
   local -r env_config_name="${1:-${ENVIRONMENT_CFG:-}}"
   debug "eb_load_config: Load Config from file to EB: ${env_config_name}"
   if [[ -z ${env_config_name:-} ]]; then
-    error "eb_load_config: requires an env_config_name environment variable to exist"
+    error_log "eb_load_config: requires an env_config_name environment variable to exist"
     return 1
   fi
   eb_run config put "${env_config_name}"

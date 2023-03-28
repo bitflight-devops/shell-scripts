@@ -51,19 +51,18 @@ fi
 : "${BFD_REPOSITORY:=${SCRIPTS_LIB_DIR%/lib}}"
 : "${LOG_FUNCTIONS_LOADED:=1}"
 
+[[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${SYSTEM_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/system_functions.sh"
 [[ -z ${COLOR_AND_EMOJI_VARIABLES_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/color_and_emoji_variables.sh"
-[[ -z ${STRING_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/string_functions.sh"
 [[ -z ${GITHUB_CORE_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/github_core_functions.sh"
 [[ -z ${YAML_FUNCTIONS_LOADED:-} ]] && source "${SCRIPTS_LIB_DIR}/yaml_functions.sh"
 
-
 print_function_name() {
   local level="${1:-0}"
-  if [[ -n "${FUNCNAME[${level}]}" ]]; then
+  if [[ -n ${FUNCNAME[${level}]}   ]]; then
     printf '%s\n' "${FUNCNAME[${level}]}"
   else
-    printf '%s\n' "${funcstack[@]:${level}:1}"
+    printf '%s\n' "${funcstack[@]:level:1}"
   fi
 }
 
@@ -395,7 +394,8 @@ log_output() {
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   local -r return_code=${1:?}
   shift
-  local -r labelUppercase="$(uppercase "${1}")"
+  local labelUppercase
+  labelUppercase="$(uppercase "${1}")"
   shift
   if iscolorcode "$(colorcode "${1}")"; then
     local -r color="$(colorcode "${1}")"
@@ -434,12 +434,12 @@ debug() {
 }
 debug_log() { debug "${@}"; }
 
-info() {
+info_log() {
   local -r return_code=$?
   [[ $# -eq 0 ]] && return 0 # Exit if there is nothing to print
   log_output "${return_code}" "INFO" "COLOR_BOLD_WHITE" "★ ${*}"
 }
-info_log() { info "${@}"; }
+info() { info_log "${@}"; }
 
 notice() {
   local -r return_code=$?
@@ -448,15 +448,15 @@ notice() {
 }
 notice_log() { notice "${@}"; }
 
-error() {
+error_log() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
   log_output "${return_code}" "ERROR" "COLOR_RED" "✗ ${*}" | to_stderr
 }
-error_log() { error "${@}"; }
+error() { error_log "${@}"; }
 
-fatal() {
+fatal_log() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
@@ -464,16 +464,17 @@ fatal() {
   exit "${return_code}"
 }
 
-fatal_log() { fatal "${@}"; }
+fatal() { fatal_log "${@}"; }
 
-warn() {
+warn_log() {
   local return_code=$?
   [[ $# -eq 0 ]] && return 0                        # Exit if there is nothing to print
   [[ ${return_code} -eq 0 ]] && local return_code=1 # if we don't have the real return code, then make it an error
   log_output "${return_code}" "WARN" "COLOR_YELLOW" "∴ ${*}" | to_stderr
 }
-warning() { warn "${@}"; }
-
+warning_log() { warn_log "${@}"; }
+warn() { warn_log "${@}"; }
+warning() { warn_log "${@}"; }
 failure() {
   if [[ $1 =~ ^[\d]+$ ]] && [[ $1 -gt 0 ]]; then
     local -r return_code="$1"
@@ -538,7 +539,7 @@ pipe_errors_to_github_workflow() {
   elif [[ -f "${SCRIPTS_LIB_DIR}/parse_logs.perl" ]]; then
     perl "${SCRIPTS_LIB_DIR}/parse_logs.perl" "${log_file_path}" || error "error parsing log file: ${log_file_path}"
   else
-    error "Perl log parsing script not found: ${SCRIPTS_LIB_DIR}/parse_logs.perl"
+    error_log "Perl log parsing script not found: ${SCRIPTS_LIB_DIR}/parse_logs.perl"
     cat "${log_file_path}"
   fi
 }
@@ -572,7 +573,7 @@ print_single_log_file() {
       unset ERROR_LOG_FILE
       echo "::endgroup::"
     else
-      info "Log file contents: ${GITHUB_LOG_FILE}\n$(cat "${GITHUB_LOG_FILE}")"
+      info_log "Log file contents: ${GITHUB_LOG_FILE}\n$(cat "${GITHUB_LOG_FILE}")"
     fi
   fi
 }

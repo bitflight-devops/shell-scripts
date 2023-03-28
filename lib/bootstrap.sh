@@ -101,7 +101,7 @@ load_library() {
     echo "source '${SCRIPTS_LIB_DIR}/${library}'"
     return 0
   else
-    error "unable to find: source '${SCRIPTS_LIB_DIR}/${library}'"
+    error_log "unable to find: source '${SCRIPTS_LIB_DIR}/${library}'"
   fi
   return 1
 }
@@ -121,7 +121,7 @@ load_libraries() {
       load_library "${library}" || bootstrap_exec error "Library ${library} not found"
     done
   else
-    error "Environment variables BFD_REPOSITORY or SCRIPTS_LIB_DIR not set"
+    error_log "Environment variables BFD_REPOSITORY or SCRIPTS_LIB_DIR not set"
   fi
 }
 
@@ -132,7 +132,7 @@ unload_libraries() {
       unload_library "${library}" || bootstrap_exec error "Library ${library} not found"
     done
   else
-    error "Environment variables BFD_REPOSITORY or SCRIPTS_LIB_DIR not set"
+    error_log "Environment variables BFD_REPOSITORY or SCRIPTS_LIB_DIR not set"
   fi
 }
 
@@ -149,21 +149,22 @@ logs_as_comments() {
       printf '# '
   fi
 }
-
-function info() {
+if ! command_exists info_log; then
+  info_log() {
     local c=$'\e[32m'
     local e=$'\e[0m'
     logs_as_comments
     printf '%sINFO: %s%s\n' "${c}" "${*}" "${e}"
-}
-
-function error() {
+  }
+fi
+if ! command_exists error_log; then
+  error_log() {
     local c=$'\e[32m'
     local e=$'\e[0m'
     logs_as_comments
     printf '%sERROR: %s%s\n' "${c}" "${*}" "${e}" >&2
-}
-
+  }
+fi
 if [[ ${#PROVIDED_LIBRARY_LIST[@]} -eq 0 ]]; then
   LOAD_LIBRARIES=("${AVAILABLE_LIBRARIES[@]}")
 else
@@ -171,7 +172,9 @@ else
 fi
 
 if [[ -z ${UNLOAD_LIBRARIES-} ]]; then
-    bootstrap_exec info "Loading libraries..."
+  if is_sourced; then
+    bootstrap_exec info_log "Loading libraries..."
+  fi
     SOURCED_LIBRARIES="$(load_libraries "${LOAD_LIBRARIES[@]}")"
     sourcing_errored=$?
 fi
@@ -191,9 +194,12 @@ else
   fi
 fi
 if [[ ${sourcing_errored} -eq 0 ]]; then
-  bootstrap_exec info "Libraries loaded\n$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+  if is_sourced; then
+    whichloaded="$(printf ' -> %s\n' "${LOAD_LIBRARIES[@]}")"
+    bootstrap_exec info_log "Libraries loaded\n${whichloaded}"
+  fi
 else
-  error "Failed to load libraries"
+  error_log "Failed to load libraries"
 fi
 unset LOAD_LIBRARIES
 unset AVAILABLE_LIBRARIES

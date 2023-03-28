@@ -149,7 +149,7 @@ step_summary_title() (
       # File exists, Add or Update the Title
       SEDARGS=(-i)
       is_darwin && SEDARGS+=("''")
-      info "Setting Step Summary Title to: ${title}"
+      info_log "Setting Step Summary Title to: ${title}"
       if sed -n '1 p' "${GITHUB_STEP_SUMMARY}" 2> /dev/null | grep -q -e "^#"; then
         # Update title
         sed "${SEDARGS[@]}" "1 s/^.*$/${title}/" "${GITHUB_STEP_SUMMARY}" || true
@@ -164,7 +164,7 @@ step_summary_title() (
 
 step_summary_append() (
   set +x +e
-  info "${0}(): Appending to Step Summary: ${*}"
+  info_log "${0}(): Appending to Step Summary: ${*}"
   running_in_github_actions || GITHUB_STEP_SUMMARY="summary.md"
   echo "${*}" >> "${GITHUB_STEP_SUMMARY}"
   return 0
@@ -179,7 +179,7 @@ set_env() {
       local key="${1%%=*}"
       local value="${1#*=}"
     else
-      error "${0}: You need to provide two arguments. Provided args ${*}"
+      error_log "${0}: You need to provide two arguments. Provided args ${*}"
       return 1
     fi
   fi
@@ -209,7 +209,7 @@ set_output() {
       local key="${1%%=*}"
       local value="${1#*=}"
     else
-      error "${0}: You need to provide two arguments. Provided args ${*}"
+      error_log "${0}: You need to provide two arguments. Provided args ${*}"
       return 1
     fi
   fi
@@ -232,7 +232,7 @@ set_output() {
 
 set_github_state() {
   if [[ $# -ne 2 ]]; then
-    error "${0}: You need to provide two arguments. Provided args ${*}"
+    error_log "${0}: You need to provide two arguments. Provided args ${*}"
     return 1
   fi
   if running_in_github_actions; then
@@ -299,7 +299,7 @@ multiline_variable() {
     local -r variable_value="${3}"
     printf "%s<<%s\n%s\n%s\n" "${variable_name}" "${delimiter}" "${variable_value:-}" "${delimiter}" >> "${variable_file}"
   else
-    error "You need to provide a variable name and value. Args: ${*}"
+    error_log "You need to provide a variable name and value. Args: ${*}"
   fi
 }
 get_last_github_author_email() {

@@ -242,7 +242,7 @@ set_env_var() {
     prefix='export '
   fi
   if [[ -z ${file:-} ]]; then
-    error "Could not find a shell profile file to set the environment variable in."
+    error_log "Could not find a shell profile file to set the environment variable in."
     return 1
   fi
   if [[ ! -f ${file} ]]; then
@@ -304,7 +304,7 @@ runAptGetUpdate() (
   else
     local lastUpdate="$(date -u -d @"${lastAptGetUpdate}" +'%-Hh %-Mm %-Ss')"
 
-    info "Skip apt-get update because its last run was '${lastUpdate}' ago"
+    info_log "Skip apt-get update because its last run was '${lastUpdate}' ago"
   fi
 )
 
@@ -416,7 +416,7 @@ ubuntu_package_installed() {
   if command_exists dpkg-query; then
     dpkg-query -W "${1}" > /dev/null 2>&1
   else
-    error "dpkg-query not found, checking for ${*} failed"
+    error_log "dpkg-query not found, checking for ${*} failed"
     return 1
   fi
 }
@@ -426,7 +426,7 @@ yum_package_installed() {
   elif command_exists yum; then
     yum list installed "${1}" > /dev/null 2>&1
   else
-    error "rpm, yum not found, checking for ${*} failed"
+    error_log "rpm, yum not found, checking for ${*} failed"
     return 1
   fi
 }
@@ -434,7 +434,7 @@ pip_package_installed() {
   if command_exists pip3; then
     pip3 show "${1}" > /dev/null 2>&1
   else
-    error "pip not found, checking for ${*} failed"
+    error_log "pip not found, checking for ${*} failed"
     return 1
   fi
 }
@@ -552,9 +552,9 @@ mpm_configuration_file_path() {
   fi
   file_list=$(find_file_under_directory "${config_dir}" "${file_regex}")
   if [[ $(wc -l <<< "${file_list}" | tr -d ' ') -gt 1 ]]; then
-    error "Multiple mpm configuration files found in ${config_dir}"
-    error "Please remove all but one of the following files:"
-    error "${file_list}"
+    error_log "Multiple mpm configuration files found in ${config_dir}"
+    error_log "Please remove all but one of the following files:"
+    error_log "${file_list}"
     return 1
   fi
   config_file=$(head -1 <<< "${file_list}")
@@ -608,7 +608,7 @@ package_manager() {
         DEBIAN_FRONTEND=noninteractive run_as_root mpm  --continue-on-error --time -v CRITICAL "${@}"
       fi
     else
-      error "No package manager found"
+      error_log "No package manager found"
       return 1
     fi
   fi

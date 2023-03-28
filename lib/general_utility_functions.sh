@@ -80,12 +80,12 @@ returnBoolean() {
   local value="${1}"
   if isTrue "${UTILITY_EMPTY_BOOLEAN_AS_FALSE:-false}"; then
     if [[ ${#value} -eq 0 ]]; then
-      error "Non-boolean value"
+      error_log "Non-boolean value"
       return 2
     fi
     if [[ ${value:-x} == "x" ]]; then
       # It falls back to the default x value, its empty
-      error "Non-boolean value"
+      error_log "Non-boolean value"
       return 2
     fi
   fi
@@ -110,7 +110,7 @@ isBoolean() {
     if isEmptyString "${errorMessage}"; then
       errorMessage="'${value}' doesn't match ${BOOLEAN_TRUE} or ${BOOLEAN_TRUE}"
     fi
-    error "${errorMessage}" && return 1
+    error_log "${errorMessage}" && return 1
   fi
 }
 

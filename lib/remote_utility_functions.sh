@@ -107,7 +107,7 @@ withBackoff() {
   done
 
   if [[ ${exitCode} -gt 0 ]]; then
-    error "${0}(): All Attempts Failed! ($*)"
+    error_log "${0}(): All Attempts Failed! ($*)"
   fi
 
   return "${exitCode}"
@@ -221,7 +221,7 @@ basic_wget() {
 
 configure_bastion_ssh_tunnel() {
   if [[ -z ${BASTION_HOST} ]] || [[ -z ${BASTION_USER} ]] || [[ -z ${BASTION_PRIVATE_KEY} ]]; then
-    error "One or more essential bastion variables missing: BASTION_PRIVATE_KEY:'${BASTION_PRIVATE_KEY:0:10}' BASTION_HOST:'${BASTION_HOST}' BASTION_USER:'${BASTION_USER}'"
+    error_log "One or more essential bastion variables missing: BASTION_PRIVATE_KEY:'${BASTION_PRIVATE_KEY:0:10}' BASTION_HOST:'${BASTION_HOST}' BASTION_USER:'${BASTION_USER}'"
     exit 1
   fi
   mkdir -p ~/.ssh

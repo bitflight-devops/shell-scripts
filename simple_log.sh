@@ -278,11 +278,22 @@ indent_style() {
   printf '%s' "${final_style}"
 }
 
+if ! command_exists uppercase; then
+  uppercase() {
+    tr '[:lower:]' '[:upper:]' <<< "${*}"
+  }
+fi
+if ! command_exists lowercase; then
+  lowercase() {
+    tr '[:upper:]' '[:lower:]' <<< "${*}"
+  }
+fi
 # convert to simple_log
 if ! command_exists log_output; then
   log_output() {
     local -r ret_val="${1}"
-    local -r log_label="$(tr '[:upper:]' '[:lower:]' <<< "${2}")"
+    local log_label
+    log_label="$(lowercase "${2}")"
     if command_exists "${log_label}"; then
       ${log_label} "${msg}"
     else
@@ -294,9 +305,11 @@ fi
 
 plain_log() {
   set +x
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
+  local fulllogtype
+  fulllogtype="$(uppercase "${1}")"
   shift
-  local -r logtypeUppercase="$(tr '[:lower:]' '[:upper:]' <<< "${fulllogtype}")"
+  local logtypeUppercase
+  logtypeUppercase="$(uppercase "${fulllogtype}")"
   local -r msg="$(sed -e 's/\\t/\t/g;s/\\n/\n/g' <<< "${*}")"
 
   printf "[%-8s] %s\n" "${logtypeUppercase}" "${msg}"
@@ -304,7 +317,8 @@ plain_log() {
 
 simple_log() {
   in_quiet_mode && return 0
-  local -r fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
+  local fulllogtype="$(tr '[:lower:]' '[:upper:]' <<< "${1}")"
+  fulllogtype="$(uppercase "${1}")"
   local -r logtype="$(get_log_type "${1}")"
   local -r logcolor="$(get_log_color "${logtype}")"
   local msg
