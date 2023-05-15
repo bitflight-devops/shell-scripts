@@ -489,7 +489,7 @@ download_shell_scripts() {
     SHELL_SCRIPTS_REF="main"
   fi
   if command_exists git; then
-    ( 
+    (
 
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       info_log "Initialising git directory" "${COLOR_BG_BLACK}${COLOR_BRIGHT_YELLOW}${BFD_REPOSITORY}${COLOR_RESET}"
@@ -511,7 +511,7 @@ download_shell_scripts() {
       info_log "Pulling latest shell scripts - completed."
     )
   else
-    ( 
+    (
       cd "${BFD_REPOSITORY}" > /dev/null || abort "Failed to change to ${BFD_REPOSITORY}."
       local bfd_cache="$(mktemp -d)"
       if download "${bfd_cache}/master.zip" "${SHELL_SCRIPTS_RELEASES_URL}"; then
