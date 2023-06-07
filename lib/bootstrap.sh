@@ -9,15 +9,6 @@ if [[ -z ${SCRIPTS_LIB_DIR:-}   ]]; then
   LC_ALL=C
   export LC_ALL
   set +e
-  read -r -d '' GET_LIB_DIR_IN_ZSH <<- 'EOF'
-	0="${${ZERO:-${0:#$ZSH_ARGZERO}}:-${(%):-%N}}"
-	0="${${(M)0:#/*}:-$PWD/$0}"
-	SCRIPTS_LIB_DIR="${0:a:h}"
-	SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
-	if [[ -f "${SCRIPTS_LIB_DIR:-}/lib/.scripts.lib.md" ]]; then
-		SCRIPTS_LIB_DIR="${SCRIPTS_LIB_DIR:-}/lib"
-	fi
-	EOF
 
   # by using a HEREDOC, we are disabling shellcheck and shfmt
 
@@ -38,11 +29,20 @@ EOF
   is_zsh() {
     [[ ${whichshell:-} == "zsh" ]]
   }
+  # shellcheck disable=SC2277,SC2299,SC2250,SC2296,SC2298,SC2310
   if command_exists zsh && [[ ${whichshell} == "zsh"   ]]; then
     # We are running in zsh
-    eval "${GET_LIB_DIR_IN_ZSH}"
-    IN_ZSH=true
-    IN_BASH=false
+    if [[ -f "${0:a:h}/bootstrap.zsh" ]]; then
+      source "${0:a:h}/bootstrap.zsh"
+    else
+      SCRIPTS_LIB_DIR="${0:a:h}"
+      SCRIPTS_LIB_DIR="$(cd "${SCRIPTS_LIB_DIR}" > /dev/null 2>&1 && pwd -P)"
+      if [[ -f "${SCRIPTS_LIB_DIR:-}/lib/.scripts.lib.md" ]]; then
+        SCRIPTS_LIB_DIR="${SCRIPTS_LIB_DIR:-}/lib"
+      fi
+      IN_ZSH=true
+      IN_BASH=false
+    fi
   else
     # we are running in bash/sh
     SCRIPTS_LIB_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd -P)"
